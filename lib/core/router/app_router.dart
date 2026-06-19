@@ -1,0 +1,242 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:go_router/go_router.dart';
+
+
+
+import '../../features/splash/presentation/screens/splash_screen.dart';
+
+import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
+
+import '../../features/customers/presentation/screens/customers_screen.dart';
+
+import '../../features/customers/presentation/screens/customer_form_screen.dart';
+
+import '../../features/customers/presentation/screens/customer_profile_screen.dart';
+
+import '../../features/deliveries/presentation/screens/deliveries_screen.dart';
+
+import '../../features/deliveries/presentation/screens/add_delivery_screen.dart';
+
+import '../../features/inventory/presentation/screens/inventory_screen.dart';
+
+import '../../features/reports/presentation/screens/reports_screen.dart';
+
+import '../../features/payments/presentation/screens/receive_payment_screen.dart';
+
+import '../../features/expenses/presentation/screens/expenses_screen.dart';
+
+import '../../features/dispenser_sales/presentation/screens/dispenser_sales_screen.dart';
+
+import '../../features/settings/presentation/screens/settings_screen.dart';
+
+import '../../features/settings/presentation/screens/about_screen.dart';
+
+import '../../features/overdue/presentation/screens/overdue_payments_screen.dart';
+
+import '../../features/update/presentation/screens/recovery_center_screen.dart';
+
+import '../../features/update/presentation/screens/update_history_screen.dart';
+
+import '../../shared/widgets/main_scaffold.dart';
+
+
+
+final routerProvider = Provider<GoRouter>((ref) {
+
+  return GoRouter(
+
+    initialLocation: '/splash',
+
+    routes: [
+
+      GoRoute(
+
+        path: '/splash',
+
+        builder: (context, state) => const SplashScreen(),
+
+      ),
+
+      ShellRoute(
+
+        builder: (context, state, child) {
+
+          return MainScaffold(child: child);
+
+        },
+
+        routes: [
+
+          GoRoute(
+
+            path: '/',
+
+            builder: (context, state) => const DashboardScreen(),
+
+          ),
+
+          GoRoute(
+
+            path: '/customers',
+
+            builder: (context, state) => const CustomersScreen(),
+
+          ),
+
+          GoRoute(
+
+            path: '/deliveries',
+
+            builder: (context, state) => const DeliveriesScreen(),
+
+          ),
+
+          GoRoute(
+
+            path: '/inventory',
+
+            builder: (context, state) => const InventoryScreen(),
+
+          ),
+
+          GoRoute(
+
+            path: '/reports',
+
+            builder: (context, state) => const ReportsScreen(),
+
+          ),
+
+        ],
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/add',
+
+        builder: (context, state) => const CustomerFormScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id',
+
+        builder: (context, state) {
+
+          final id = state.pathParameters['id']!;
+
+          return CustomerProfileScreen(customerId: id);
+
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id/edit',
+
+        builder: (context, state) {
+
+          final id = state.pathParameters['id']!;
+
+          return CustomerFormScreen(customerId: id);
+
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id/payment',
+
+        builder: (context, state) {
+
+          final id = state.pathParameters['id']!;
+
+          return ReceivePaymentScreen(customerId: id);
+
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/deliveries/add',
+
+        builder: (context, state) {
+
+          final extra = state.extra as Map<String, dynamic>?;
+
+          final customerId = extra?['customerId'] as String?;
+
+          return AddDeliveryScreen(preselectedCustomerId: customerId);
+
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/expenses',
+
+        builder: (context, state) => const ExpensesScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/dispenser-sales',
+
+        builder: (context, state) => const DispenserSalesScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/settings',
+
+        builder: (context, state) => const SettingsScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/about',
+
+        builder: (context, state) => const AboutScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/overdue',
+
+        builder: (context, state) => const OverduePaymentsScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/recovery-center',
+
+        builder: (context, state) => const RecoveryCenterScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/update-history',
+
+        builder: (context, state) => const UpdateHistoryScreen(),
+
+      ),
+
+    ],
+
+  );
+
+});
+

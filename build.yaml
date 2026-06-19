@@ -1,0 +1,7 @@
+global_options:
+  freezed:
+    runs_before:
+      - riverpod_generator
+  drift_dev:
+    runs_before:
+      - riverpod_generator

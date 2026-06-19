@@ -1,0 +1,59 @@
+name: tubig_track
+description: TubigTrack - Mineral Monitoring System for water refilling business.
+publish_to: 'none'
+version: 1.2.0+12
+
+environment:
+  sdk: '>=3.8.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_riverpod: ^3.3.2
+  riverpod_annotation: ^4.0.3
+  go_router: ^17.3.0
+  drift: ^2.34.0
+  drift_flutter: ^0.3.0
+  freezed_annotation: ^3.1.0
+  shared_preferences: ^2.3.5
+  path_provider: ^2.1.5
+  uuid: ^4.5.1
+  intl: ^0.20.2
+  file_picker: ^9.1.1
+  share_plus: ^10.1.4
+  permission_handler: ^11.3.1
+  pdf: ^3.11.1
+  path: ^1.9.1
+  excel: ^4.0.6
+  cupertino_icons: ^1.0.8
+  flutter_local_notifications: ^19.0.0
+  timezone: ^0.10.0
+  workmanager: ^0.6.0
+  package_info_plus: ^8.3.0
+  http: ^1.4.0
+  open_filex: ^4.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.13
+  drift_dev: ^2.34.0
+  freezed: ^3.2.5
+  json_serializable: ^6.9.5
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/ic_launcher.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icon/ic_launcher.png"
+  min_sdk_android: 21
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/splash_logo.png
+    - assets/images/splash_water.png
