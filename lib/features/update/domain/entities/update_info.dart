@@ -1,9 +1,13 @@
+import '../../../../core/utils/version_utils.dart';
+
 class UpdateInfo {
   final String version;
   final int build;
   final String apkUrl;
   final List<String> releaseNotes;
   final bool mandatory;
+  final String? releaseName;
+  final DateTime? publishedAt;
 
   const UpdateInfo({
     required this.version,
@@ -11,6 +15,8 @@ class UpdateInfo {
     required this.apkUrl,
     required this.releaseNotes,
     this.mandatory = false,
+    this.releaseName,
+    this.publishedAt,
   });
 
   factory UpdateInfo.fromJson(Map<String, dynamic> json) {
@@ -26,5 +32,18 @@ class UpdateInfo {
     );
   }
 
-  bool isNewerThan({required int currentBuild}) => build > currentBuild;
+  /// True when remote [version] is newer than [currentVersion].
+  /// Falls back to [build] comparison when versions are equal.
+  bool isNewerThan({
+    required String currentVersion,
+    required int currentBuild,
+  }) {
+    final cmp = VersionUtils.compare(version, currentVersion);
+    if (cmp > 0) return true;
+    if (cmp < 0) return false;
+    if (build > 0 && currentBuild > 0) {
+      return build > currentBuild;
+    }
+    return false;
+  }
 }

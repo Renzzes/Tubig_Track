@@ -10,6 +10,7 @@ import '../../domain/entities/update_history_entry.dart';
 import '../../domain/repositories/backup_repository.dart';
 import '../../domain/repositories/update_repository.dart';
 import '../../services/update_service.dart';
+import '../screens/update_diagnostics_screen.dart';
 
 final updateRepositoryProvider = Provider<UpdateRepository>((ref) {
   return UpdateRepositoryImpl();
@@ -47,4 +48,16 @@ final packageInfoProvider = FutureProvider<PackageInfo>((ref) async {
 final availableBackupsProvider =
     FutureProvider<List<BackupFileInfo>>((ref) async {
   return ref.watch(backupRepositoryProvider).listBackups();
+});
+
+final updateDiagnosticsProvider =
+    FutureProvider<UpdateDiagnosticsData>((ref) async {
+  final service = ref.watch(updateServiceProvider);
+  final result = await service.checkForUpdates();
+  return UpdateDiagnosticsData(
+    currentVersion: result.currentVersion,
+    latestVersion: result.latestVersion ?? result.fetchResult?.latestVersion,
+    isUpdateAvailable: result.isUpdateAvailable,
+    fetchResult: result.fetchResult ?? service.lastFetchResult,
+  );
 });

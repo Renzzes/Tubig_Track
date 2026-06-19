@@ -1,13 +1,13 @@
 class AppConstants {
   static const String appName = 'TubigTrack';
-  static const String appVersion = '1.2.0';
+  static const String appVersion = '1.2.1';
   static const String applicationId = 'com.tubigtrack.tubig_track';
 
-  /// Remote update manifest URLs (host your JSON at these endpoints).
-  static const String updateManifestUrlStable =
-      'https://tubigtrack.app/updates/stable.json';
-  static const String updateManifestUrlBeta =
-      'https://tubigtrack.app/updates/beta.json';
+  /// GitHub Releases API for self-update.
+  static const String githubLatestReleaseUrl =
+      'https://api.github.com/repos/Renzzes/Tubig_Track/releases/latest';
+  static const String githubReleasesUrl =
+      'https://api.github.com/repos/Renzzes/Tubig_Track/releases';
 
   static const String backupsFolderName = 'TubigTrack/Backups';
   static const String preUpdateBackupPrefix = 'tubigtrack_preupdate_';

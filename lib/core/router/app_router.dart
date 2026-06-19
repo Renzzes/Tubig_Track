@@ -38,6 +38,8 @@ import '../../features/update/presentation/screens/recovery_center_screen.dart';
 
 import '../../features/update/presentation/screens/update_history_screen.dart';
 
+import '../../features/update/presentation/screens/update_diagnostics_screen.dart';
+
 import '../../shared/widgets/main_scaffold.dart';
 
 
@@ -231,6 +233,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/update-history',
 
         builder: (context, state) => const UpdateHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/update-diagnostics',
+
+        builder: (context, state) => const UpdateDiagnosticsScreen(),
 
       ),
 

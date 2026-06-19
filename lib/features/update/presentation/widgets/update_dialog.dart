@@ -4,12 +4,14 @@ import '../../domain/entities/update_info.dart';
 
 class UpdateDialog extends StatelessWidget {
   final UpdateInfo updateInfo;
+  final String currentVersion;
   final VoidCallback onLater;
   final VoidCallback onUpdateNow;
 
   const UpdateDialog({
     super.key,
     required this.updateInfo,
+    required this.currentVersion,
     required this.onLater,
     required this.onUpdateNow,
   });
@@ -17,6 +19,7 @@ class UpdateDialog extends StatelessWidget {
   static Future<void> show(
     BuildContext context, {
     required UpdateInfo updateInfo,
+    required String currentVersion,
     required VoidCallback onLater,
     required VoidCallback onUpdateNow,
   }) {
@@ -25,6 +28,7 @@ class UpdateDialog extends StatelessWidget {
       barrierDismissible: !updateInfo.mandatory,
       builder: (_) => UpdateDialog(
         updateInfo: updateInfo,
+        currentVersion: currentVersion,
         onLater: onLater,
         onUpdateNow: onUpdateNow,
       ),
@@ -45,30 +49,40 @@ class UpdateDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Version ${updateInfo.version}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            _VersionRow(
+              label: 'Current Version',
+              value: currentVersion,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            _VersionRow(
+              label: 'Latest Version',
+              value: updateInfo.version,
+              highlight: true,
+            ),
+            const SizedBox(height: 16),
             Text(
-              "What's New",
+              'Release Notes',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            ...updateInfo.releaseNotes.map(
-              (note) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• '),
-                    Expanded(child: Text(note)),
-                  ],
+            if (updateInfo.releaseNotes.isEmpty)
+              Text(
+                updateInfo.releaseName ?? 'No release notes provided.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else
+              ...updateInfo.releaseNotes.map(
+                (note) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('• '),
+                      Expanded(child: Text(note)),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -77,7 +91,44 @@ class UpdateDialog extends StatelessWidget {
           TextButton(onPressed: onLater, child: const Text('Later')),
         FilledButton(
           onPressed: onUpdateNow,
-          child: const Text('Update Now'),
+          child: const Text('Download Update'),
+        ),
+      ],
+    );
+  }
+}
+
+class _VersionRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool highlight;
+
+  const _VersionRow({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[700],
+                ),
+          ),
+        ),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: highlight
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+              ),
         ),
       ],
     );

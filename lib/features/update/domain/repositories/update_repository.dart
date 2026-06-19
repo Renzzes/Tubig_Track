@@ -1,9 +1,10 @@
 import '../entities/update_channel.dart';
+import '../entities/update_fetch_result.dart';
 import '../entities/update_history_entry.dart';
-import '../entities/update_info.dart';
 
 abstract class UpdateRepository {
-  Future<UpdateInfo?> fetchLatestUpdate(UpdateChannel channel);
+  Future<UpdateFetchResult> fetchLatestRelease(UpdateChannel channel);
+  Future<UpdateFetchResult> testGitHubConnection(UpdateChannel channel);
   Future<void> saveLastCheckTime(DateTime time);
   Future<DateTime?> getLastCheckTime();
   Future<UpdateChannel> getUpdateChannel();
@@ -15,4 +16,5 @@ abstract class UpdateRepository {
   Future<void> savePendingReleaseNotes(List<String> notes);
   Future<List<String>> getPendingReleaseNotes();
   Future<void> clearPendingReleaseNotes();
+  UpdateFetchResult? get lastFetchResult;
 }

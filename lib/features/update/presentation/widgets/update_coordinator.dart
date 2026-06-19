@@ -43,22 +43,23 @@ class _UpdateCoordinatorState extends ConsumerState<UpdateCoordinator> {
 
     final result = await ref.read(updateServiceProvider).checkForUpdates();
     ref.invalidate(lastUpdateCheckProvider);
+    ref.invalidate(updateDiagnosticsProvider);
 
     if (!mounted) return;
-    if (result.status == UpdateCheckStatus.updateAvailable &&
-        result.updateInfo != null) {
-      await _showUpdateDialog(result.updateInfo!);
+    if (result.isUpdateAvailable && result.updateInfo != null) {
+      await _showUpdateDialog(result);
     }
   }
 
-  Future<void> _showUpdateDialog(UpdateInfo updateInfo) async {
+  Future<void> _showUpdateDialog(UpdateCheckResult result) async {
     await UpdateDialog.show(
       context,
-      updateInfo: updateInfo,
+      updateInfo: result.updateInfo!,
+      currentVersion: result.currentVersion,
       onLater: () => Navigator.pop(context),
       onUpdateNow: () {
         Navigator.pop(context);
-        _startUpdate(updateInfo);
+        _startUpdate(result.updateInfo!);
       },
     );
   }
@@ -99,9 +100,27 @@ Future<void> performManualUpdateCheck(
   WidgetRef ref, {
   bool showUpToDateMessage = true,
 }) async {
+  if (!context.mounted) return;
+
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const PopScope(
+      canPop: false,
+      child: Center(child: CircularProgressIndicator()),
+    ),
+  );
+
   final service = ref.read(updateServiceProvider);
-  final result = await service.checkForUpdates();
+  UpdateCheckResult result;
+  try {
+    result = await service.checkForUpdates();
+  } finally {
+    if (context.mounted) Navigator.pop(context);
+  }
+
   ref.invalidate(lastUpdateCheckProvider);
+  ref.invalidate(updateDiagnosticsProvider);
 
   if (!context.mounted) return;
 
@@ -110,6 +129,7 @@ Future<void> performManualUpdateCheck(
       await UpdateDialog.show(
         context,
         updateInfo: result.updateInfo!,
+        currentVersion: result.currentVersion,
         onLater: () => Navigator.pop(context),
         onUpdateNow: () async {
           Navigator.pop(context);
@@ -132,22 +152,28 @@ Future<void> performManualUpdateCheck(
           }
         },
       );
-    case UpdateCheckStatus.offline:
+    case UpdateCheckStatus.networkError:
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Unable to check for updates. Continue normal operation.'),
+          content: Text(
+            'Unable to connect to GitHub. Please check your internet connection.',
+          ),
+        ),
+      );
+    case UpdateCheckStatus.apiError:
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to retrieve release information.'),
         ),
       );
     case UpdateCheckStatus.upToDate:
       if (showUpToDateMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You are on the latest version.')),
+          const SnackBar(
+            content: Text('You are already using the latest version.'),
+          ),
         );
       }
-    case UpdateCheckStatus.error:
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to check for updates.')),
-      );
     default:
       break;
   }

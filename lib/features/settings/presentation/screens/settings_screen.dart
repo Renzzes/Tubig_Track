@@ -164,6 +164,20 @@ class SettingsScreen extends ConsumerWidget {
 
             ),
 
+            ListTile(
+
+              leading: const Icon(Icons.bug_report_outlined),
+
+              title: const Text('Update Diagnostics'),
+
+              subtitle: const Text('GitHub API status and connection test'),
+
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+
+              onTap: () => context.push('/update-diagnostics'),
+
+            ),
+
 
 
             const Divider(),

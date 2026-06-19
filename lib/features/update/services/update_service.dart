@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -7,7 +8,10 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/version_utils.dart';
 import '../domain/entities/update_channel.dart';
+import '../domain/entities/update_fetch_result.dart';
 import '../domain/entities/update_history_entry.dart';
 import '../domain/entities/update_info.dart';
 import '../domain/repositories/backup_repository.dart';
@@ -18,8 +22,8 @@ enum UpdateCheckStatus {
   checking,
   upToDate,
   updateAvailable,
-  offline,
-  error,
+  networkError,
+  apiError,
 }
 
 class UpdateService {
@@ -47,58 +51,80 @@ class UpdateService {
   Future<List<UpdateHistoryEntry>> getHistory() =>
       _updateRepository.getUpdateHistory();
 
+  UpdateFetchResult? get lastFetchResult => _updateRepository.lastFetchResult;
+
+  Future<UpdateFetchResult> testGitHubConnection() async {
+    final channel = await _updateRepository.getUpdateChannel();
+    return _updateRepository.testGitHubConnection(channel);
+  }
+
   Future<UpdateCheckResult> checkForUpdates() async {
     try {
       final packageInfo = await getPackageInfo();
+      final currentVersion = VersionUtils.normalize(packageInfo.version);
       final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
       final channel = await _updateRepository.getUpdateChannel();
 
-      final updateInfo = await _updateRepository.fetchLatestUpdate(channel);
+      debugPrint('[Update] Current installed version: $currentVersion');
+      debugPrint('[Update] Current build: $currentBuild');
+      debugPrint('[Update] Channel: ${channel.value}');
+
+      final fetchResult = await _updateRepository.fetchLatestRelease(channel);
       await _updateRepository.saveLastCheckTime(DateTime.now());
 
-      if (updateInfo == null) {
+      debugPrint('[Update] Fetch error: ${fetchResult.error}');
+      debugPrint('[Update] GitHub latest version: ${fetchResult.latestVersion}');
+
+      if (fetchResult.isNetworkError) {
         return UpdateCheckResult(
-          status: UpdateCheckStatus.offline,
-          currentVersion: packageInfo.version,
+          status: UpdateCheckStatus.networkError,
+          currentVersion: currentVersion,
           currentBuild: currentBuild,
+          fetchResult: fetchResult,
         );
       }
 
-      if (!updateInfo.isNewerThan(currentBuild: currentBuild)) {
+      if (fetchResult.isApiError || fetchResult.updateInfo == null) {
+        return UpdateCheckResult(
+          status: UpdateCheckStatus.apiError,
+          currentVersion: currentVersion,
+          currentBuild: currentBuild,
+          fetchResult: fetchResult,
+        );
+      }
+
+      final updateInfo = fetchResult.updateInfo!;
+
+      if (!updateInfo.isNewerThan(
+        currentVersion: currentVersion,
+        currentBuild: currentBuild,
+      )) {
+        debugPrint('[Update] Up to date — installed $currentVersion == latest ${updateInfo.version}');
         return UpdateCheckResult(
           status: UpdateCheckStatus.upToDate,
-          currentVersion: packageInfo.version,
+          currentVersion: currentVersion,
           currentBuild: currentBuild,
+          latestVersion: updateInfo.version,
+          fetchResult: fetchResult,
         );
       }
 
+      debugPrint('[Update] Update available: ${updateInfo.version}');
       return UpdateCheckResult(
         status: UpdateCheckStatus.updateAvailable,
-        currentVersion: packageInfo.version,
+        currentVersion: currentVersion,
         currentBuild: currentBuild,
+        latestVersion: updateInfo.version,
         updateInfo: updateInfo,
+        fetchResult: fetchResult,
       );
-    } on SocketException {
-      await _updateRepository.saveLastCheckTime(DateTime.now());
+    } catch (e, st) {
+      debugPrint('[Update] checkForUpdates error: $e');
+      debugPrint('[Update] Stack: $st');
       final packageInfo = await getPackageInfo();
       return UpdateCheckResult(
-        status: UpdateCheckStatus.offline,
-        currentVersion: packageInfo.version,
-        currentBuild: int.tryParse(packageInfo.buildNumber) ?? 0,
-      );
-    } on http.ClientException {
-      await _updateRepository.saveLastCheckTime(DateTime.now());
-      final packageInfo = await getPackageInfo();
-      return UpdateCheckResult(
-        status: UpdateCheckStatus.offline,
-        currentVersion: packageInfo.version,
-        currentBuild: int.tryParse(packageInfo.buildNumber) ?? 0,
-      );
-    } catch (_) {
-      final packageInfo = await getPackageInfo();
-      return UpdateCheckResult(
-        status: UpdateCheckStatus.error,
-        currentVersion: packageInfo.version,
+        status: UpdateCheckStatus.apiError,
+        currentVersion: VersionUtils.normalize(packageInfo.version),
         currentBuild: int.tryParse(packageInfo.buildNumber) ?? 0,
       );
     }
@@ -134,11 +160,17 @@ class UpdateService {
     required void Function(double progress) onProgress,
   }) async {
     final packageInfo = await getPackageInfo();
+    final currentVersion = VersionUtils.normalize(packageInfo.version);
     final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-    if (!updateInfo.isNewerThan(currentBuild: currentBuild)) {
+    if (!updateInfo.isNewerThan(
+      currentVersion: currentVersion,
+      currentBuild: currentBuild,
+    )) {
       throw Exception('Cannot install: version is not newer than current');
     }
+
+    debugPrint('[Update] Downloading APK from: ${updateInfo.apkUrl}');
 
     await _backupRepository.createPreUpdateBackup();
     onProgress(0.1);
@@ -151,7 +183,10 @@ class UpdateService {
     }
 
     final request = http.Request('GET', Uri.parse(updateInfo.apkUrl));
+    request.headers['User-Agent'] = 'TubigTrack/${AppConstants.appVersion}';
     final response = await _httpClient.send(request);
+
+    debugPrint('[Update] Download response status: ${response.statusCode}');
 
     if (response.statusCode != 200) {
       throw Exception('Download failed (${response.statusCode})');
@@ -177,6 +212,8 @@ class UpdateService {
     if (stat.size == 0) {
       throw Exception('Downloaded APK is empty');
     }
+
+    debugPrint('[Update] APK downloaded: ${stat.size} bytes');
 
     onProgress(1.0);
     await _updateRepository.savePendingReleaseNotes(updateInfo.releaseNotes);
@@ -207,12 +244,19 @@ class UpdateCheckResult {
   final UpdateCheckStatus status;
   final String currentVersion;
   final int currentBuild;
+  final String? latestVersion;
   final UpdateInfo? updateInfo;
+  final UpdateFetchResult? fetchResult;
 
   const UpdateCheckResult({
     required this.status,
     required this.currentVersion,
     required this.currentBuild,
+    this.latestVersion,
     this.updateInfo,
+    this.fetchResult,
   });
+
+  bool get isUpdateAvailable =>
+      status == UpdateCheckStatus.updateAvailable && updateInfo != null;
 }
