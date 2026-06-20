@@ -7,11 +7,15 @@ import '../../domain/entities/delivery.dart';
 class DeliveryListTile extends StatelessWidget {
   final Delivery delivery;
   final String customerName;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const DeliveryListTile({
     super.key,
     required this.delivery,
     required this.customerName,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -80,6 +84,25 @@ class DeliveryListTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 _StatusBadge(label: paymentLabel, color: paymentColor),
+                if (onEdit != null || onDelete != null)
+                  PopupMenuButton<String>(
+                    onSelected: (action) {
+                      if (action == 'edit') onEdit?.call();
+                      if (action == 'delete') onDelete?.call();
+                    },
+                    itemBuilder: (_) => [
+                      if (onEdit != null)
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Text('Edit'),
+                        ),
+                      if (onDelete != null)
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Text('Delete'),
+                        ),
+                    ],
+                  ),
               ],
             ),
             const SizedBox(height: 6),

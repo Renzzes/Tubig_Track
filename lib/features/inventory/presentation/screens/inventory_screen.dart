@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/responsive.dart';
@@ -197,9 +198,19 @@ class InventoryScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Transaction history
-          Text(
-            'Transaction History',
-            style: Theme.of(context).textTheme.titleMedium,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Transaction History',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.push('/inventory/history'),
+                child: const Text('View All'),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(

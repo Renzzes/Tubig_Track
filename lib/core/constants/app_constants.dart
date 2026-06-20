@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'TubigTrack';
-  static const String appVersion = '1.2.1';
+  static const String appVersion = '1.3.0';
   static const String applicationId = 'com.tubigtrack.tubig_track';
 
   /// GitHub Releases API for self-update.
@@ -14,9 +14,11 @@ class AppConstants {
 
   static const String settingTotalBottleInventory = 'total_bottle_inventory';
   static const String settingLowInventoryThreshold = 'low_inventory_threshold';
+  static const String settingCostPerBottle = 'cost_per_bottle';
   static const int defaultBottleInventory = 100;
   static const int defaultLowInventoryThreshold = 25;
   static const double defaultPricePerBottle = 30.0;
+  static const double defaultCostPerBottle = 25.0;
 
   static const List<String> expenseCategories = [
     'Fuel',

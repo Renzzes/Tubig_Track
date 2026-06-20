@@ -31,14 +31,10 @@ class _DispenserSalesScreenState extends ConsumerState<DispenserSalesScreen> {
       body: salesAsync.when(
         data: (sales) {
           if (sales.isEmpty) {
-            return EmptyStateWidget(
+            return const EmptyStateWidget(
               icon: Icons.local_drink_outlined,
               message: 'No dispenser sales recorded',
-              action: ElevatedButton.icon(
-                onPressed: () => _showAddSheet(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Add Sale'),
-              ),
+              subMessage: 'Tap + to add your first sale',
             );
           }
 

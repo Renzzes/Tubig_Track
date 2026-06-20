@@ -9,6 +9,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../transactions/presentation/providers/recent_transactions_provider.dart';
 import '../../../transactions/presentation/widgets/recent_transactions_widget.dart';
+import '../../../savings/presentation/providers/savings_provider.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/summary_card.dart';
@@ -20,6 +21,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final transactionsAsync = ref.watch(recentTransactionsProvider);
+    final savingsAsync = ref.watch(savingsSummaryProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -116,6 +118,20 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
+              savingsAsync.when(
+                data: (savings) => SummaryCard(
+                  title: 'Savings',
+                  value: CurrencyFormatter.format(savings.currentSavings),
+                  icon: Icons.savings_outlined,
+                  color: AppColors.success,
+                  subtitle: 'Tap for details',
+                  onTap: () => context.push('/savings'),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 12),
+
               // Unpaid Receivables — full width
               SummaryCard(
                 title: 'Unpaid Receivables',
@@ -160,12 +176,22 @@ class DashboardScreen extends ConsumerWidget {
               ],
 
               // Recent transactions
-              const Text(
-                'Recent Transactions',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Recent Transactions',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push('/transactions/all'),
+                    child: const Text('View All'),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Card(

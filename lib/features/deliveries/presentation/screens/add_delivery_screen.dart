@@ -15,8 +15,13 @@ import '../widgets/payment_mode_selector.dart';
 
 class AddDeliveryScreen extends ConsumerStatefulWidget {
   final String? preselectedCustomerId;
+  final String? deliveryId;
 
-  const AddDeliveryScreen({super.key, this.preselectedCustomerId});
+  const AddDeliveryScreen({
+    super.key,
+    this.preselectedCustomerId,
+    this.deliveryId,
+  });
 
   @override
   ConsumerState<AddDeliveryScreen> createState() => _AddDeliveryScreenState();
@@ -37,6 +42,8 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = const TimeOfDay(hour: 9, minute: 0);
   bool _isLoading = false;
+  bool _isEditMode = false;
+  String? _editDeliveryId;
 
   double get _quantity => double.tryParse(_quantityCtrl.text) ?? 0;
   double get _price => double.tryParse(_priceCtrl.text) ?? 0;
@@ -48,6 +55,64 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     super.initState();
     _quantityCtrl.addListener(_recalculate);
     _priceCtrl.addListener(_recalculate);
+    if (widget.deliveryId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadDelivery(widget.deliveryId!);
+      });
+    }
+  }
+
+  Future<void> _loadDelivery(String id) async {
+    setState(() => _isLoading = true);
+    try {
+      final delivery =
+          await ref.read(deliveryRepositoryProvider).getById(id);
+      if (delivery == null || !mounted) return;
+
+      final customers =
+          await ref.read(customerRepositoryProvider).getAll();
+      Customer? matched;
+      for (final c in customers) {
+        if (c.id == delivery.customerId) {
+          matched = c;
+          break;
+        }
+      }
+      _editDeliveryId = id;
+      _isEditMode = true;
+      _selectedCustomer = matched;
+      _quantityCtrl.text = delivery.quantity.toString();
+      _priceCtrl.text = delivery.pricePerBottle.toStringAsFixed(2);
+      _paymentStatus = delivery.paymentStatus;
+      _deliveryStatus = delivery.deliveryStatus;
+      _selectedDate = delivery.deliveryDate;
+      if (delivery.deliveryTime != null) {
+        _selectedTime = _parseTime(delivery.deliveryTime!);
+      }
+      _amountPaidCtrl.text =
+          delivery.amountPaid > 0 ? delivery.amountPaid.toString() : '';
+      _notesCtrl.text = delivery.notes ?? '';
+      setState(() {});
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  TimeOfDay _parseTime(String time) {
+    try {
+      final parts = time.split(' ');
+      final hm = parts[0].split(':');
+      var hour = int.parse(hm[0]);
+      final minute = int.parse(hm[1]);
+      if (parts.length > 1) {
+        final period = parts[1].toUpperCase();
+        if (period == 'PM' && hour < 12) hour += 12;
+        if (period == 'AM' && hour == 12) hour = 0;
+      }
+      return TimeOfDay(hour: hour, minute: minute);
+    } catch (_) {
+      return const TimeOfDay(hour: 9, minute: 0);
+    }
   }
 
   @override
@@ -133,7 +198,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
       }
 
       final delivery = Delivery(
-        id: const Uuid().v4(),
+        id: _editDeliveryId ?? const Uuid().v4(),
         customerId: _selectedCustomer!.id,
         quantity: qty,
         pricePerBottle: price,
@@ -147,11 +212,19 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
 
-      await ref.read(deliveryRepositoryProvider).createDelivery(delivery);
+      if (_isEditMode) {
+        await ref.read(deliveryRepositoryProvider).updateDelivery(delivery);
+      } else {
+        await ref.read(deliveryRepositoryProvider).createDelivery(delivery);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Delivery scheduled!')),
+          SnackBar(
+            content: Text(
+              _isEditMode ? 'Delivery updated!' : 'Delivery scheduled!',
+            ),
+          ),
         );
         context.pop();
       }
@@ -186,7 +259,9 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New Delivery')),
+      appBar: AppBar(
+        title: Text(_isEditMode ? 'Edit Delivery' : 'New Delivery'),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -528,9 +603,9 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text(
-                      'Save Delivery',
-                      style: TextStyle(fontSize: 17),
+                  : Text(
+                      _isEditMode ? 'Update Delivery' : 'Save Delivery',
+                      style: const TextStyle(fontSize: 17),
                     ),
             ),
             const SizedBox(height: 16),

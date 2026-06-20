@@ -282,6 +282,9 @@ class CustomerProfileScreen extends ConsumerWidget {
               _SectionHeader(
                 title: 'Deliveries',
                 count: deliveriesAsync.whenOrNull(data: (d) => d.length),
+                onViewAll: () => context.push(
+                  '/customers/$customerId/history/deliveries',
+                ),
               ),
               const SizedBox(height: 8),
               deliveriesAsync.when(
@@ -439,6 +442,9 @@ class CustomerProfileScreen extends ConsumerWidget {
               _SectionHeader(
                 title: 'Payments',
                 count: paymentsAsync.whenOrNull(data: (p) => p.length),
+                onViewAll: () => context.push(
+                  '/customers/$customerId/history/payments',
+                ),
               ),
               const SizedBox(height: 8),
               paymentsAsync.when(
@@ -498,6 +504,9 @@ class CustomerProfileScreen extends ConsumerWidget {
                 count: customerTransactions.isNotEmpty
                     ? customerTransactions.length
                     : null,
+                onViewAll: () => context.push(
+                  '/customers/$customerId/history/bottles',
+                ),
               ),
               const SizedBox(height: 8),
               if (customerTransactions.isEmpty)
@@ -600,8 +609,13 @@ class CustomerProfileScreen extends ConsumerWidget {
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int? count;
+  final VoidCallback? onViewAll;
 
-  const _SectionHeader({required this.title, this.count});
+  const _SectionHeader({
+    required this.title,
+    this.count,
+    this.onViewAll,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -629,6 +643,12 @@ class _SectionHeader extends StatelessWidget {
             ),
           ),
         ],
+        const Spacer(),
+        if (onViewAll != null)
+          TextButton(
+            onPressed: onViewAll,
+            child: const Text('View All'),
+          ),
       ],
     );
   }

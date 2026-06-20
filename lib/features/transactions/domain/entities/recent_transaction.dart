@@ -7,6 +7,7 @@ enum RecentTransactionType {
   bottlePurchase,
   bottleDamaged,
   dispenserSale,
+  savingsAddition,
 }
 
 class RecentTransaction {
@@ -46,6 +47,8 @@ class RecentTransaction {
         return 'Damaged Bottles';
       case RecentTransactionType.dispenserSale:
         return 'Dispenser Sale';
+      case RecentTransactionType.savingsAddition:
+        return 'Savings Addition';
     }
   }
 }

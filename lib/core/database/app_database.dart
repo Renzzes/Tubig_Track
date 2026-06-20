@@ -8,6 +8,7 @@ import 'tables/payments_table.dart';
 import 'tables/expenses_table.dart';
 import 'tables/dispenser_sales_table.dart';
 import 'tables/settings_table.dart';
+import 'tables/savings_contributions_table.dart';
 
 import 'daos/customers_dao.dart';
 import 'daos/deliveries_dao.dart';
@@ -16,6 +17,7 @@ import 'daos/payments_dao.dart';
 import 'daos/expenses_dao.dart';
 import 'daos/dispenser_sales_dao.dart';
 import 'daos/settings_dao.dart';
+import 'daos/savings_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -28,6 +30,7 @@ part 'app_database.g.dart';
     ExpensesTable,
     DispenserSalesTable,
     SettingsTable,
+    SavingsContributionsTable,
   ],
   daos: [
     CustomersDao,
@@ -37,6 +40,7 @@ part 'app_database.g.dart';
     ExpensesDao,
     DispenserSalesDao,
     SettingsDao,
+    SavingsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -44,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -53,6 +57,7 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
         await settingsDao.setValue('total_bottle_inventory', '100');
         await settingsDao.setValue('low_inventory_threshold', '25');
+        await settingsDao.setValue('cost_per_bottle', '25');
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -63,6 +68,13 @@ class AppDatabase extends _$AppDatabase {
           final existing = await settingsDao.getValue('low_inventory_threshold');
           if (existing == null) {
             await settingsDao.setValue('low_inventory_threshold', '25');
+          }
+        }
+        if (from < 4) {
+          await m.createTable(savingsContributionsTable);
+          final cost = await settingsDao.getValue('cost_per_bottle');
+          if (cost == null) {
+            await settingsDao.setValue('cost_per_bottle', '25');
           }
         }
       },

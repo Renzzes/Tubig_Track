@@ -12,7 +12,15 @@ import '../../features/customers/presentation/screens/customers_screen.dart';
 
 import '../../features/customers/presentation/screens/customer_form_screen.dart';
 
+import '../../features/customers/presentation/screens/customer_history_screen.dart';
+
 import '../../features/customers/presentation/screens/customer_profile_screen.dart';
+
+import '../../features/savings/presentation/screens/savings_detail_screen.dart';
+
+import '../../features/savings/presentation/screens/savings_history_screen.dart';
+
+import '../../features/transactions/presentation/screens/all_transactions_screen.dart';
 
 import '../../features/deliveries/presentation/screens/deliveries_screen.dart';
 
@@ -124,6 +132,48 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/customers/:id/history/deliveries',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerHistoryScreen(
+            customerId: id,
+            type: CustomerHistoryType.deliveries,
+          );
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id/history/payments',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerHistoryScreen(
+            customerId: id,
+            type: CustomerHistoryType.payments,
+          );
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id/history/bottles',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerHistoryScreen(
+            customerId: id,
+            type: CustomerHistoryType.bottleTransactions,
+          );
+        },
+
+      ),
+
+      GoRoute(
+
         path: '/customers/:id',
 
         builder: (context, state) {
@@ -160,6 +210,17 @@ final routerProvider = Provider<GoRouter>((ref) {
 
           return ReceivePaymentScreen(customerId: id);
 
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/deliveries/:id/edit',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AddDeliveryScreen(deliveryId: id);
         },
 
       ),
@@ -233,6 +294,38 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/update-history',
 
         builder: (context, state) => const UpdateHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/history',
+
+        builder: (context, state) => const InventoryHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/savings',
+
+        builder: (context, state) => const SavingsDetailScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/savings/history',
+
+        builder: (context, state) => const SavingsHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/transactions/all',
+
+        builder: (context, state) => const AllTransactionsScreen(),
 
       ),
 

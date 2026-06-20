@@ -1,232 +1,248 @@
-import 'package:drift/drift.dart';
-import '../../../../core/database/app_database.dart';
-import '../../../../core/utils/payment_status_utils.dart';
-import '../../domain/entities/delivery.dart';
-import '../../domain/repositories/delivery_repository.dart';
-
-class DeliveryRepositoryImpl implements DeliveryRepository {
-  final AppDatabase _db;
-
-  DeliveryRepositoryImpl(this._db);
-
-  Delivery _map(DeliveriesTableData row) {
-    return Delivery(
-      id: row.id,
-      customerId: row.customerId,
-      quantity: row.quantity,
-      pricePerBottle: row.pricePerBottle,
-      totalAmount: row.totalAmount,
-      paymentStatus: Delivery.paymentStatusFromString(row.paymentStatus),
-      amountPaid: row.amountPaid,
-      remainingBalance: row.remainingBalance,
-      deliveryDate: row.deliveryDate,
-      deliveryTime: row.deliveryTime,
-      deliveryStatus: Delivery.deliveryStatusFromString(row.deliveryStatus),
-      notes: row.notes,
-    );
-  }
-
-  (DateTime, DateTime) _resolveDateRange(
-    DeliveryDateRangeFilter dateRange,
-    DateTime? customStart,
-    DateTime? customEnd,
-  ) {
-    final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    switch (dateRange) {
-      case DeliveryDateRangeFilter.today:
-        return (todayStart, todayStart.add(const Duration(days: 1)));
-      case DeliveryDateRangeFilter.thisWeek:
-        final weekday = now.weekday;
-        final weekStart = todayStart.subtract(Duration(days: weekday - 1));
-        return (weekStart, weekStart.add(const Duration(days: 7)));
-      case DeliveryDateRangeFilter.thisMonth:
-        final monthStart = DateTime(now.year, now.month, 1);
-        final monthEnd = DateTime(now.year, now.month + 1, 1);
-        return (monthStart, monthEnd);
-      case DeliveryDateRangeFilter.custom:
-        final start = customStart ?? todayStart;
-        final end = (customEnd ?? todayStart).add(const Duration(days: 1));
-        return (start, end);
-      case DeliveryDateRangeFilter.none:
-        return (DateTime(2000), DateTime(2100));
-    }
-  }
-
-  @override
-  Stream<List<Delivery>> watchAll() {
-    return _db.deliveriesDao.watchAll().map(
-          (rows) => rows.map(_map).toList(),
-        );
-  }
-
-  @override
-  Stream<List<Delivery>> watchByFilter(
-    DeliveryFilter filter, {
-    DeliveryDateRangeFilter dateRange = DeliveryDateRangeFilter.none,
-    DateTime? customStart,
-    DateTime? customEnd,
-  }) {
-    switch (filter) {
-      case DeliveryFilter.today:
-        return _db.deliveriesDao
-            .watchTodayActive()
-            .map((rows) => rows.map(_map).toList());
-      case DeliveryFilter.completed:
-        if (dateRange != DeliveryDateRangeFilter.none) {
-          final (start, end) =
-              _resolveDateRange(dateRange, customStart, customEnd);
-          return _db.deliveriesDao
-              .watchCompletedOrPaidInRange(start, end)
-              .map((rows) => rows.map(_map).toList());
-        }
-        return _db.deliveriesDao
-            .watchCompletedOrPaid()
-            .map((rows) => rows.map(_map).toList());
-      case DeliveryFilter.all:
-        if (dateRange != DeliveryDateRangeFilter.none) {
-          final (start, end) =
-              _resolveDateRange(dateRange, customStart, customEnd);
-          return _db.deliveriesDao
-              .watchAllInRange(start, end)
-              .map((rows) => rows.map(_map).toList());
-        }
-        return _db.deliveriesDao
-            .watchAll()
-            .map((rows) => rows.map(_map).toList());
-    }
-  }
-
-  @override
-  Future<List<Delivery>> getAll() async {
-    final rows = await _db.deliveriesDao.getAll();
-    return rows.map(_map).toList();
-  }
-
-  @override
-  Future<List<Delivery>> getByCustomer(String customerId) async {
-    final rows = await _db.deliveriesDao.getByCustomer(customerId);
-    return rows.map(_map).toList();
-  }
-
-  @override
-  Stream<List<Delivery>> watchByCustomer(String customerId) {
-    return _db.deliveriesDao.watchByCustomer(customerId).map(
-          (rows) => rows.map(_map).toList(),
-        );
-  }
-
-  @override
-  Future<List<Delivery>> getByDateRange(DateTime start, DateTime end) async {
-    final rows = await _db.deliveriesDao.getByDateRange(start, end);
-    return rows.map(_map).toList();
-  }
-
-  @override
-  Future<Delivery?> getById(String id) async {
-    final row = await _db.deliveriesDao.getById(id);
-    return row != null ? _map(row) : null;
-  }
-
-  @override
-  Future<void> createDelivery(Delivery delivery) async {
-    await _db.deliveriesDao.insertDelivery(
-      DeliveriesTableCompanion.insert(
-        id: delivery.id,
-        customerId: delivery.customerId,
-        quantity: delivery.quantity,
-        pricePerBottle: delivery.pricePerBottle,
-        totalAmount: delivery.totalAmount,
-        paymentStatus:
-            Value(Delivery.paymentStatusToString(delivery.paymentStatus)),
-        amountPaid: Value(delivery.amountPaid),
-        remainingBalance: Value(delivery.remainingBalance),
-        deliveryDate: Value(delivery.deliveryDate),
-        deliveryTime: Value(delivery.deliveryTime),
-        deliveryStatus:
-            Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
-        notes: Value(delivery.notes),
-      ),
-    );
-
-    if (delivery.deliveryStatus == DeliveryStatus.completed ||
-        delivery.deliveryStatus == DeliveryStatus.inProgress) {
-      await _db.bottleTransactionsDao.insertTransaction(
-        BottleTransactionsTableCompanion.insert(
-          id: '${delivery.id}_borrow',
-          customerId: Value(delivery.customerId),
-          transactionType: 'borrow',
-          quantity: delivery.quantity,
-          date: Value(delivery.deliveryDate),
-          notes: Value('Delivery #${delivery.id.substring(0, 8)}'),
-        ),
-      );
-    }
-  }
-
-  @override
-  Future<void> updateDelivery(Delivery delivery) async {
-    await _db.deliveriesDao.updateDelivery(
-      DeliveriesTableCompanion(
-        id: Value(delivery.id),
-        customerId: Value(delivery.customerId),
-        quantity: Value(delivery.quantity),
-        pricePerBottle: Value(delivery.pricePerBottle),
-        totalAmount: Value(delivery.totalAmount),
-        paymentStatus:
-            Value(Delivery.paymentStatusToString(delivery.paymentStatus)),
-        amountPaid: Value(delivery.amountPaid),
-        remainingBalance: Value(delivery.remainingBalance),
-        deliveryDate: Value(delivery.deliveryDate),
-        deliveryTime: Value(delivery.deliveryTime),
-        deliveryStatus:
-            Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
-        notes: Value(delivery.notes),
-      ),
-    );
-  }
-
-  @override
-  Future<void> deleteDelivery(String id) async {
-    await _db.deliveriesDao.deleteDelivery(id);
-  }
-
-  @override
-  Future<void> syncAllPaymentStatuses() async {
-    final all = await _db.deliveriesDao.getAll();
-    for (final row in all) {
-      final newStatus = PaymentStatusUtils.computeStatus(
-        totalAmount: row.totalAmount,
-        amountPaid: row.amountPaid,
-      );
-      final newBalance = PaymentStatusUtils.computeRemainingBalance(
-        totalAmount: row.totalAmount,
-        amountPaid: row.amountPaid,
-      );
-      var deliveryStatus = row.deliveryStatus;
-      if (newStatus == 'paid' && deliveryStatus != 'cancelled') {
-        deliveryStatus = 'completed';
-      }
-      if (newStatus != row.paymentStatus ||
-          newBalance != row.remainingBalance ||
-          deliveryStatus != row.deliveryStatus) {
-        await _db.deliveriesDao.updateDelivery(
-          DeliveriesTableCompanion(
-            id: Value(row.id),
-            customerId: Value(row.customerId),
-            quantity: Value(row.quantity),
-            pricePerBottle: Value(row.pricePerBottle),
-            totalAmount: Value(row.totalAmount),
-            paymentStatus: Value(newStatus),
-            amountPaid: Value(row.amountPaid),
-            remainingBalance: Value(newBalance),
-            deliveryDate: Value(row.deliveryDate),
-            deliveryTime: Value(row.deliveryTime),
-            deliveryStatus: Value(deliveryStatus),
-            notes: Value(row.notes),
-          ),
-        );
-      }
-    }
-  }
-}
+import 'package:drift/drift.dart';
+
+import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/payment_status_utils.dart';
+import '../../domain/entities/delivery.dart';
+import '../../domain/repositories/delivery_repository.dart';
+
+class DeliveryRepositoryImpl implements DeliveryRepository {
+  final AppDatabase _db;
+
+  DeliveryRepositoryImpl(this._db);
+
+  Delivery _map(DeliveriesTableData row) {
+    return Delivery(
+      id: row.id,
+      customerId: row.customerId,
+      quantity: row.quantity,
+      pricePerBottle: row.pricePerBottle,
+      totalAmount: row.totalAmount,
+      paymentStatus: Delivery.paymentStatusFromString(row.paymentStatus),
+      amountPaid: row.amountPaid,
+      remainingBalance: row.remainingBalance,
+      deliveryDate: row.deliveryDate,
+      deliveryTime: row.deliveryTime,
+      deliveryStatus: Delivery.deliveryStatusFromString(row.deliveryStatus),
+      notes: row.notes,
+    );
+  }
+
+  DeliveriesTableCompanion _companion(Delivery delivery) {
+    return DeliveriesTableCompanion(
+      id: Value(delivery.id),
+      customerId: Value(delivery.customerId),
+      quantity: Value(delivery.quantity),
+      pricePerBottle: Value(delivery.pricePerBottle),
+      totalAmount: Value(delivery.totalAmount),
+      paymentStatus: Value(Delivery.paymentStatusToString(delivery.paymentStatus)),
+      amountPaid: Value(delivery.amountPaid),
+      remainingBalance: Value(delivery.remainingBalance),
+      deliveryDate: Value(delivery.deliveryDate),
+      deliveryTime: Value(delivery.deliveryTime),
+      deliveryStatus: Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
+      notes: Value(delivery.notes),
+    );
+  }
+
+  (DateTime, DateTime) _resolveDateRange(
+    DeliveryDateRangeFilter dateRange,
+    DateTime? customStart,
+    DateTime? customEnd,
+  ) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    switch (dateRange) {
+      case DeliveryDateRangeFilter.today:
+        return (todayStart, todayStart.add(const Duration(days: 1)));
+      case DeliveryDateRangeFilter.thisWeek:
+        final weekday = now.weekday;
+        final weekStart = todayStart.subtract(Duration(days: weekday - 1));
+        return (weekStart, weekStart.add(const Duration(days: 7)));
+      case DeliveryDateRangeFilter.thisMonth:
+        final monthStart = DateTime(now.year, now.month, 1);
+        final monthEnd = DateTime(now.year, now.month + 1, 1);
+        return (monthStart, monthEnd);
+      case DeliveryDateRangeFilter.custom:
+        final start = customStart ?? todayStart;
+        final end = (customEnd ?? todayStart).add(const Duration(days: 1));
+        return (start, end);
+      case DeliveryDateRangeFilter.none:
+        return (DateTime(2000), DateTime(2100));
+    }
+  }
+
+  Future<void> _syncBorrowTransaction(Delivery delivery) async {
+    final borrowId = '${delivery.id}_borrow';
+    await _db.bottleTransactionsDao.deleteTransaction(borrowId);
+
+    if (delivery.deliveryStatus == DeliveryStatus.completed ||
+        delivery.deliveryStatus == DeliveryStatus.inProgress) {
+      await _db.bottleTransactionsDao.insertTransaction(
+        BottleTransactionsTableCompanion.insert(
+          id: borrowId,
+          customerId: Value(delivery.customerId),
+          transactionType: 'borrow',
+          quantity: delivery.quantity,
+          date: Value(delivery.deliveryDate),
+          notes: Value('Delivery #${delivery.id.substring(0, 8)}'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Stream<List<Delivery>> watchAll() {
+    return _db.deliveriesDao.watchAll().map(
+          (rows) => rows.map(_map).toList(),
+        );
+  }
+
+  @override
+  Stream<List<Delivery>> watchByFilter(
+    DeliveryFilter filter, {
+    DeliveryDateRangeFilter dateRange = DeliveryDateRangeFilter.none,
+    DateTime? customStart,
+    DateTime? customEnd,
+  }) {
+    switch (filter) {
+      case DeliveryFilter.today:
+        return _db.deliveriesDao
+            .watchTodayActive()
+            .map((rows) => rows.map(_map).toList());
+      case DeliveryFilter.completed:
+        if (dateRange != DeliveryDateRangeFilter.none) {
+          final (start, end) =
+              _resolveDateRange(dateRange, customStart, customEnd);
+          return _db.deliveriesDao
+              .watchCompletedOrPaidInRange(start, end)
+              .map((rows) => rows.map(_map).toList());
+        }
+        return _db.deliveriesDao
+            .watchCompletedOrPaid()
+            .map((rows) => rows.map(_map).toList());
+      case DeliveryFilter.all:
+        if (dateRange != DeliveryDateRangeFilter.none) {
+          final (start, end) =
+              _resolveDateRange(dateRange, customStart, customEnd);
+          return _db.deliveriesDao
+              .watchAllInRange(start, end)
+              .map((rows) => rows.map(_map).toList());
+        }
+        return _db.deliveriesDao
+            .watchAll()
+            .map((rows) => rows.map(_map).toList());
+    }
+  }
+
+  @override
+  Future<List<Delivery>> getAll() async {
+    final rows = await _db.deliveriesDao.getAll();
+    return rows.map(_map).toList();
+  }
+
+  @override
+  Future<List<Delivery>> getByCustomer(String customerId) async {
+    final rows = await _db.deliveriesDao.getByCustomer(customerId);
+    return rows.map(_map).toList();
+  }
+
+  @override
+  Stream<List<Delivery>> watchByCustomer(String customerId) {
+    return _db.deliveriesDao.watchByCustomer(customerId).map(
+          (rows) => rows.map(_map).toList(),
+        );
+  }
+
+  @override
+  Future<List<Delivery>> getByDateRange(DateTime start, DateTime end) async {
+    final rows = await _db.deliveriesDao.getByDateRange(start, end);
+    return rows.map(_map).toList();
+  }
+
+  @override
+  Future<Delivery?> getById(String id) async {
+    final row = await _db.deliveriesDao.getById(id);
+    return row != null ? _map(row) : null;
+  }
+
+  @override
+  Future<void> createDelivery(Delivery delivery) async {
+    await _db.transaction(() async {
+      await _db.deliveriesDao.insertDelivery(
+        DeliveriesTableCompanion.insert(
+          id: delivery.id,
+          customerId: delivery.customerId,
+          quantity: delivery.quantity,
+          pricePerBottle: delivery.pricePerBottle,
+          totalAmount: delivery.totalAmount,
+          paymentStatus:
+              Value(Delivery.paymentStatusToString(delivery.paymentStatus)),
+          amountPaid: Value(delivery.amountPaid),
+          remainingBalance: Value(delivery.remainingBalance),
+          deliveryDate: Value(delivery.deliveryDate),
+          deliveryTime: Value(delivery.deliveryTime),
+          deliveryStatus:
+              Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
+          notes: Value(delivery.notes),
+        ),
+      );
+      await _syncBorrowTransaction(delivery);
+    });
+  }
+
+  @override
+  Future<void> updateDelivery(Delivery delivery) async {
+    await _db.transaction(() async {
+      await _db.deliveriesDao.updateDelivery(_companion(delivery));
+      await _syncBorrowTransaction(delivery);
+    });
+  }
+
+  @override
+  Future<void> deleteDelivery(String id) async {
+    await _db.transaction(() async {
+      await _db.paymentsDao.deleteByDelivery(id);
+      await _db.bottleTransactionsDao.deleteTransaction('${id}_borrow');
+      await _db.deliveriesDao.deleteDelivery(id);
+    });
+  }
+
+  @override
+  Future<void> syncAllPaymentStatuses() async {
+    final all = await _db.deliveriesDao.getAll();
+    for (final row in all) {
+      final newStatus = PaymentStatusUtils.computeStatus(
+        totalAmount: row.totalAmount,
+        amountPaid: row.amountPaid,
+      );
+      final newBalance = PaymentStatusUtils.computeRemainingBalance(
+        totalAmount: row.totalAmount,
+        amountPaid: row.amountPaid,
+      );
+      var deliveryStatus = row.deliveryStatus;
+      if (newStatus == 'paid' && deliveryStatus != 'cancelled') {
+        deliveryStatus = 'completed';
+      }
+      if (newStatus != row.paymentStatus ||
+          newBalance != row.remainingBalance ||
+          deliveryStatus != row.deliveryStatus) {
+        await _db.deliveriesDao.updateDelivery(
+          DeliveriesTableCompanion(
+            id: Value(row.id),
+            customerId: Value(row.customerId),
+            quantity: Value(row.quantity),
+            pricePerBottle: Value(row.pricePerBottle),
+            totalAmount: Value(row.totalAmount),
+            paymentStatus: Value(newStatus),
+            amountPaid: Value(row.amountPaid),
+            remainingBalance: Value(newBalance),
+            deliveryDate: Value(row.deliveryDate),
+            deliveryTime: Value(row.deliveryTime),
+            deliveryStatus: Value(deliveryStatus),
+            notes: Value(row.notes),
+          ),
+        );
+      }
+    }
+  }
+}

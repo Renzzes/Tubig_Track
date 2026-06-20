@@ -1,7 +1,7 @@
 name: tubig_track
 description: TubigTrack - Mineral Monitoring System for water refilling business.
 publish_to: 'none'
-version: 1.2.1+3
+version: 1.3.0+5
 
 environment:
   sdk: '>=3.8.0 <4.0.0'

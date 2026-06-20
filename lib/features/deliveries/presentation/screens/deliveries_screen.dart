@@ -5,6 +5,8 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
+import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../domain/entities/delivery.dart';
 import '../../domain/repositories/delivery_repository.dart';
 import '../providers/deliveries_provider.dart';
 import '../widgets/delivery_list_tile.dart';
@@ -82,6 +84,8 @@ class DeliveriesScreen extends ConsumerWidget {
                     return DeliveryListTile(
                       delivery: d,
                       customerName: customerMap[d.customerId] ?? 'Unknown',
+                      onEdit: () => context.push('/deliveries/${d.id}/edit'),
+                      onDelete: () => _confirmDelete(context, ref, d),
                     );
                   },
                 );
@@ -98,6 +102,27 @@ class DeliveriesScreen extends ConsumerWidget {
         label: const Text('New Delivery'),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Delivery delivery,
+  ) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Delete Delivery',
+      message:
+          'Delete this delivery?\n\nThis action cannot be undone.',
+      confirmText: 'Delete',
+    );
+    if (confirmed != true) return;
+    await ref.read(deliveryRepositoryProvider).deleteDelivery(delivery.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Delivery deleted')),
+      );
+    }
   }
 
   String _dateRangeLabel(DeliveryDateRangeFilter range) {

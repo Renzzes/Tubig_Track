@@ -16,6 +16,7 @@ class AboutScreen extends StatelessWidget {
     'Backup & Restore',
     'Notifications',
     'Self Update System',
+    'Savings Monitoring',
   ];
 
   @override

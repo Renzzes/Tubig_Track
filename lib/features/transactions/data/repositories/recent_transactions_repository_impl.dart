@@ -9,6 +9,14 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
 
   @override
   Future<List<RecentTransaction>> getRecent({int limit = 50}) async {
+    final all = await _buildAll();
+    return all.take(limit).toList();
+  }
+
+  @override
+  Future<List<RecentTransaction>> getAll() => _buildAll();
+
+  Future<List<RecentTransaction>> _buildAll() async {
     final items = <RecentTransaction>[];
 
     final customers = await _db.customersDao.getAll();
@@ -98,8 +106,22 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
       );
     }
 
+    for (final c in await _db.savingsDao.getAll()) {
+      items.add(
+        RecentTransaction(
+          id: 'savings_${c.id}',
+          type: RecentTransactionType.savingsAddition,
+          date: c.date,
+          title: 'Manual Savings',
+          subtitle: c.notes,
+          amount: c.amount,
+          isCredit: true,
+        ),
+      );
+    }
+
     items.sort((a, b) => b.date.compareTo(a.date));
-    return items.take(limit).toList();
+    return items;
   }
 
   String _typeTitle(RecentTransactionType type) {

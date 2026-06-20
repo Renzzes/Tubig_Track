@@ -1,0 +1,133 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../shared/widgets/history_filter_bar.dart';
+import '../../../../shared/widgets/loading_overlay.dart';
+import '../../domain/entities/recent_transaction.dart';
+import '../providers/recent_transactions_provider.dart';
+import '../widgets/recent_transactions_widget.dart';
+
+class AllTransactionsScreen extends ConsumerStatefulWidget {
+  const AllTransactionsScreen({super.key});
+
+  @override
+  ConsumerState<AllTransactionsScreen> createState() =>
+      _AllTransactionsScreenState();
+}
+
+class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
+  final _searchCtrl = TextEditingController();
+  DateTime? _startDate;
+  DateTime? _endDate;
+  RecentTransactionType? _typeFilter;
+  static const _pageSize = 30;
+  int _visibleCount = _pageSize;
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<RecentTransaction> _filter(List<RecentTransaction> all) {
+    final query = _searchCtrl.text.trim().toLowerCase();
+    return all.where((tx) {
+      if (_typeFilter != null && tx.type != _typeFilter) return false;
+      if (!isInDateRange(tx.date, _startDate, _endDate)) return false;
+      if (query.isEmpty) return true;
+      return tx.title.toLowerCase().contains(query) ||
+          tx.typeLabel.toLowerCase().contains(query) ||
+          (tx.subtitle?.toLowerCase().contains(query) ?? false);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final txsAsync = ref.watch(allTransactionsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('All Transactions')),
+      body: Column(
+        children: [
+          HistoryFilterBar(
+            searchController: _searchCtrl,
+            startDate: _startDate,
+            endDate: _endDate,
+            onDateFilterTap: () async {
+              final (start, end) = await showDateRangePickerDialog(
+                context,
+                initialStart: _startDate,
+                initialEnd: _endDate,
+              );
+              if (start != null) {
+                setState(() {
+                  _startDate = start;
+                  _endDate = end;
+                  _visibleCount = _pageSize;
+                });
+              }
+            },
+            onClearDates: () => setState(() {
+              _startDate = null;
+              _endDate = null;
+              _visibleCount = _pageSize;
+            }),
+            typeFilter: PopupMenuButton<RecentTransactionType?>(
+              icon: const Icon(Icons.filter_list),
+              tooltip: 'Type filter',
+              onSelected: (v) => setState(() {
+                _typeFilter = v;
+                _visibleCount = _pageSize;
+              }),
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: null, child: Text('All Types')),
+                ...RecentTransactionType.values.map(
+                  (t) => PopupMenuItem(
+                    value: t,
+                    child: Text(RecentTransaction(id: '', type: t, date: DateTime.now(), title: '', amount: 0, isCredit: true).typeLabel),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: txsAsync.when(
+              data: (all) {
+                final filtered = _filter(all);
+                if (filtered.isEmpty) {
+                  return const Center(child: Text('No transactions found'));
+                }
+                final visible = filtered.take(_visibleCount).toList();
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    if (n is ScrollEndNotification &&
+                        n.metrics.pixels >= n.metrics.maxScrollExtent - 100 &&
+                        _visibleCount < filtered.length) {
+                      setState(() => _visibleCount += _pageSize);
+                    }
+                    return false;
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      RecentTransactionsWidget(
+                        transactions: visible,
+                        limit: visible.length,
+                      ),
+                      if (_visibleCount < filtered.length)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const LoadingOverlay(),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

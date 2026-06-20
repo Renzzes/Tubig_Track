@@ -63,6 +63,12 @@ class PaymentsDao extends DatabaseAccessor<AppDatabase>
     return (delete(paymentsTable)..where((t) => t.id.equals(id))).go();
   }
 
+  Future<int> deleteByDelivery(String deliveryId) {
+    return (delete(paymentsTable)
+          ..where((t) => t.deliveryId.equals(deliveryId)))
+        .go();
+  }
+
   Future<double> getTotalForDateRange(DateTime start, DateTime end) async {
     final amountExpr = paymentsTable.amount.sum();
     final query = selectOnly(paymentsTable)

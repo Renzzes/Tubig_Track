@@ -2845,6 +2845,320 @@ class SettingsTableCompanion extends UpdateCompanion<SettingsTableData> {
   }
 }
 
+class $SavingsContributionsTableTable extends SavingsContributionsTable
+    with
+        TableInfo<
+          $SavingsContributionsTableTable,
+          SavingsContributionsTableData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavingsContributionsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, amount, date, notes];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'savings_contributions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavingsContributionsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavingsContributionsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavingsContributionsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+    );
+  }
+
+  @override
+  $SavingsContributionsTableTable createAlias(String alias) {
+    return $SavingsContributionsTableTable(attachedDatabase, alias);
+  }
+}
+
+class SavingsContributionsTableData extends DataClass
+    implements Insertable<SavingsContributionsTableData> {
+  final String id;
+  final double amount;
+  final DateTime date;
+  final String? notes;
+  const SavingsContributionsTableData({
+    required this.id,
+    required this.amount,
+    required this.date,
+    this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['amount'] = Variable<double>(amount);
+    map['date'] = Variable<DateTime>(date);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    return map;
+  }
+
+  SavingsContributionsTableCompanion toCompanion(bool nullToAbsent) {
+    return SavingsContributionsTableCompanion(
+      id: Value(id),
+      amount: Value(amount),
+      date: Value(date),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+    );
+  }
+
+  factory SavingsContributionsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavingsContributionsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      amount: serializer.fromJson<double>(json['amount']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      notes: serializer.fromJson<String?>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'amount': serializer.toJson<double>(amount),
+      'date': serializer.toJson<DateTime>(date),
+      'notes': serializer.toJson<String?>(notes),
+    };
+  }
+
+  SavingsContributionsTableData copyWith({
+    String? id,
+    double? amount,
+    DateTime? date,
+    Value<String?> notes = const Value.absent(),
+  }) => SavingsContributionsTableData(
+    id: id ?? this.id,
+    amount: amount ?? this.amount,
+    date: date ?? this.date,
+    notes: notes.present ? notes.value : this.notes,
+  );
+  SavingsContributionsTableData copyWithCompanion(
+    SavingsContributionsTableCompanion data,
+  ) {
+    return SavingsContributionsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      date: data.date.present ? data.date.value : this.date,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavingsContributionsTableData(')
+          ..write('id: $id, ')
+          ..write('amount: $amount, ')
+          ..write('date: $date, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, amount, date, notes);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavingsContributionsTableData &&
+          other.id == this.id &&
+          other.amount == this.amount &&
+          other.date == this.date &&
+          other.notes == this.notes);
+}
+
+class SavingsContributionsTableCompanion
+    extends UpdateCompanion<SavingsContributionsTableData> {
+  final Value<String> id;
+  final Value<double> amount;
+  final Value<DateTime> date;
+  final Value<String?> notes;
+  final Value<int> rowid;
+  const SavingsContributionsTableCompanion({
+    this.id = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.date = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SavingsContributionsTableCompanion.insert({
+    required String id,
+    required double amount,
+    this.date = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       amount = Value(amount);
+  static Insertable<SavingsContributionsTableData> custom({
+    Expression<String>? id,
+    Expression<double>? amount,
+    Expression<DateTime>? date,
+    Expression<String>? notes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (amount != null) 'amount': amount,
+      if (date != null) 'date': date,
+      if (notes != null) 'notes': notes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SavingsContributionsTableCompanion copyWith({
+    Value<String>? id,
+    Value<double>? amount,
+    Value<DateTime>? date,
+    Value<String?>? notes,
+    Value<int>? rowid,
+  }) {
+    return SavingsContributionsTableCompanion(
+      id: id ?? this.id,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      notes: notes ?? this.notes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavingsContributionsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('amount: $amount, ')
+          ..write('date: $date, ')
+          ..write('notes: $notes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2859,6 +3173,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $DispenserSalesTableTable dispenserSalesTable =
       $DispenserSalesTableTable(this);
   late final $SettingsTableTable settingsTable = $SettingsTableTable(this);
+  late final $SavingsContributionsTableTable savingsContributionsTable =
+      $SavingsContributionsTableTable(this);
   late final CustomersDao customersDao = CustomersDao(this as AppDatabase);
   late final DeliveriesDao deliveriesDao = DeliveriesDao(this as AppDatabase);
   late final BottleTransactionsDao bottleTransactionsDao =
@@ -2869,6 +3185,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     this as AppDatabase,
   );
   late final SettingsDao settingsDao = SettingsDao(this as AppDatabase);
+  late final SavingsDao savingsDao = SavingsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2881,6 +3198,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     expensesTable,
     dispenserSalesTable,
     settingsTable,
+    savingsContributionsTable,
   ];
 }
 
@@ -4486,6 +4804,206 @@ typedef $$SettingsTableTableProcessedTableManager =
       SettingsTableData,
       PrefetchHooks Function()
     >;
+typedef $$SavingsContributionsTableTableCreateCompanionBuilder =
+    SavingsContributionsTableCompanion Function({
+      required String id,
+      required double amount,
+      Value<DateTime> date,
+      Value<String?> notes,
+      Value<int> rowid,
+    });
+typedef $$SavingsContributionsTableTableUpdateCompanionBuilder =
+    SavingsContributionsTableCompanion Function({
+      Value<String> id,
+      Value<double> amount,
+      Value<DateTime> date,
+      Value<String?> notes,
+      Value<int> rowid,
+    });
+
+class $$SavingsContributionsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SavingsContributionsTableTable> {
+  $$SavingsContributionsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavingsContributionsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavingsContributionsTableTable> {
+  $$SavingsContributionsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavingsContributionsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavingsContributionsTableTable> {
+  $$SavingsContributionsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+}
+
+class $$SavingsContributionsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavingsContributionsTableTable,
+          SavingsContributionsTableData,
+          $$SavingsContributionsTableTableFilterComposer,
+          $$SavingsContributionsTableTableOrderingComposer,
+          $$SavingsContributionsTableTableAnnotationComposer,
+          $$SavingsContributionsTableTableCreateCompanionBuilder,
+          $$SavingsContributionsTableTableUpdateCompanionBuilder,
+          (
+            SavingsContributionsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $SavingsContributionsTableTable,
+              SavingsContributionsTableData
+            >,
+          ),
+          SavingsContributionsTableData,
+          PrefetchHooks Function()
+        > {
+  $$SavingsContributionsTableTableTableManager(
+    _$AppDatabase db,
+    $SavingsContributionsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavingsContributionsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$SavingsContributionsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$SavingsContributionsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavingsContributionsTableCompanion(
+                id: id,
+                amount: amount,
+                date: date,
+                notes: notes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required double amount,
+                Value<DateTime> date = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavingsContributionsTableCompanion.insert(
+                id: id,
+                amount: amount,
+                date: date,
+                notes: notes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavingsContributionsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavingsContributionsTableTable,
+      SavingsContributionsTableData,
+      $$SavingsContributionsTableTableFilterComposer,
+      $$SavingsContributionsTableTableOrderingComposer,
+      $$SavingsContributionsTableTableAnnotationComposer,
+      $$SavingsContributionsTableTableCreateCompanionBuilder,
+      $$SavingsContributionsTableTableUpdateCompanionBuilder,
+      (
+        SavingsContributionsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $SavingsContributionsTableTable,
+          SavingsContributionsTableData
+        >,
+      ),
+      SavingsContributionsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4507,4 +5025,9 @@ class $AppDatabaseManager {
       $$DispenserSalesTableTableTableManager(_db, _db.dispenserSalesTable);
   $$SettingsTableTableTableManager get settingsTable =>
       $$SettingsTableTableTableManager(_db, _db.settingsTable);
+  $$SavingsContributionsTableTableTableManager get savingsContributionsTable =>
+      $$SavingsContributionsTableTableTableManager(
+        _db,
+        _db.savingsContributionsTable,
+      );
 }
