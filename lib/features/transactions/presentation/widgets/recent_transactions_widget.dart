@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/recent_transaction.dart';
+import '../utils/transaction_activity_handler.dart';
 
 class RecentTransactionsWidget extends StatelessWidget {
   final List<RecentTransaction> transactions;
@@ -35,61 +36,69 @@ class RecentTransactionsWidget extends StatelessWidget {
         final amountPrefix = tx.isCredit ? '+' : '-';
         final amountColor = tx.isCredit ? Colors.green[700] : Colors.red[700];
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 64,
-                child: Text(
-                  time,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tx.typeLabel,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => TransactionActivityHandler.onTap(context, tx),
+            onLongPress: () => TransactionActivityHandler.onLongPress(context, tx),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      time,
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
-                    Text(
-                      tx.title,
-                      style: const TextStyle(fontSize: 13),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (tx.subtitle != null)
-                      Text(
-                        tx.subtitle!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tx.typeLabel,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    Text(
-                      DateFormatter.format(tx.date),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        Text(
+                          tx.title,
+                          style: const TextStyle(fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (tx.subtitle != null)
+                          Text(
+                            tx.subtitle!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        Text(
+                          DateFormatter.format(tx.date),
+                          style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    '$amountPrefix${CurrencyFormatter.format(tx.amount)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: amountColor,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '$amountPrefix${CurrencyFormatter.format(tx.amount)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: amountColor,
-                ),
-              ),
-            ],
+            ),
           ),
         );
       }).toList(),

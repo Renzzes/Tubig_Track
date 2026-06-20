@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../supply_purchases/data/repositories/supply_purchase_repository_impl.dart';
 import '../../domain/entities/expense.dart';
 import '../../domain/repositories/expense_repository.dart';
 
@@ -15,6 +16,11 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       amount: row.amount,
       date: row.date,
       notes: row.notes,
+      description: row.description,
+      supplier: row.supplier,
+      quantity: row.quantity,
+      unitCost: row.unitCost,
+      supplyPurchaseId: row.supplyPurchaseId,
     );
   }
 
@@ -38,6 +44,12 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   }
 
   @override
+  Future<Expense?> getById(String id) async {
+    final row = await _db.expensesDao.getById(id);
+    return row == null ? null : _map(row);
+  }
+
+  @override
   Future<void> addExpense(Expense expense) async {
     await _db.expensesDao.insertExpense(
       ExpensesTableCompanion.insert(
@@ -46,12 +58,23 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         amount: expense.amount,
         date: Value(expense.date),
         notes: Value(expense.notes),
+        description: Value(expense.description),
+        supplier: Value(expense.supplier),
+        quantity: Value(expense.quantity),
+        unitCost: Value(expense.unitCost),
+        supplyPurchaseId: Value(expense.supplyPurchaseId),
       ),
     );
   }
 
   @override
   Future<void> deleteExpense(String id) async {
+    final row = await _db.expensesDao.getById(id);
+    if (row?.supplyPurchaseId != null) {
+      await SupplyPurchaseRepositoryImpl(_db)
+          .deletePurchase(row!.supplyPurchaseId!);
+      return;
+    }
     await _db.expensesDao.deleteExpense(id);
   }
 }

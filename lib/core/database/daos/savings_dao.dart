@@ -35,4 +35,19 @@ class SavingsDao extends DatabaseAccessor<AppDatabase> with _$SavingsDaoMixin {
     final row = await query.getSingle();
     return row.read(amountExpr) ?? 0.0;
   }
+
+  Future<double> getTotalContributionsForDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final amountExpr = savingsContributionsTable.amount.sum();
+    final query = selectOnly(savingsContributionsTable)
+      ..addColumns([amountExpr])
+      ..where(
+        savingsContributionsTable.date.isBiggerOrEqualValue(start) &
+            savingsContributionsTable.date.isSmallerOrEqualValue(end),
+      );
+    final row = await query.getSingle();
+    return row.read(amountExpr) ?? 0.0;
+  }
 }

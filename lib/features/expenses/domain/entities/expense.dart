@@ -4,6 +4,11 @@ class Expense {
   final double amount;
   final DateTime date;
   final String? notes;
+  final String? description;
+  final String? supplier;
+  final int? quantity;
+  final double? unitCost;
+  final String? supplyPurchaseId;
 
   const Expense({
     required this.id,
@@ -11,5 +16,18 @@ class Expense {
     required this.amount,
     required this.date,
     this.notes,
+    this.description,
+    this.supplier,
+    this.quantity,
+    this.unitCost,
+    this.supplyPurchaseId,
   });
+
+  String get displayDescription {
+    if (description != null && description!.isNotEmpty) return description!;
+    if (quantity != null && quantity! > 0) {
+      return '$quantity $category';
+    }
+    return category;
+  }
 }

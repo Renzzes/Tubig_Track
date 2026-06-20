@@ -55,8 +55,11 @@ class SavingsRepositoryImpl implements SavingsRepository {
     }
 
     var bottlePurchases = 0.0;
+    final linkedBottleIds =
+        await _db.supplyPurchasesDao.getLinkedBottleTransactionIds();
     for (final t in bottleTxs) {
       if (t.transactionType == 'purchase') {
+        if (linkedBottleIds.contains(t.id)) continue;
         bottlePurchases += t.quantity * costPerBottle;
       }
     }
@@ -126,8 +129,11 @@ class SavingsRepositoryImpl implements SavingsRepository {
       );
     }
 
+    final linkedBottleIds =
+        await _db.supplyPurchasesDao.getLinkedBottleTransactionIds();
     for (final t in await _db.bottleTransactionsDao.getAll()) {
       if (t.transactionType != 'purchase') continue;
+      if (linkedBottleIds.contains(t.id)) continue;
       entries.add(
         SavingsLedgerEntry(
           id: 'bottle_${t.id}',

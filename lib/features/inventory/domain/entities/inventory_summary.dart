@@ -1,21 +1,16 @@
 class InventorySummary {
-  /// The starting inventory set by the user (before any transactions).
   final int initialInventory;
-
-  /// initialInventory + purchased − damaged
   final int totalBottles;
-
-  /// borrowed − returned (bottles currently with customers)
   final int borrowedOutstanding;
-
-  /// totalBottles − borrowedOutstanding
   final int availableBottles;
-
-  // Raw totals for reference
   final int borrowedBottles;
   final int returnedBottles;
   final int damagedBottles;
   final int purchasedBottles;
+  final int gallonsStock;
+  final int capsStock;
+  final int waterStocks;
+  final int othersStock;
 
   const InventorySummary({
     required this.initialInventory,
@@ -26,5 +21,9 @@ class InventorySummary {
     required this.returnedBottles,
     required this.damagedBottles,
     required this.purchasedBottles,
+    this.gallonsStock = 0,
+    this.capsStock = 0,
+    this.waterStocks = 0,
+    this.othersStock = 0,
   });
 }

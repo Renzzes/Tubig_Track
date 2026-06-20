@@ -124,7 +124,9 @@ class DashboardScreen extends ConsumerWidget {
                   value: CurrencyFormatter.format(savings.currentSavings),
                   icon: Icons.savings_outlined,
                   color: AppColors.success,
-                  subtitle: 'Tap for details',
+                  subtitle: savings.manualAdditions > 0
+                      ? 'Manual Additions: ${CurrencyFormatter.format(savings.manualAdditions)}'
+                      : 'Tap for details',
                   onTap: () => context.push('/savings'),
                 ),
                 loading: () => const SizedBox.shrink(),

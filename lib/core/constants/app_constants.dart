@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'TubigTrack';
-  static const String appVersion = '1.3.0';
+  static const String appVersion = '1.3.2';
   static const String applicationId = 'com.tubigtrack.tubig_track';
 
   /// GitHub Releases API for self-update.
@@ -20,14 +20,29 @@ class AppConstants {
   static const double defaultPricePerBottle = 30.0;
   static const double defaultCostPerBottle = 25.0;
 
-  static const List<String> expenseCategories = [
-    'Fuel',
-    'Electricity',
-    'Water',
-    'Maintenance',
-    'Salary',
-    'Supplies',
+  static const List<String> supplyItemTypes = [
+    'Gallons',
+    'Bottles',
+    'Caps',
+    'Water Stocks',
     'Others',
+  ];
+
+  /// Keys used in inventory_stock table (non-bottle items).
+  static const Map<String, String> supplyItemStockKeys = {
+    'Gallons': 'gallons',
+    'Caps': 'caps',
+    'Water Stocks': 'water_stocks',
+    'Others': 'others',
+  };
+
+  static const List<String> expenseCategories = [
+    'Supplies',
+    'Other Supplies',
+    'Operations',
+    'Maintenance',
+    'Utilities',
+    'Miscellaneous',
   ];
 
   static const String transactionBorrow = 'borrow';

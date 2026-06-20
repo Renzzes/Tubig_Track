@@ -13,11 +13,17 @@ final savingsRepositoryProvider = Provider<SavingsRepository>((ref) {
   return SavingsRepositoryImpl(ref.watch(databaseProvider));
 });
 
+final savingsContributionsStreamProvider = StreamProvider((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.savingsDao.watchAll();
+});
+
 final savingsSummaryProvider = FutureProvider<SavingsSummary>((ref) async {
   ref.watch(deliveriesStreamProvider);
   ref.watch(expensesStreamProvider);
   ref.watch(dispenserSalesStreamProvider);
   ref.watch(bottleTransactionsStreamProvider);
+  ref.watch(savingsContributionsStreamProvider);
   return ref.watch(savingsRepositoryProvider).getSummary();
 });
 
@@ -27,5 +33,6 @@ final savingsLedgerProvider =
   ref.watch(expensesStreamProvider);
   ref.watch(dispenserSalesStreamProvider);
   ref.watch(bottleTransactionsStreamProvider);
+  ref.watch(savingsContributionsStreamProvider);
   return ref.watch(savingsRepositoryProvider).getLedgerHistory();
 });

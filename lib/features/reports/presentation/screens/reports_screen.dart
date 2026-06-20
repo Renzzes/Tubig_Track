@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:excel/excel.dart' as xl;
 import 'package:share_plus/share_plus.dart';
@@ -108,18 +109,32 @@ class ReportsScreen extends ConsumerWidget {
               pw.SizedBox(height: 20),
               pw.Divider(),
               pw.SizedBox(height: 10),
-              _pdfRow('Delivery Sales', CurrencyFormatter.format(report.deliverySales)),
-              _pdfRow('Dispenser Sales', CurrencyFormatter.format(report.dispenserSales)),
+              pw.Text('Revenue', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              _pdfRow('Delivery Revenue', CurrencyFormatter.format(report.deliverySales)),
+              _pdfRow('Dispenser Revenue', CurrencyFormatter.format(report.dispenserSales)),
               _pdfRow('Total Sales', CurrencyFormatter.format(report.totalSales), bold: true),
               pw.SizedBox(height: 10),
-              _pdfRow('Total Expenses', CurrencyFormatter.format(report.totalExpenses)),
+              pw.Text('Supplies Purchased', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              _pdfRow('Supplies', CurrencyFormatter.format(report.suppliesExpenses)),
+              _pdfRow('Other Supplies', CurrencyFormatter.format(report.otherSuppliesExpenses)),
+              _pdfRow('Total Supplies Purchased',
+                  CurrencyFormatter.format(report.totalSuppliesPurchased), bold: true),
+              pw.SizedBox(height: 10),
+              pw.Text('Expenses', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              _pdfRow('Operations', CurrencyFormatter.format(report.operationsExpenses)),
+              _pdfRow('Maintenance', CurrencyFormatter.format(report.maintenanceExpenses)),
+              _pdfRow('Utilities', CurrencyFormatter.format(report.utilitiesExpenses)),
+              _pdfRow('Miscellaneous', CurrencyFormatter.format(report.miscellaneousExpenses)),
+              _pdfRow('Total Expenses', CurrencyFormatter.format(report.totalExpenses), bold: true),
+              pw.SizedBox(height: 10),
+              pw.Text('Savings Summary', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              _pdfRow('Current Savings', CurrencyFormatter.format(report.currentSavings)),
+              _pdfRow('Manual Savings Additions',
+                  CurrencyFormatter.format(report.totalManualSavings)),
+              _pdfRow('Net Savings', CurrencyFormatter.format(report.netSavings), bold: true),
               pw.SizedBox(height: 10),
               pw.Divider(),
-              _pdfRow(
-                'Net Profit',
-                CurrencyFormatter.format(report.netProfit),
-                bold: true,
-              ),
+              _pdfRow('Net Profit', CurrencyFormatter.format(report.netProfit), bold: true),
               pw.SizedBox(height: 20),
               _pdfRow('Total Deliveries', '${report.totalDeliveries}'),
               _pdfRow('Bottles Delivered', '${report.totalBottlesDelivered}'),
@@ -188,21 +203,65 @@ class ReportsScreen extends ConsumerWidget {
         xl.TextCellValue('Metric'),
         xl.TextCellValue('Value'),
       ]);
+      sheet.appendRow([xl.TextCellValue('Revenue')]);
       sheet.appendRow([
-        xl.TextCellValue('Delivery Sales'),
+        xl.TextCellValue('Delivery Revenue'),
         xl.DoubleCellValue(report.deliverySales),
       ]);
       sheet.appendRow([
-        xl.TextCellValue('Dispenser Sales'),
+        xl.TextCellValue('Dispenser Revenue'),
         xl.DoubleCellValue(report.dispenserSales),
       ]);
       sheet.appendRow([
         xl.TextCellValue('Total Sales'),
         xl.DoubleCellValue(report.totalSales),
       ]);
+      sheet.appendRow([xl.TextCellValue('Supplies Purchased')]);
+      sheet.appendRow([
+        xl.TextCellValue('Supplies'),
+        xl.DoubleCellValue(report.suppliesExpenses),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Other Supplies'),
+        xl.DoubleCellValue(report.otherSuppliesExpenses),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Total Supplies Purchased'),
+        xl.DoubleCellValue(report.totalSuppliesPurchased),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Expenses')]);
+      sheet.appendRow([
+        xl.TextCellValue('Operations'),
+        xl.DoubleCellValue(report.operationsExpenses),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Maintenance'),
+        xl.DoubleCellValue(report.maintenanceExpenses),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Utilities'),
+        xl.DoubleCellValue(report.utilitiesExpenses),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Miscellaneous'),
+        xl.DoubleCellValue(report.miscellaneousExpenses),
+      ]);
       sheet.appendRow([
         xl.TextCellValue('Total Expenses'),
         xl.DoubleCellValue(report.totalExpenses),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Savings Summary')]);
+      sheet.appendRow([
+        xl.TextCellValue('Current Savings'),
+        xl.DoubleCellValue(report.currentSavings),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Manual Savings Additions'),
+        xl.DoubleCellValue(report.totalManualSavings),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Net Savings'),
+        xl.DoubleCellValue(report.netSavings),
       ]);
       sheet.appendRow([
         xl.TextCellValue('Net Profit'),
@@ -254,13 +313,13 @@ class ReportsScreen extends ConsumerWidget {
   }
 }
 
-class _ReportContent extends StatelessWidget {
+class _ReportContent extends ConsumerWidget {
   final ReportSummary report;
 
   const _ReportContent({required this.report});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: EdgeInsets.all(context.pageHorizontalPadding),
       children: [
@@ -295,11 +354,11 @@ class _ReportContent extends StatelessWidget {
         _SectionHeader(title: 'Revenue', icon: Icons.trending_up, color: AppColors.primary),
         const SizedBox(height: 8),
         _MetricRow(
-          label: 'Delivery Sales',
+          label: 'Delivery Revenue',
           value: CurrencyFormatter.format(report.deliverySales),
         ),
         _MetricRow(
-          label: 'Dispenser Sales',
+          label: 'Dispenser Revenue',
           value: CurrencyFormatter.format(report.dispenserSales),
         ),
         const Divider(),
@@ -315,9 +374,124 @@ class _ReportContent extends StatelessWidget {
         _SectionHeader(title: 'Expenses', icon: Icons.receipt_outlined, color: AppColors.error),
         const SizedBox(height: 8),
         _MetricRow(
+          label: 'Operations',
+          value: CurrencyFormatter.format(report.operationsExpenses),
+        ),
+        _MetricRow(
+          label: 'Maintenance',
+          value: CurrencyFormatter.format(report.maintenanceExpenses),
+        ),
+        _MetricRow(
+          label: 'Utilities',
+          value: CurrencyFormatter.format(report.utilitiesExpenses),
+        ),
+        _MetricRow(
+          label: 'Miscellaneous',
+          value: CurrencyFormatter.format(report.miscellaneousExpenses),
+        ),
+        const Divider(),
+        _MetricRow(
           label: 'Total Expenses',
           value: CurrencyFormatter.format(report.totalExpenses),
+          isTotal: true,
           color: AppColors.error,
+        ),
+        const SizedBox(height: 16),
+
+        // Supplies Purchased section
+        _SectionHeader(
+          title: 'Supplies Purchased',
+          icon: Icons.inventory_outlined,
+          color: AppColors.warning,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Supplies',
+          value: CurrencyFormatter.format(report.suppliesExpenses),
+        ),
+        if (report.suppliesDetails.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          ...report.suppliesDetails.map(
+            (d) => _DetailRow(
+              label: d.description,
+              value: CurrencyFormatter.format(d.amount),
+              subtitle: d.supplier,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Other Supplies',
+          value: CurrencyFormatter.format(report.otherSuppliesExpenses),
+        ),
+        if (report.otherSuppliesDetails.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          ...report.otherSuppliesDetails.map(
+            (d) => _DetailRow(
+              label: d.description,
+              value: CurrencyFormatter.format(d.amount),
+              subtitle: d.supplier,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        const Text(
+          'Supply Purchase Details',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        if (report.otherSuppliesDetails.isEmpty && report.suppliesDetails.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'No supply purchase details for this period',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+          ),
+        const Divider(),
+        _MetricRow(
+          label: 'Total Supplies Purchased',
+          value: CurrencyFormatter.format(report.totalSuppliesPurchased),
+          isTotal: true,
+          color: AppColors.warning,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => context.push('/reports/supplier-summary'),
+          icon: const Icon(Icons.store_outlined, size: 18),
+          label: const Text('View Supplier Summary'),
+        ),
+        const SizedBox(height: 16),
+
+        // Savings section
+        _SectionHeader(
+          title: 'Savings Summary',
+          icon: Icons.savings_outlined,
+          color: AppColors.success,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Current Savings',
+          value: CurrencyFormatter.format(report.currentSavings),
+        ),
+        _MetricRow(
+          label: 'Manual Savings Additions',
+          value: CurrencyFormatter.format(report.totalManualSavings),
+        ),
+        if (report.manualSavingsInPeriod > 0)
+          _MetricRow(
+            label: 'Manual Additions (This Period)',
+            value: CurrencyFormatter.format(report.manualSavingsInPeriod),
+          ),
+        const Divider(),
+        _MetricRow(
+          label: 'Net Savings',
+          value: CurrencyFormatter.format(report.netSavings),
+          isTotal: true,
+          color: AppColors.success,
         ),
         const SizedBox(height: 16),
 
@@ -369,9 +543,9 @@ class _ReportContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // Operations section
+        // Delivery activity section
         _SectionHeader(
-          title: 'Operations',
+          title: 'Delivery Activity',
           icon: Icons.local_shipping_outlined,
           color: AppColors.primary,
         ),
@@ -420,6 +594,53 @@ class _SectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final String? subtitle;
+
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 13),
+                ),
+                if (subtitle != null && subtitle!.isNotEmpty)
+                  Text(
+                    subtitle!,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

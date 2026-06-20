@@ -49,6 +49,11 @@ class InventoryRepositoryImpl implements InventoryRepository {
     final availableBottles =
         (totalBottles - borrowedOutstanding).clamp(0, 999999);
 
+    final gallonsStock = await _db.inventoryStockDao.getQuantity('gallons');
+    final capsStock = await _db.inventoryStockDao.getQuantity('caps');
+    final waterStocks = await _db.inventoryStockDao.getQuantity('water_stocks');
+    final othersStock = await _db.inventoryStockDao.getQuantity('others');
+
     return InventorySummary(
       initialInventory: initialInventory,
       totalBottles: totalBottles,
@@ -58,6 +63,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
       returnedBottles: returned,
       damagedBottles: damaged,
       purchasedBottles: purchased,
+      gallonsStock: gallonsStock,
+      capsStock: capsStock,
+      waterStocks: waterStocks,
+      othersStock: othersStock,
     );
   }
 

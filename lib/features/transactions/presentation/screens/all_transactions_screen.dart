@@ -28,6 +28,31 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
     super.dispose();
   }
 
+  static String _typeLabel(RecentTransactionType type) {
+    switch (type) {
+      case RecentTransactionType.delivery:
+        return 'Delivery';
+      case RecentTransactionType.payment:
+        return 'Payment';
+      case RecentTransactionType.expense:
+        return 'Expense';
+      case RecentTransactionType.bottleBorrow:
+        return 'Bottle Borrow';
+      case RecentTransactionType.bottleReturn:
+        return 'Bottle Return';
+      case RecentTransactionType.bottlePurchase:
+        return 'Inventory Purchase';
+      case RecentTransactionType.bottleDamaged:
+        return 'Damaged Bottles';
+      case RecentTransactionType.dispenserSale:
+        return 'Dispenser Sale';
+      case RecentTransactionType.savingsAddition:
+        return 'Savings Addition';
+      case RecentTransactionType.supplyPurchase:
+        return 'Supply Purchase';
+    }
+  }
+
   List<RecentTransaction> _filter(List<RecentTransaction> all) {
     final query = _searchCtrl.text.trim().toLowerCase();
     return all.where((tx) {
@@ -83,7 +108,7 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
                 ...RecentTransactionType.values.map(
                   (t) => PopupMenuItem(
                     value: t,
-                    child: Text(RecentTransaction(id: '', type: t, date: DateTime.now(), title: '', amount: 0, isCredit: true).typeLabel),
+                    child: Text(_typeLabel(t)),
                   ),
                 ),
               ],

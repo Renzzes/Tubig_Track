@@ -133,6 +133,92 @@ class InventoryScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
+          // Supply management
+          Text(
+            'Supply Management',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final useColumn = constraints.maxWidth < 400;
+              final children = [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.push('/inventory/purchase-stock'),
+                    icon: const Icon(Icons.add_shopping_cart, size: 18),
+                    label: const Text('Purchase Stock'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        context.push('/inventory/supply-purchases'),
+                    icon: const Icon(Icons.history, size: 18),
+                    label: const Text('Supply Purchases'),
+                  ),
+                ),
+              ];
+              if (useColumn) {
+                return Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            context.push('/inventory/purchase-stock'),
+                        icon: const Icon(Icons.add_shopping_cart, size: 18),
+                        label: const Text('Purchase Stock'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () =>
+                            context.push('/inventory/supply-purchases'),
+                        icon: const Icon(Icons.history, size: 18),
+                        label: const Text('Supply Purchases'),
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Row(children: children);
+            },
+          ),
+          summaryAsync.when(
+            data: (s) {
+              if (s.gallonsStock == 0 &&
+                  s.capsStock == 0 &&
+                  s.waterStocks == 0 &&
+                  s.othersStock == 0) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (s.gallonsStock > 0)
+                      Chip(label: Text('Gallons: ${s.gallonsStock}')),
+                    if (s.capsStock > 0)
+                      Chip(label: Text('Caps: ${s.capsStock}')),
+                    if (s.waterStocks > 0)
+                      Chip(label: Text('Water Stocks: ${s.waterStocks}')),
+                    if (s.othersStock > 0)
+                      Chip(label: Text('Others: ${s.othersStock}')),
+                  ],
+                ),
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 20),
+
           // Action buttons
           Text(
             'Record Transaction',

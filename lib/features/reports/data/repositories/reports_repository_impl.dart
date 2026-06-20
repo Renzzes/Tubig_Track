@@ -1,7 +1,9 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/expense_category_utils.dart';
 import '../../domain/entities/report_summary.dart';
 import '../../domain/repositories/reports_repository.dart';
+import '../../../savings/data/repositories/savings_repository_impl.dart';
 
 class ReportsRepositoryImpl implements ReportsRepository {
   final AppDatabase _db;
@@ -48,8 +50,56 @@ class ReportsRepositoryImpl implements ReportsRepository {
         await _db.dispenserSalesDao.getTotalForDateRange(start, end);
     final totalSales = deliverySales + dispenserSales;
 
-    final totalExpenses =
-        await _db.expensesDao.getTotalForDateRange(start, end);
+    final expenseRows = await _db.expensesDao.getByDateRange(start, end);
+    final expenseData = expenseRows
+        .map((e) => (category: e.category, amount: e.amount))
+        .toList();
+
+    final suppliesExpenses = ExpenseCategoryUtils.sumForGroup(
+      expenseData,
+      ExpenseCategoryUtils.supplies,
+    );
+    final otherSuppliesExpenses = ExpenseCategoryUtils.sumForGroup(
+      expenseData,
+      ExpenseCategoryUtils.otherSupplies,
+    );
+    final totalSuppliesPurchased = suppliesExpenses + otherSuppliesExpenses;
+    final operationsExpenses = ExpenseCategoryUtils.sumForGroup(
+      expenseData,
+      ExpenseCategoryUtils.operations,
+    );
+    final maintenanceExpenses = ExpenseCategoryUtils.sumForGroup(
+      expenseData,
+      ExpenseCategoryUtils.maintenance,
+    );
+    final utilitiesExpenses = ExpenseCategoryUtils.sumForGroup(
+      expenseData,
+      ExpenseCategoryUtils.utilities,
+    );
+    final miscellaneousExpenses = ExpenseCategoryUtils.sumForGroup(
+      expenseData,
+      ExpenseCategoryUtils.miscellaneous,
+    );
+    final totalExpenses = expenseData.fold(0.0, (s, e) => s + e.amount);
+
+    final suppliesDetails = <SupplyDetailLine>[];
+    final otherSuppliesDetails = <SupplyDetailLine>[];
+    for (final e in expenseRows) {
+      final group = ExpenseCategoryUtils.reportGroupFor(e.category);
+      final desc = e.description?.isNotEmpty == true
+          ? e.description!
+          : (e.notes?.isNotEmpty == true ? e.notes! : e.category);
+      final line = SupplyDetailLine(
+        description: desc,
+        amount: e.amount,
+        supplier: e.supplier,
+      );
+      if (group == ExpenseCategoryUtils.supplies) {
+        suppliesDetails.add(line);
+      } else if (group == ExpenseCategoryUtils.otherSupplies) {
+        otherSuppliesDetails.add(line);
+      }
+    }
 
     final paymentsReceived =
         await _db.paymentsDao.getTotalForDateRange(start, end);
@@ -58,6 +108,15 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final totalBottles =
         deliveries.fold<int>(0, (sum, d) => sum + d.quantity);
 
+    final savingsRepo = SavingsRepositoryImpl(_db);
+    final savingsSummary = await savingsRepo.getSummary();
+    final manualInPeriod =
+        await _db.savingsDao.getTotalContributionsForDateRange(start, end);
+
+    final businessSavings =
+        savingsSummary.currentSavings - savingsSummary.manualAdditions;
+    final netSavings = savingsSummary.currentSavings;
+
     return ReportSummary(
       period: period,
       startDate: start,
@@ -65,11 +124,24 @@ class ReportsRepositoryImpl implements ReportsRepository {
       deliverySales: deliverySales,
       dispenserSales: dispenserSales,
       totalSales: totalSales,
+      suppliesExpenses: suppliesExpenses,
+      otherSuppliesExpenses: otherSuppliesExpenses,
+      totalSuppliesPurchased: totalSuppliesPurchased,
+      operationsExpenses: operationsExpenses,
+      maintenanceExpenses: maintenanceExpenses,
+      utilitiesExpenses: utilitiesExpenses,
+      miscellaneousExpenses: miscellaneousExpenses,
       totalExpenses: totalExpenses,
+      suppliesDetails: suppliesDetails,
+      otherSuppliesDetails: otherSuppliesDetails,
       netProfit: totalSales - totalExpenses,
       totalDeliveries: deliveries.length,
       totalBottlesDelivered: totalBottles,
       totalPaymentsReceived: paymentsReceived,
+      currentSavings: businessSavings,
+      manualSavingsInPeriod: manualInPeriod,
+      totalManualSavings: savingsSummary.manualAdditions,
+      netSavings: netSavings,
     );
   }
 }

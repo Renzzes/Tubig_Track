@@ -28,6 +28,12 @@ import '../../features/deliveries/presentation/screens/add_delivery_screen.dart'
 
 import '../../features/inventory/presentation/screens/inventory_screen.dart';
 
+import '../../features/supply_purchases/presentation/screens/purchase_stock_screen.dart';
+
+import '../../features/supply_purchases/presentation/screens/supply_purchases_history_screen.dart';
+
+import '../../features/supply_purchases/presentation/screens/supplier_summary_screen.dart';
+
 import '../../features/reports/presentation/screens/reports_screen.dart';
 
 import '../../features/payments/presentation/screens/receive_payment_screen.dart';
@@ -302,6 +308,41 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/inventory/history',
 
         builder: (context, state) => const InventoryHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/purchase-stock',
+
+        builder: (context, state) => const PurchaseStockScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/supply-purchases',
+
+        builder: (context, state) => const SupplyPurchasesHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/supply-purchases/:id',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PurchaseStockScreen(purchaseId: id);
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/reports/supplier-summary',
+
+        builder: (context, state) => const SupplierSummaryScreen(),
 
       ),
 

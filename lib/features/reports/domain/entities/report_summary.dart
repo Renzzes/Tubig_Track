@@ -1,17 +1,52 @@
 enum ReportPeriod { daily, weekly, monthly, yearly }
 
+class SupplyDetailLine {
+  final String description;
+  final double amount;
+  final String? supplier;
+
+  const SupplyDetailLine({
+    required this.description,
+    required this.amount,
+    this.supplier,
+  });
+}
+
 class ReportSummary {
   final ReportPeriod period;
   final DateTime startDate;
   final DateTime endDate;
+
+  // Revenue
   final double deliverySales;
   final double dispenserSales;
   final double totalSales;
+
+  // Expenses by category group
+  final double suppliesExpenses;
+  final double otherSuppliesExpenses;
+  final double totalSuppliesPurchased;
+  final double operationsExpenses;
+  final double maintenanceExpenses;
+  final double utilitiesExpenses;
+  final double miscellaneousExpenses;
   final double totalExpenses;
+
+  // Supply drill-down
+  final List<SupplyDetailLine> suppliesDetails;
+  final List<SupplyDetailLine> otherSuppliesDetails;
+
+  // Profit & operations
   final double netProfit;
   final int totalDeliveries;
   final int totalBottlesDelivered;
   final double totalPaymentsReceived;
+
+  // Savings snapshot
+  final double currentSavings;
+  final double manualSavingsInPeriod;
+  final double totalManualSavings;
+  final double netSavings;
 
   const ReportSummary({
     required this.period,
@@ -20,10 +55,23 @@ class ReportSummary {
     required this.deliverySales,
     required this.dispenserSales,
     required this.totalSales,
+    required this.suppliesExpenses,
+    required this.otherSuppliesExpenses,
+    required this.totalSuppliesPurchased,
+    required this.operationsExpenses,
+    required this.maintenanceExpenses,
+    required this.utilitiesExpenses,
+    required this.miscellaneousExpenses,
     required this.totalExpenses,
+    required this.suppliesDetails,
+    required this.otherSuppliesDetails,
     required this.netProfit,
     required this.totalDeliveries,
     required this.totalBottlesDelivered,
     required this.totalPaymentsReceived,
+    required this.currentSavings,
+    required this.manualSavingsInPeriod,
+    required this.totalManualSavings,
+    required this.netSavings,
   });
 }

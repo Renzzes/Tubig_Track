@@ -35,6 +35,11 @@ class ExpensesDao extends DatabaseAccessor<AppDatabase>
         .get();
   }
 
+  Future<ExpensesTableData?> getById(String id) {
+    return (select(expensesTable)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
   Future<int> insertExpense(ExpensesTableCompanion companion) {
     return into(expensesTable).insert(companion);
   }
