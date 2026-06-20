@@ -547,6 +547,17 @@ class $DeliveriesTableTable extends DeliveriesTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _receiptNumberMeta = const VerificationMeta(
+    'receiptNumber',
+  );
+  @override
+  late final GeneratedColumn<String> receiptNumber = GeneratedColumn<String>(
+    'receipt_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -561,6 +572,7 @@ class $DeliveriesTableTable extends DeliveriesTable
     deliveryTime,
     deliveryStatus,
     notes,
+    receiptNumber,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -674,6 +686,15 @@ class $DeliveriesTableTable extends DeliveriesTable
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('receipt_number')) {
+      context.handle(
+        _receiptNumberMeta,
+        receiptNumber.isAcceptableOrUnknown(
+          data['receipt_number']!,
+          _receiptNumberMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -731,6 +752,10 @@ class $DeliveriesTableTable extends DeliveriesTable
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      receiptNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}receipt_number'],
+      ),
     );
   }
 
@@ -754,6 +779,7 @@ class DeliveriesTableData extends DataClass
   final String? deliveryTime;
   final String deliveryStatus;
   final String? notes;
+  final String? receiptNumber;
   const DeliveriesTableData({
     required this.id,
     required this.customerId,
@@ -767,6 +793,7 @@ class DeliveriesTableData extends DataClass
     this.deliveryTime,
     required this.deliveryStatus,
     this.notes,
+    this.receiptNumber,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -786,6 +813,9 @@ class DeliveriesTableData extends DataClass
     map['delivery_status'] = Variable<String>(deliveryStatus);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || receiptNumber != null) {
+      map['receipt_number'] = Variable<String>(receiptNumber);
     }
     return map;
   }
@@ -808,6 +838,9 @@ class DeliveriesTableData extends DataClass
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      receiptNumber: receiptNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receiptNumber),
     );
   }
 
@@ -829,6 +862,7 @@ class DeliveriesTableData extends DataClass
       deliveryTime: serializer.fromJson<String?>(json['deliveryTime']),
       deliveryStatus: serializer.fromJson<String>(json['deliveryStatus']),
       notes: serializer.fromJson<String?>(json['notes']),
+      receiptNumber: serializer.fromJson<String?>(json['receiptNumber']),
     );
   }
   @override
@@ -847,6 +881,7 @@ class DeliveriesTableData extends DataClass
       'deliveryTime': serializer.toJson<String?>(deliveryTime),
       'deliveryStatus': serializer.toJson<String>(deliveryStatus),
       'notes': serializer.toJson<String?>(notes),
+      'receiptNumber': serializer.toJson<String?>(receiptNumber),
     };
   }
 
@@ -863,6 +898,7 @@ class DeliveriesTableData extends DataClass
     Value<String?> deliveryTime = const Value.absent(),
     String? deliveryStatus,
     Value<String?> notes = const Value.absent(),
+    Value<String?> receiptNumber = const Value.absent(),
   }) => DeliveriesTableData(
     id: id ?? this.id,
     customerId: customerId ?? this.customerId,
@@ -876,6 +912,9 @@ class DeliveriesTableData extends DataClass
     deliveryTime: deliveryTime.present ? deliveryTime.value : this.deliveryTime,
     deliveryStatus: deliveryStatus ?? this.deliveryStatus,
     notes: notes.present ? notes.value : this.notes,
+    receiptNumber: receiptNumber.present
+        ? receiptNumber.value
+        : this.receiptNumber,
   );
   DeliveriesTableData copyWithCompanion(DeliveriesTableCompanion data) {
     return DeliveriesTableData(
@@ -909,6 +948,9 @@ class DeliveriesTableData extends DataClass
           ? data.deliveryStatus.value
           : this.deliveryStatus,
       notes: data.notes.present ? data.notes.value : this.notes,
+      receiptNumber: data.receiptNumber.present
+          ? data.receiptNumber.value
+          : this.receiptNumber,
     );
   }
 
@@ -926,7 +968,8 @@ class DeliveriesTableData extends DataClass
           ..write('deliveryDate: $deliveryDate, ')
           ..write('deliveryTime: $deliveryTime, ')
           ..write('deliveryStatus: $deliveryStatus, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('receiptNumber: $receiptNumber')
           ..write(')'))
         .toString();
   }
@@ -945,6 +988,7 @@ class DeliveriesTableData extends DataClass
     deliveryTime,
     deliveryStatus,
     notes,
+    receiptNumber,
   );
   @override
   bool operator ==(Object other) =>
@@ -961,7 +1005,8 @@ class DeliveriesTableData extends DataClass
           other.deliveryDate == this.deliveryDate &&
           other.deliveryTime == this.deliveryTime &&
           other.deliveryStatus == this.deliveryStatus &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.receiptNumber == this.receiptNumber);
 }
 
 class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
@@ -977,6 +1022,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
   final Value<String?> deliveryTime;
   final Value<String> deliveryStatus;
   final Value<String?> notes;
+  final Value<String?> receiptNumber;
   final Value<int> rowid;
   const DeliveriesTableCompanion({
     this.id = const Value.absent(),
@@ -991,6 +1037,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     this.deliveryTime = const Value.absent(),
     this.deliveryStatus = const Value.absent(),
     this.notes = const Value.absent(),
+    this.receiptNumber = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DeliveriesTableCompanion.insert({
@@ -1006,6 +1053,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     this.deliveryTime = const Value.absent(),
     this.deliveryStatus = const Value.absent(),
     this.notes = const Value.absent(),
+    this.receiptNumber = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        customerId = Value(customerId),
@@ -1025,6 +1073,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     Expression<String>? deliveryTime,
     Expression<String>? deliveryStatus,
     Expression<String>? notes,
+    Expression<String>? receiptNumber,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1040,6 +1089,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
       if (deliveryTime != null) 'delivery_time': deliveryTime,
       if (deliveryStatus != null) 'delivery_status': deliveryStatus,
       if (notes != null) 'notes': notes,
+      if (receiptNumber != null) 'receipt_number': receiptNumber,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1057,6 +1107,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     Value<String?>? deliveryTime,
     Value<String>? deliveryStatus,
     Value<String?>? notes,
+    Value<String?>? receiptNumber,
     Value<int>? rowid,
   }) {
     return DeliveriesTableCompanion(
@@ -1072,6 +1123,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
       deliveryTime: deliveryTime ?? this.deliveryTime,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
       notes: notes ?? this.notes,
+      receiptNumber: receiptNumber ?? this.receiptNumber,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1115,6 +1167,9 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (receiptNumber.present) {
+      map['receipt_number'] = Variable<String>(receiptNumber.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1136,6 +1191,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
           ..write('deliveryTime: $deliveryTime, ')
           ..write('deliveryStatus: $deliveryStatus, ')
           ..write('notes: $notes, ')
+          ..write('receiptNumber: $receiptNumber, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3466,6 +3522,17 @@ class $SupplyPurchasesTableTable extends SupplyPurchasesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _supplierIdMeta = const VerificationMeta(
+    'supplierId',
+  );
+  @override
+  late final GeneratedColumn<String> supplierId = GeneratedColumn<String>(
+    'supplier_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _itemTypeMeta = const VerificationMeta(
     'itemType',
   );
@@ -3546,6 +3613,7 @@ class $SupplyPurchasesTableTable extends SupplyPurchasesTable
     id,
     purchaseDate,
     supplierName,
+    supplierId,
     itemType,
     quantity,
     unitCost,
@@ -3590,6 +3658,12 @@ class $SupplyPurchasesTableTable extends SupplyPurchasesTable
       );
     } else if (isInserting) {
       context.missing(_supplierNameMeta);
+    }
+    if (data.containsKey('supplier_id')) {
+      context.handle(
+        _supplierIdMeta,
+        supplierId.isAcceptableOrUnknown(data['supplier_id']!, _supplierIdMeta),
+      );
     }
     if (data.containsKey('item_type')) {
       context.handle(
@@ -3670,6 +3744,10 @@ class $SupplyPurchasesTableTable extends SupplyPurchasesTable
         DriftSqlType.string,
         data['${effectivePrefix}supplier_name'],
       )!,
+      supplierId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}supplier_id'],
+      ),
       itemType: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}item_type'],
@@ -3712,6 +3790,7 @@ class SupplyPurchasesTableData extends DataClass
   final String id;
   final DateTime purchaseDate;
   final String supplierName;
+  final String? supplierId;
   final String itemType;
   final int quantity;
   final double unitCost;
@@ -3723,6 +3802,7 @@ class SupplyPurchasesTableData extends DataClass
     required this.id,
     required this.purchaseDate,
     required this.supplierName,
+    this.supplierId,
     required this.itemType,
     required this.quantity,
     required this.unitCost,
@@ -3737,6 +3817,9 @@ class SupplyPurchasesTableData extends DataClass
     map['id'] = Variable<String>(id);
     map['purchase_date'] = Variable<DateTime>(purchaseDate);
     map['supplier_name'] = Variable<String>(supplierName);
+    if (!nullToAbsent || supplierId != null) {
+      map['supplier_id'] = Variable<String>(supplierId);
+    }
     map['item_type'] = Variable<String>(itemType);
     map['quantity'] = Variable<int>(quantity);
     map['unit_cost'] = Variable<double>(unitCost);
@@ -3756,6 +3839,9 @@ class SupplyPurchasesTableData extends DataClass
       id: Value(id),
       purchaseDate: Value(purchaseDate),
       supplierName: Value(supplierName),
+      supplierId: supplierId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(supplierId),
       itemType: Value(itemType),
       quantity: Value(quantity),
       unitCost: Value(unitCost),
@@ -3779,6 +3865,7 @@ class SupplyPurchasesTableData extends DataClass
       id: serializer.fromJson<String>(json['id']),
       purchaseDate: serializer.fromJson<DateTime>(json['purchaseDate']),
       supplierName: serializer.fromJson<String>(json['supplierName']),
+      supplierId: serializer.fromJson<String?>(json['supplierId']),
       itemType: serializer.fromJson<String>(json['itemType']),
       quantity: serializer.fromJson<int>(json['quantity']),
       unitCost: serializer.fromJson<double>(json['unitCost']),
@@ -3797,6 +3884,7 @@ class SupplyPurchasesTableData extends DataClass
       'id': serializer.toJson<String>(id),
       'purchaseDate': serializer.toJson<DateTime>(purchaseDate),
       'supplierName': serializer.toJson<String>(supplierName),
+      'supplierId': serializer.toJson<String?>(supplierId),
       'itemType': serializer.toJson<String>(itemType),
       'quantity': serializer.toJson<int>(quantity),
       'unitCost': serializer.toJson<double>(unitCost),
@@ -3811,6 +3899,7 @@ class SupplyPurchasesTableData extends DataClass
     String? id,
     DateTime? purchaseDate,
     String? supplierName,
+    Value<String?> supplierId = const Value.absent(),
     String? itemType,
     int? quantity,
     double? unitCost,
@@ -3822,6 +3911,7 @@ class SupplyPurchasesTableData extends DataClass
     id: id ?? this.id,
     purchaseDate: purchaseDate ?? this.purchaseDate,
     supplierName: supplierName ?? this.supplierName,
+    supplierId: supplierId.present ? supplierId.value : this.supplierId,
     itemType: itemType ?? this.itemType,
     quantity: quantity ?? this.quantity,
     unitCost: unitCost ?? this.unitCost,
@@ -3843,6 +3933,9 @@ class SupplyPurchasesTableData extends DataClass
       supplierName: data.supplierName.present
           ? data.supplierName.value
           : this.supplierName,
+      supplierId: data.supplierId.present
+          ? data.supplierId.value
+          : this.supplierId,
       itemType: data.itemType.present ? data.itemType.value : this.itemType,
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
       unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
@@ -3861,6 +3954,7 @@ class SupplyPurchasesTableData extends DataClass
           ..write('id: $id, ')
           ..write('purchaseDate: $purchaseDate, ')
           ..write('supplierName: $supplierName, ')
+          ..write('supplierId: $supplierId, ')
           ..write('itemType: $itemType, ')
           ..write('quantity: $quantity, ')
           ..write('unitCost: $unitCost, ')
@@ -3877,6 +3971,7 @@ class SupplyPurchasesTableData extends DataClass
     id,
     purchaseDate,
     supplierName,
+    supplierId,
     itemType,
     quantity,
     unitCost,
@@ -3892,6 +3987,7 @@ class SupplyPurchasesTableData extends DataClass
           other.id == this.id &&
           other.purchaseDate == this.purchaseDate &&
           other.supplierName == this.supplierName &&
+          other.supplierId == this.supplierId &&
           other.itemType == this.itemType &&
           other.quantity == this.quantity &&
           other.unitCost == this.unitCost &&
@@ -3906,6 +4002,7 @@ class SupplyPurchasesTableCompanion
   final Value<String> id;
   final Value<DateTime> purchaseDate;
   final Value<String> supplierName;
+  final Value<String?> supplierId;
   final Value<String> itemType;
   final Value<int> quantity;
   final Value<double> unitCost;
@@ -3918,6 +4015,7 @@ class SupplyPurchasesTableCompanion
     this.id = const Value.absent(),
     this.purchaseDate = const Value.absent(),
     this.supplierName = const Value.absent(),
+    this.supplierId = const Value.absent(),
     this.itemType = const Value.absent(),
     this.quantity = const Value.absent(),
     this.unitCost = const Value.absent(),
@@ -3931,6 +4029,7 @@ class SupplyPurchasesTableCompanion
     required String id,
     this.purchaseDate = const Value.absent(),
     required String supplierName,
+    this.supplierId = const Value.absent(),
     required String itemType,
     required int quantity,
     required double unitCost,
@@ -3950,6 +4049,7 @@ class SupplyPurchasesTableCompanion
     Expression<String>? id,
     Expression<DateTime>? purchaseDate,
     Expression<String>? supplierName,
+    Expression<String>? supplierId,
     Expression<String>? itemType,
     Expression<int>? quantity,
     Expression<double>? unitCost,
@@ -3963,6 +4063,7 @@ class SupplyPurchasesTableCompanion
       if (id != null) 'id': id,
       if (purchaseDate != null) 'purchase_date': purchaseDate,
       if (supplierName != null) 'supplier_name': supplierName,
+      if (supplierId != null) 'supplier_id': supplierId,
       if (itemType != null) 'item_type': itemType,
       if (quantity != null) 'quantity': quantity,
       if (unitCost != null) 'unit_cost': unitCost,
@@ -3979,6 +4080,7 @@ class SupplyPurchasesTableCompanion
     Value<String>? id,
     Value<DateTime>? purchaseDate,
     Value<String>? supplierName,
+    Value<String?>? supplierId,
     Value<String>? itemType,
     Value<int>? quantity,
     Value<double>? unitCost,
@@ -3992,6 +4094,7 @@ class SupplyPurchasesTableCompanion
       id: id ?? this.id,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       supplierName: supplierName ?? this.supplierName,
+      supplierId: supplierId ?? this.supplierId,
       itemType: itemType ?? this.itemType,
       quantity: quantity ?? this.quantity,
       unitCost: unitCost ?? this.unitCost,
@@ -4014,6 +4117,9 @@ class SupplyPurchasesTableCompanion
     }
     if (supplierName.present) {
       map['supplier_name'] = Variable<String>(supplierName.value);
+    }
+    if (supplierId.present) {
+      map['supplier_id'] = Variable<String>(supplierId.value);
     }
     if (itemType.present) {
       map['item_type'] = Variable<String>(itemType.value);
@@ -4050,6 +4156,7 @@ class SupplyPurchasesTableCompanion
           ..write('id: $id, ')
           ..write('purchaseDate: $purchaseDate, ')
           ..write('supplierName: $supplierName, ')
+          ..write('supplierId: $supplierId, ')
           ..write('itemType: $itemType, ')
           ..write('quantity: $quantity, ')
           ..write('unitCost: $unitCost, ')
@@ -4287,6 +4394,937 @@ class InventoryStockTableCompanion
   }
 }
 
+class $SuppliersTableTable extends SuppliersTable
+    with TableInfo<$SuppliersTableTable, SuppliersTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SuppliersTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contactPersonMeta = const VerificationMeta(
+    'contactPerson',
+  );
+  @override
+  late final GeneratedColumn<String> contactPerson = GeneratedColumn<String>(
+    'contact_person',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _mobileMeta = const VerificationMeta('mobile');
+  @override
+  late final GeneratedColumn<String> mobile = GeneratedColumn<String>(
+    'mobile',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addressMeta = const VerificationMeta(
+    'address',
+  );
+  @override
+  late final GeneratedColumn<String> address = GeneratedColumn<String>(
+    'address',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    contactPerson,
+    mobile,
+    address,
+    notes,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'suppliers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SuppliersTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('contact_person')) {
+      context.handle(
+        _contactPersonMeta,
+        contactPerson.isAcceptableOrUnknown(
+          data['contact_person']!,
+          _contactPersonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('mobile')) {
+      context.handle(
+        _mobileMeta,
+        mobile.isAcceptableOrUnknown(data['mobile']!, _mobileMeta),
+      );
+    }
+    if (data.containsKey('address')) {
+      context.handle(
+        _addressMeta,
+        address.isAcceptableOrUnknown(data['address']!, _addressMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SuppliersTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SuppliersTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      contactPerson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}contact_person'],
+      ),
+      mobile: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mobile'],
+      ),
+      address: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}address'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SuppliersTableTable createAlias(String alias) {
+    return $SuppliersTableTable(attachedDatabase, alias);
+  }
+}
+
+class SuppliersTableData extends DataClass
+    implements Insertable<SuppliersTableData> {
+  final String id;
+  final String name;
+  final String? contactPerson;
+  final String? mobile;
+  final String? address;
+  final String? notes;
+  final DateTime createdAt;
+  const SuppliersTableData({
+    required this.id,
+    required this.name,
+    this.contactPerson,
+    this.mobile,
+    this.address,
+    this.notes,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || contactPerson != null) {
+      map['contact_person'] = Variable<String>(contactPerson);
+    }
+    if (!nullToAbsent || mobile != null) {
+      map['mobile'] = Variable<String>(mobile);
+    }
+    if (!nullToAbsent || address != null) {
+      map['address'] = Variable<String>(address);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SuppliersTableCompanion toCompanion(bool nullToAbsent) {
+    return SuppliersTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      contactPerson: contactPerson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contactPerson),
+      mobile: mobile == null && nullToAbsent
+          ? const Value.absent()
+          : Value(mobile),
+      address: address == null && nullToAbsent
+          ? const Value.absent()
+          : Value(address),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SuppliersTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SuppliersTableData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      contactPerson: serializer.fromJson<String?>(json['contactPerson']),
+      mobile: serializer.fromJson<String?>(json['mobile']),
+      address: serializer.fromJson<String?>(json['address']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'contactPerson': serializer.toJson<String?>(contactPerson),
+      'mobile': serializer.toJson<String?>(mobile),
+      'address': serializer.toJson<String?>(address),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SuppliersTableData copyWith({
+    String? id,
+    String? name,
+    Value<String?> contactPerson = const Value.absent(),
+    Value<String?> mobile = const Value.absent(),
+    Value<String?> address = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    DateTime? createdAt,
+  }) => SuppliersTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    contactPerson: contactPerson.present
+        ? contactPerson.value
+        : this.contactPerson,
+    mobile: mobile.present ? mobile.value : this.mobile,
+    address: address.present ? address.value : this.address,
+    notes: notes.present ? notes.value : this.notes,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SuppliersTableData copyWithCompanion(SuppliersTableCompanion data) {
+    return SuppliersTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      contactPerson: data.contactPerson.present
+          ? data.contactPerson.value
+          : this.contactPerson,
+      mobile: data.mobile.present ? data.mobile.value : this.mobile,
+      address: data.address.present ? data.address.value : this.address,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SuppliersTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('contactPerson: $contactPerson, ')
+          ..write('mobile: $mobile, ')
+          ..write('address: $address, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, name, contactPerson, mobile, address, notes, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SuppliersTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.contactPerson == this.contactPerson &&
+          other.mobile == this.mobile &&
+          other.address == this.address &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt);
+}
+
+class SuppliersTableCompanion extends UpdateCompanion<SuppliersTableData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> contactPerson;
+  final Value<String?> mobile;
+  final Value<String?> address;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const SuppliersTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.contactPerson = const Value.absent(),
+    this.mobile = const Value.absent(),
+    this.address = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SuppliersTableCompanion.insert({
+    required String id,
+    required String name,
+    this.contactPerson = const Value.absent(),
+    this.mobile = const Value.absent(),
+    this.address = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name);
+  static Insertable<SuppliersTableData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? contactPerson,
+    Expression<String>? mobile,
+    Expression<String>? address,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (contactPerson != null) 'contact_person': contactPerson,
+      if (mobile != null) 'mobile': mobile,
+      if (address != null) 'address': address,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SuppliersTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? contactPerson,
+    Value<String?>? mobile,
+    Value<String?>? address,
+    Value<String?>? notes,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return SuppliersTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      contactPerson: contactPerson ?? this.contactPerson,
+      mobile: mobile ?? this.mobile,
+      address: address ?? this.address,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (contactPerson.present) {
+      map['contact_person'] = Variable<String>(contactPerson.value);
+    }
+    if (mobile.present) {
+      map['mobile'] = Variable<String>(mobile.value);
+    }
+    if (address.present) {
+      map['address'] = Variable<String>(address.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SuppliersTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('contactPerson: $contactPerson, ')
+          ..write('mobile: $mobile, ')
+          ..write('address: $address, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SavingsGoalsTableTable extends SavingsGoalsTable
+    with TableInfo<$SavingsGoalsTableTable, SavingsGoalsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavingsGoalsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetAmountMeta = const VerificationMeta(
+    'targetAmount',
+  );
+  @override
+  late final GeneratedColumn<double> targetAmount = GeneratedColumn<double>(
+    'target_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetDateMeta = const VerificationMeta(
+    'targetDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> targetDate = GeneratedColumn<DateTime>(
+    'target_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    targetAmount,
+    targetDate,
+    notes,
+    isActive,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'savings_goals';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavingsGoalsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('target_amount')) {
+      context.handle(
+        _targetAmountMeta,
+        targetAmount.isAcceptableOrUnknown(
+          data['target_amount']!,
+          _targetAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetAmountMeta);
+    }
+    if (data.containsKey('target_date')) {
+      context.handle(
+        _targetDateMeta,
+        targetDate.isAcceptableOrUnknown(data['target_date']!, _targetDateMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavingsGoalsTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavingsGoalsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      targetAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}target_amount'],
+      )!,
+      targetDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}target_date'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SavingsGoalsTableTable createAlias(String alias) {
+    return $SavingsGoalsTableTable(attachedDatabase, alias);
+  }
+}
+
+class SavingsGoalsTableData extends DataClass
+    implements Insertable<SavingsGoalsTableData> {
+  final String id;
+  final String name;
+  final double targetAmount;
+  final DateTime? targetDate;
+  final String? notes;
+  final bool isActive;
+  final DateTime createdAt;
+  const SavingsGoalsTableData({
+    required this.id,
+    required this.name,
+    required this.targetAmount,
+    this.targetDate,
+    this.notes,
+    required this.isActive,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['target_amount'] = Variable<double>(targetAmount);
+    if (!nullToAbsent || targetDate != null) {
+      map['target_date'] = Variable<DateTime>(targetDate);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SavingsGoalsTableCompanion toCompanion(bool nullToAbsent) {
+    return SavingsGoalsTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      targetAmount: Value(targetAmount),
+      targetDate: targetDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetDate),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      isActive: Value(isActive),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SavingsGoalsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavingsGoalsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      targetAmount: serializer.fromJson<double>(json['targetAmount']),
+      targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'targetAmount': serializer.toJson<double>(targetAmount),
+      'targetDate': serializer.toJson<DateTime?>(targetDate),
+      'notes': serializer.toJson<String?>(notes),
+      'isActive': serializer.toJson<bool>(isActive),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SavingsGoalsTableData copyWith({
+    String? id,
+    String? name,
+    double? targetAmount,
+    Value<DateTime?> targetDate = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    bool? isActive,
+    DateTime? createdAt,
+  }) => SavingsGoalsTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    targetAmount: targetAmount ?? this.targetAmount,
+    targetDate: targetDate.present ? targetDate.value : this.targetDate,
+    notes: notes.present ? notes.value : this.notes,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SavingsGoalsTableData copyWithCompanion(SavingsGoalsTableCompanion data) {
+    return SavingsGoalsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      targetAmount: data.targetAmount.present
+          ? data.targetAmount.value
+          : this.targetAmount,
+      targetDate: data.targetDate.present
+          ? data.targetDate.value
+          : this.targetDate,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavingsGoalsTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('notes: $notes, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    targetAmount,
+    targetDate,
+    notes,
+    isActive,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavingsGoalsTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.targetAmount == this.targetAmount &&
+          other.targetDate == this.targetDate &&
+          other.notes == this.notes &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt);
+}
+
+class SavingsGoalsTableCompanion
+    extends UpdateCompanion<SavingsGoalsTableData> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<double> targetAmount;
+  final Value<DateTime?> targetDate;
+  final Value<String?> notes;
+  final Value<bool> isActive;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const SavingsGoalsTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.targetAmount = const Value.absent(),
+    this.targetDate = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SavingsGoalsTableCompanion.insert({
+    required String id,
+    required String name,
+    required double targetAmount,
+    this.targetDate = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       targetAmount = Value(targetAmount);
+  static Insertable<SavingsGoalsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<double>? targetAmount,
+    Expression<DateTime>? targetDate,
+    Expression<String>? notes,
+    Expression<bool>? isActive,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (targetAmount != null) 'target_amount': targetAmount,
+      if (targetDate != null) 'target_date': targetDate,
+      if (notes != null) 'notes': notes,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SavingsGoalsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<double>? targetAmount,
+    Value<DateTime?>? targetDate,
+    Value<String?>? notes,
+    Value<bool>? isActive,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return SavingsGoalsTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      targetAmount: targetAmount ?? this.targetAmount,
+      targetDate: targetDate ?? this.targetDate,
+      notes: notes ?? this.notes,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (targetAmount.present) {
+      map['target_amount'] = Variable<double>(targetAmount.value);
+    }
+    if (targetDate.present) {
+      map['target_date'] = Variable<DateTime>(targetDate.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavingsGoalsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('targetAmount: $targetAmount, ')
+          ..write('targetDate: $targetDate, ')
+          ..write('notes: $notes, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4307,6 +5345,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $SupplyPurchasesTableTable(this);
   late final $InventoryStockTableTable inventoryStockTable =
       $InventoryStockTableTable(this);
+  late final $SuppliersTableTable suppliersTable = $SuppliersTableTable(this);
+  late final $SavingsGoalsTableTable savingsGoalsTable =
+      $SavingsGoalsTableTable(this);
   late final CustomersDao customersDao = CustomersDao(this as AppDatabase);
   late final DeliveriesDao deliveriesDao = DeliveriesDao(this as AppDatabase);
   late final BottleTransactionsDao bottleTransactionsDao =
@@ -4324,6 +5365,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final InventoryStockDao inventoryStockDao = InventoryStockDao(
     this as AppDatabase,
   );
+  late final SuppliersDao suppliersDao = SuppliersDao(this as AppDatabase);
+  late final SavingsGoalsDao savingsGoalsDao = SavingsGoalsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4339,6 +5384,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     savingsContributionsTable,
     supplyPurchasesTable,
     inventoryStockTable,
+    suppliersTable,
+    savingsGoalsTable,
   ];
 }
 
@@ -4581,6 +5628,7 @@ typedef $$DeliveriesTableTableCreateCompanionBuilder =
       Value<String?> deliveryTime,
       Value<String> deliveryStatus,
       Value<String?> notes,
+      Value<String?> receiptNumber,
       Value<int> rowid,
     });
 typedef $$DeliveriesTableTableUpdateCompanionBuilder =
@@ -4597,6 +5645,7 @@ typedef $$DeliveriesTableTableUpdateCompanionBuilder =
       Value<String?> deliveryTime,
       Value<String> deliveryStatus,
       Value<String?> notes,
+      Value<String?> receiptNumber,
       Value<int> rowid,
     });
 
@@ -4666,6 +5715,11 @@ class $$DeliveriesTableTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get receiptNumber => $composableBuilder(
+    column: $table.receiptNumber,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4738,6 +5792,11 @@ class $$DeliveriesTableTableOrderingComposer
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get receiptNumber => $composableBuilder(
+    column: $table.receiptNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DeliveriesTableTableAnnotationComposer
@@ -4802,6 +5861,11 @@ class $$DeliveriesTableTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get receiptNumber => $composableBuilder(
+    column: $table.receiptNumber,
+    builder: (column) => column,
+  );
 }
 
 class $$DeliveriesTableTableTableManager
@@ -4853,6 +5917,7 @@ class $$DeliveriesTableTableTableManager
                 Value<String?> deliveryTime = const Value.absent(),
                 Value<String> deliveryStatus = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> receiptNumber = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DeliveriesTableCompanion(
                 id: id,
@@ -4867,6 +5932,7 @@ class $$DeliveriesTableTableTableManager
                 deliveryTime: deliveryTime,
                 deliveryStatus: deliveryStatus,
                 notes: notes,
+                receiptNumber: receiptNumber,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4883,6 +5949,7 @@ class $$DeliveriesTableTableTableManager
                 Value<String?> deliveryTime = const Value.absent(),
                 Value<String> deliveryStatus = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> receiptNumber = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DeliveriesTableCompanion.insert(
                 id: id,
@@ -4897,6 +5964,7 @@ class $$DeliveriesTableTableTableManager
                 deliveryTime: deliveryTime,
                 deliveryStatus: deliveryStatus,
                 notes: notes,
+                receiptNumber: receiptNumber,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6248,6 +7316,7 @@ typedef $$SupplyPurchasesTableTableCreateCompanionBuilder =
       required String id,
       Value<DateTime> purchaseDate,
       required String supplierName,
+      Value<String?> supplierId,
       required String itemType,
       required int quantity,
       required double unitCost,
@@ -6262,6 +7331,7 @@ typedef $$SupplyPurchasesTableTableUpdateCompanionBuilder =
       Value<String> id,
       Value<DateTime> purchaseDate,
       Value<String> supplierName,
+      Value<String?> supplierId,
       Value<String> itemType,
       Value<int> quantity,
       Value<double> unitCost,
@@ -6293,6 +7363,11 @@ class $$SupplyPurchasesTableTableFilterComposer
 
   ColumnFilters<String> get supplierName => $composableBuilder(
     column: $table.supplierName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get supplierId => $composableBuilder(
+    column: $table.supplierId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6356,6 +7431,11 @@ class $$SupplyPurchasesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get supplierId => $composableBuilder(
+    column: $table.supplierId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get itemType => $composableBuilder(
     column: $table.itemType,
     builder: (column) => ColumnOrderings(column),
@@ -6411,6 +7491,11 @@ class $$SupplyPurchasesTableTableAnnotationComposer
 
   GeneratedColumn<String> get supplierName => $composableBuilder(
     column: $table.supplierName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get supplierId => $composableBuilder(
+    column: $table.supplierId,
     builder: (column) => column,
   );
 
@@ -6484,6 +7569,7 @@ class $$SupplyPurchasesTableTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<DateTime> purchaseDate = const Value.absent(),
                 Value<String> supplierName = const Value.absent(),
+                Value<String?> supplierId = const Value.absent(),
                 Value<String> itemType = const Value.absent(),
                 Value<int> quantity = const Value.absent(),
                 Value<double> unitCost = const Value.absent(),
@@ -6496,6 +7582,7 @@ class $$SupplyPurchasesTableTableTableManager
                 id: id,
                 purchaseDate: purchaseDate,
                 supplierName: supplierName,
+                supplierId: supplierId,
                 itemType: itemType,
                 quantity: quantity,
                 unitCost: unitCost,
@@ -6510,6 +7597,7 @@ class $$SupplyPurchasesTableTableTableManager
                 required String id,
                 Value<DateTime> purchaseDate = const Value.absent(),
                 required String supplierName,
+                Value<String?> supplierId = const Value.absent(),
                 required String itemType,
                 required int quantity,
                 required double unitCost,
@@ -6522,6 +7610,7 @@ class $$SupplyPurchasesTableTableTableManager
                 id: id,
                 purchaseDate: purchaseDate,
                 supplierName: supplierName,
+                supplierId: supplierId,
                 itemType: itemType,
                 quantity: quantity,
                 unitCost: unitCost,
@@ -6719,6 +7808,507 @@ typedef $$InventoryStockTableTableProcessedTableManager =
       InventoryStockTableData,
       PrefetchHooks Function()
     >;
+typedef $$SuppliersTableTableCreateCompanionBuilder =
+    SuppliersTableCompanion Function({
+      required String id,
+      required String name,
+      Value<String?> contactPerson,
+      Value<String?> mobile,
+      Value<String?> address,
+      Value<String?> notes,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$SuppliersTableTableUpdateCompanionBuilder =
+    SuppliersTableCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> contactPerson,
+      Value<String?> mobile,
+      Value<String?> address,
+      Value<String?> notes,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$SuppliersTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SuppliersTableTable> {
+  $$SuppliersTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contactPerson => $composableBuilder(
+    column: $table.contactPerson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mobile => $composableBuilder(
+    column: $table.mobile,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get address => $composableBuilder(
+    column: $table.address,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SuppliersTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SuppliersTableTable> {
+  $$SuppliersTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contactPerson => $composableBuilder(
+    column: $table.contactPerson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mobile => $composableBuilder(
+    column: $table.mobile,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get address => $composableBuilder(
+    column: $table.address,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SuppliersTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SuppliersTableTable> {
+  $$SuppliersTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get contactPerson => $composableBuilder(
+    column: $table.contactPerson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mobile =>
+      $composableBuilder(column: $table.mobile, builder: (column) => column);
+
+  GeneratedColumn<String> get address =>
+      $composableBuilder(column: $table.address, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$SuppliersTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SuppliersTableTable,
+          SuppliersTableData,
+          $$SuppliersTableTableFilterComposer,
+          $$SuppliersTableTableOrderingComposer,
+          $$SuppliersTableTableAnnotationComposer,
+          $$SuppliersTableTableCreateCompanionBuilder,
+          $$SuppliersTableTableUpdateCompanionBuilder,
+          (
+            SuppliersTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $SuppliersTableTable,
+              SuppliersTableData
+            >,
+          ),
+          SuppliersTableData,
+          PrefetchHooks Function()
+        > {
+  $$SuppliersTableTableTableManager(
+    _$AppDatabase db,
+    $SuppliersTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SuppliersTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SuppliersTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SuppliersTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> contactPerson = const Value.absent(),
+                Value<String?> mobile = const Value.absent(),
+                Value<String?> address = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SuppliersTableCompanion(
+                id: id,
+                name: name,
+                contactPerson: contactPerson,
+                mobile: mobile,
+                address: address,
+                notes: notes,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<String?> contactPerson = const Value.absent(),
+                Value<String?> mobile = const Value.absent(),
+                Value<String?> address = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SuppliersTableCompanion.insert(
+                id: id,
+                name: name,
+                contactPerson: contactPerson,
+                mobile: mobile,
+                address: address,
+                notes: notes,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SuppliersTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SuppliersTableTable,
+      SuppliersTableData,
+      $$SuppliersTableTableFilterComposer,
+      $$SuppliersTableTableOrderingComposer,
+      $$SuppliersTableTableAnnotationComposer,
+      $$SuppliersTableTableCreateCompanionBuilder,
+      $$SuppliersTableTableUpdateCompanionBuilder,
+      (
+        SuppliersTableData,
+        BaseReferences<_$AppDatabase, $SuppliersTableTable, SuppliersTableData>,
+      ),
+      SuppliersTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$SavingsGoalsTableTableCreateCompanionBuilder =
+    SavingsGoalsTableCompanion Function({
+      required String id,
+      required String name,
+      required double targetAmount,
+      Value<DateTime?> targetDate,
+      Value<String?> notes,
+      Value<bool> isActive,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$SavingsGoalsTableTableUpdateCompanionBuilder =
+    SavingsGoalsTableCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<double> targetAmount,
+      Value<DateTime?> targetDate,
+      Value<String?> notes,
+      Value<bool> isActive,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$SavingsGoalsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SavingsGoalsTableTable> {
+  $$SavingsGoalsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavingsGoalsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavingsGoalsTableTable> {
+  $$SavingsGoalsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavingsGoalsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavingsGoalsTableTable> {
+  $$SavingsGoalsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get targetAmount => $composableBuilder(
+    column: $table.targetAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get targetDate => $composableBuilder(
+    column: $table.targetDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$SavingsGoalsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavingsGoalsTableTable,
+          SavingsGoalsTableData,
+          $$SavingsGoalsTableTableFilterComposer,
+          $$SavingsGoalsTableTableOrderingComposer,
+          $$SavingsGoalsTableTableAnnotationComposer,
+          $$SavingsGoalsTableTableCreateCompanionBuilder,
+          $$SavingsGoalsTableTableUpdateCompanionBuilder,
+          (
+            SavingsGoalsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $SavingsGoalsTableTable,
+              SavingsGoalsTableData
+            >,
+          ),
+          SavingsGoalsTableData,
+          PrefetchHooks Function()
+        > {
+  $$SavingsGoalsTableTableTableManager(
+    _$AppDatabase db,
+    $SavingsGoalsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavingsGoalsTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SavingsGoalsTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SavingsGoalsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> targetAmount = const Value.absent(),
+                Value<DateTime?> targetDate = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavingsGoalsTableCompanion(
+                id: id,
+                name: name,
+                targetAmount: targetAmount,
+                targetDate: targetDate,
+                notes: notes,
+                isActive: isActive,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required double targetAmount,
+                Value<DateTime?> targetDate = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavingsGoalsTableCompanion.insert(
+                id: id,
+                name: name,
+                targetAmount: targetAmount,
+                targetDate: targetDate,
+                notes: notes,
+                isActive: isActive,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavingsGoalsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavingsGoalsTableTable,
+      SavingsGoalsTableData,
+      $$SavingsGoalsTableTableFilterComposer,
+      $$SavingsGoalsTableTableOrderingComposer,
+      $$SavingsGoalsTableTableAnnotationComposer,
+      $$SavingsGoalsTableTableCreateCompanionBuilder,
+      $$SavingsGoalsTableTableUpdateCompanionBuilder,
+      (
+        SavingsGoalsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $SavingsGoalsTableTable,
+          SavingsGoalsTableData
+        >,
+      ),
+      SavingsGoalsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6749,4 +8339,8 @@ class $AppDatabaseManager {
       $$SupplyPurchasesTableTableTableManager(_db, _db.supplyPurchasesTable);
   $$InventoryStockTableTableTableManager get inventoryStockTable =>
       $$InventoryStockTableTableTableManager(_db, _db.inventoryStockTable);
+  $$SuppliersTableTableTableManager get suppliersTable =>
+      $$SuppliersTableTableTableManager(_db, _db.suppliersTable);
+  $$SavingsGoalsTableTableTableManager get savingsGoalsTable =>
+      $$SavingsGoalsTableTableTableManager(_db, _db.savingsGoalsTable);
 }

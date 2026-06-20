@@ -11,9 +11,11 @@ import '../../features/reports/presentation/providers/reports_provider.dart';
 import '../../features/settings/presentation/providers/settings_provider.dart';
 import '../../features/transactions/presentation/providers/recent_transactions_provider.dart';
 import '../../features/savings/presentation/providers/savings_provider.dart';
+import '../../features/savings/presentation/providers/savings_goals_provider.dart';
 import '../../features/supply_purchases/presentation/providers/supply_purchase_provider.dart';
+import '../../features/suppliers/presentation/providers/suppliers_provider.dart';
 
-/// Invalidates all data providers after a database restore.
+/// Invalidates all data providers after a database restore or reset.
 void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(databaseProvider);
   ref.invalidate(customersStreamProvider);
@@ -34,4 +36,9 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(savingsSummaryProvider);
   ref.invalidate(savingsLedgerProvider);
   ref.invalidate(supplyPurchasesStreamProvider);
+  ref.invalidate(suppliersStreamProvider);
+  ref.invalidate(savingsGoalsStreamProvider);
+  ref.invalidate(activeSavingsGoalProvider);
+  ref.invalidate(savingsInsightsProvider);
+  ref.invalidate(lowStockItemsProvider);
 }

@@ -9,6 +9,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../suppliers/presentation/providers/suppliers_provider.dart';
 import '../../domain/entities/supply_purchase.dart';
 import '../providers/supply_purchase_provider.dart';
 
@@ -30,6 +31,8 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
   final _notesCtrl = TextEditingController();
   DateTime _purchaseDate = DateTime.now();
   String _itemType = AppConstants.supplyItemTypes.first;
+  String? _selectedSupplierId;
+  bool _manualSupplier = false;
   bool _isLoading = false;
   bool _loaded = false;
   SupplyPurchase? _existing;
@@ -106,6 +109,7 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
               id: id,
               purchaseDate: _purchaseDate,
               supplierName: _supplierCtrl.text.trim(),
+              supplierId: _selectedSupplierId,
               itemType: _itemType,
               quantity: qty,
               unitCost: unitCost,
@@ -228,13 +232,74 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
                   onTap: _pickDate,
                 ),
                 const SizedBox(height: 12),
-                AppTextField(
-                  label: 'Supplier Name *',
-                  controller: _supplierCtrl,
-                  prefixIcon: const Icon(Icons.store_outlined),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Required' : null,
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Enter supplier manually'),
+                  value: _manualSupplier,
+                  onChanged: (v) => setState(() {
+                    _manualSupplier = v;
+                    _selectedSupplierId = null;
+                    if (!v) _supplierCtrl.clear();
+                  }),
                 ),
+                if (_manualSupplier)
+                  AppTextField(
+                    label: 'Supplier Name *',
+                    controller: _supplierCtrl,
+                    prefixIcon: const Icon(Icons.store_outlined),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
+                  )
+                else
+                  ref.watch(suppliersStreamProvider).when(
+                        data: (suppliers) =>
+                            DropdownButtonFormField<String?>(
+                          // ignore: deprecated_member_use
+                          value: _selectedSupplierId,
+                          decoration: const InputDecoration(
+                            labelText: 'Supplier *',
+                            prefixIcon: Icon(Icons.store_outlined),
+                          ),
+                          items: [
+                            ...suppliers.map(
+                              (s) => DropdownMenuItem(
+                                value: s.id,
+                                child: Text(s.name),
+                              ),
+                            ),
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('Manual entry...'),
+                            ),
+                          ],
+                          onChanged: (v) {
+                            setState(() {
+                              if (v == null) {
+                                _manualSupplier = true;
+                                _selectedSupplierId = null;
+                              } else {
+                                _selectedSupplierId = v;
+                                final s = suppliers
+                                    .firstWhere((x) => x.id == v);
+                                _supplierCtrl.text = s.name;
+                              }
+                            });
+                          },
+                          validator: (v) {
+                            if (!_manualSupplier && v == null) {
+                              return 'Select a supplier';
+                            }
+                            return null;
+                          },
+                        ),
+                        loading: () => const LinearProgressIndicator(),
+                        error: (_, __) => AppTextField(
+                          label: 'Supplier Name *',
+                          controller: _supplierCtrl,
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'Required' : null,
+                        ),
+                      ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   // ignore: deprecated_member_use

@@ -8,6 +8,7 @@ class SupplyPurchasesTable extends Table {
   DateTimeColumn get purchaseDate =>
       dateTime().withDefault(currentDateAndTime)();
   TextColumn get supplierName => text()();
+  TextColumn get supplierId => text().nullable()();
   // Gallons | Bottles | Caps | Water Stocks | Others
   TextColumn get itemType => text()();
   IntColumn get quantity => integer()();

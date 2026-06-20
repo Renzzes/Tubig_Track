@@ -22,6 +22,7 @@ class DeliveriesTable extends Table {
   TextColumn get deliveryStatus =>
       text().withDefault(const Constant('completed'))();
   TextColumn get notes => text().nullable()();
+  TextColumn get receiptNumber => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

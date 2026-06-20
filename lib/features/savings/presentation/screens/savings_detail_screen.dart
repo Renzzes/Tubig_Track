@@ -5,6 +5,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
+import '../../domain/entities/savings_goal.dart';
+import '../providers/savings_goals_provider.dart';
 import '../providers/savings_provider.dart';
 import '../widgets/add_savings_sheet.dart';
 
@@ -14,11 +16,18 @@ class SavingsDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(savingsSummaryProvider);
+    final insightsAsync = ref.watch(savingsInsightsProvider);
+    final activeGoalAsync = ref.watch(activeSavingsGoalProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Savings'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.flag_outlined),
+            tooltip: 'Goals',
+            onPressed: () => context.push('/savings/goals'),
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'History',
@@ -68,10 +77,70 @@ class SavingsDetailScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Breakdown',
-                style: Theme.of(context).textTheme.titleMedium,
+              activeGoalAsync.when(
+                data: (goal) {
+                  if (goal == null) return const SizedBox.shrink();
+                  final pct = goal.progressPercent(summary.currentSavings);
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Active Goal: ${goal.name}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              )),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(value: pct / 100),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Target: ${CurrencyFormatter.format(goal.targetAmount)} • Progress: ${pct.toStringAsFixed(0)}%',
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               ),
+              const SizedBox(height: 16),
+              insightsAsync.when(
+                data: (insights) => Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Savings Insights',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 12),
+                        _InsightRow(
+                          'Average Monthly Savings',
+                          CurrencyFormatter.format(insights.averageMonthlySavings),
+                        ),
+                        _InsightRow(
+                          'Highest Monthly Savings',
+                          CurrencyFormatter.format(insights.highestMonthlySavings),
+                        ),
+                        _InsightRow(
+                          'Lowest Monthly Savings',
+                          CurrencyFormatter.format(insights.lowestMonthlySavings),
+                        ),
+                        _InsightRow(
+                          'Trend',
+                          _trendLabel(insights.trend),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+              Text('Breakdown', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               _BreakdownTile(
                 label: 'Delivery Profit',
@@ -116,6 +185,37 @@ class SavingsDetailScreen extends ConsumerWidget {
         ),
         loading: () => const LoadingOverlay(),
         error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+
+  String _trendLabel(SavingsTrend trend) {
+    switch (trend) {
+      case SavingsTrend.increasing:
+        return 'Increasing';
+      case SavingsTrend.decreasing:
+        return 'Decreasing';
+      case SavingsTrend.stable:
+        return 'Stable';
+    }
+  }
+}
+
+class _InsightRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InsightRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: TextStyle(color: Colors.grey[700]))),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

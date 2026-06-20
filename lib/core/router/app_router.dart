@@ -28,6 +28,18 @@ import '../../features/deliveries/presentation/screens/add_delivery_screen.dart'
 
 import '../../features/inventory/presentation/screens/inventory_screen.dart';
 
+import '../../features/settings/presentation/screens/archive_reset_screen.dart';
+
+import '../../features/settings/presentation/screens/inventory_settings_screen.dart';
+
+import '../../features/suppliers/presentation/screens/suppliers_screen.dart';
+
+import '../../features/suppliers/presentation/screens/supplier_form_screen.dart';
+
+import '../../features/suppliers/presentation/screens/supplier_profile_screen.dart';
+
+import '../../features/savings/presentation/screens/savings_goals_screen.dart';
+
 import '../../features/supply_purchases/presentation/screens/purchase_stock_screen.dart';
 
 import '../../features/supply_purchases/presentation/screens/supply_purchases_history_screen.dart';
@@ -43,6 +55,8 @@ import '../../features/expenses/presentation/screens/expenses_screen.dart';
 import '../../features/dispenser_sales/presentation/screens/dispenser_sales_screen.dart';
 
 import '../../features/settings/presentation/screens/settings_screen.dart';
+
+import '../../features/settings/presentation/screens/factory_reset_screen.dart';
 
 import '../../features/settings/presentation/screens/about_screen.dart';
 
@@ -273,6 +287,38 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/settings/factory-reset/confirm',
+
+        builder: (context, state) => const FactoryResetConfirmScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/settings/factory-reset/complete',
+
+        builder: (context, state) => const FactoryResetCompleteScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/settings/inventory',
+
+        builder: (context, state) => const InventorySettingsScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/settings/archive-reset',
+
+        builder: (context, state) => const ArchiveResetScreen(),
+
+      ),
+
+      GoRoute(
+
         path: '/about',
 
         builder: (context, state) => const AboutScreen(),
@@ -340,6 +386,44 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/inventory/suppliers',
+
+        builder: (context, state) => const SuppliersScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/suppliers/add',
+
+        builder: (context, state) => const SupplierFormScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/suppliers/:id/edit',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SupplierFormScreen(supplierId: id);
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/suppliers/:id',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SupplierProfileScreen(supplierId: id);
+        },
+
+      ),
+
+      GoRoute(
+
         path: '/reports/supplier-summary',
 
         builder: (context, state) => const SupplierSummaryScreen(),
@@ -359,6 +443,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/savings/history',
 
         builder: (context, state) => const SavingsHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/savings/goals',
+
+        builder: (context, state) => const SavingsGoalsScreen(),
 
       ),
 

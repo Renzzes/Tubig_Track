@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../constants/app_constants.dart';
+import '../utils/receipt_number_utils.dart';
 import 'tables/customers_table.dart';
 import 'tables/deliveries_table.dart';
 import 'tables/bottle_transactions_table.dart';
@@ -11,6 +13,8 @@ import 'tables/settings_table.dart';
 import 'tables/savings_contributions_table.dart';
 import 'tables/supply_purchases_table.dart';
 import 'tables/inventory_stock_table.dart';
+import 'tables/suppliers_table.dart';
+import 'tables/savings_goals_table.dart';
 
 import 'daos/customers_dao.dart';
 import 'daos/deliveries_dao.dart';
@@ -22,6 +26,8 @@ import 'daos/settings_dao.dart';
 import 'daos/savings_dao.dart';
 import 'daos/supply_purchases_dao.dart';
 import 'daos/inventory_stock_dao.dart';
+import 'daos/suppliers_dao.dart';
+import 'daos/savings_goals_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -37,6 +43,8 @@ part 'app_database.g.dart';
     SavingsContributionsTable,
     SupplyPurchasesTable,
     InventoryStockTable,
+    SuppliersTable,
+    SavingsGoalsTable,
   ],
   daos: [
     CustomersDao,
@@ -49,6 +57,8 @@ part 'app_database.g.dart';
     SavingsDao,
     SupplyPurchasesDao,
     InventoryStockDao,
+    SuppliersDao,
+    SavingsGoalsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -56,16 +66,14 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
-        await settingsDao.setValue('total_bottle_inventory', '100');
-        await settingsDao.setValue('low_inventory_threshold', '25');
-        await settingsDao.setValue('cost_per_bottle', '25');
+        await _seedDefaultSettings();
         await _seedInventoryStock();
       },
       onUpgrade: (Migrator m, int from, int to) async {
@@ -96,8 +104,68 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(expensesTable, expensesTable.supplyPurchaseId);
           await _seedInventoryStock();
         }
+        if (from < 6) {
+          await m.createTable(suppliersTable);
+          await m.createTable(savingsGoalsTable);
+          await m.addColumn(deliveriesTable, deliveriesTable.receiptNumber);
+          await m.addColumn(supplyPurchasesTable, supplyPurchasesTable.supplierId);
+          await _seedStockThresholds();
+        }
       },
     );
+  }
+
+  Future<void> _seedDefaultSettings() async {
+    await settingsDao.setValue('total_bottle_inventory', '100');
+    await settingsDao.setValue('low_inventory_threshold', '25');
+    await settingsDao.setValue('cost_per_bottle', '25');
+    await settingsDao.setValue(
+      AppConstants.settingMinBottles,
+      '${AppConstants.defaultMinBottles}',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingMinGallons,
+      '${AppConstants.defaultMinGallons}',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingMinCaps,
+      '${AppConstants.defaultMinCaps}',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingMinWaterStocks,
+      '${AppConstants.defaultMinWaterStocks}',
+    );
+  }
+
+  Future<void> _seedStockThresholds() async {
+    final legacy = await settingsDao.getValue(
+      AppConstants.settingLowInventoryThreshold,
+    );
+    final minBottles = await settingsDao.getValue(AppConstants.settingMinBottles);
+    if (minBottles == null) {
+      await settingsDao.setValue(
+        AppConstants.settingMinBottles,
+        legacy ?? '${AppConstants.defaultMinBottles}',
+      );
+    }
+    if (await settingsDao.getValue(AppConstants.settingMinGallons) == null) {
+      await settingsDao.setValue(
+        AppConstants.settingMinGallons,
+        '${AppConstants.defaultMinGallons}',
+      );
+    }
+    if (await settingsDao.getValue(AppConstants.settingMinCaps) == null) {
+      await settingsDao.setValue(
+        AppConstants.settingMinCaps,
+        '${AppConstants.defaultMinCaps}',
+      );
+    }
+    if (await settingsDao.getValue(AppConstants.settingMinWaterStocks) == null) {
+      await settingsDao.setValue(
+        AppConstants.settingMinWaterStocks,
+        '${AppConstants.defaultMinWaterStocks}',
+      );
+    }
   }
 
   Future<void> _seedInventoryStock() async {
@@ -109,7 +177,68 @@ class AppDatabase extends _$AppDatabase {
     ]);
   }
 
+  /// Generates the next receipt number for the given year (within a transaction).
+  Future<String> nextReceiptNumber({DateTime? date}) async {
+    final d = date ?? DateTime.now();
+    final year = d.year;
+    final key = ReceiptNumberUtils.settingsKeyForYear(year);
+    final current = int.tryParse(await settingsDao.getValue(key) ?? '') ?? 0;
+    final next = current + 1;
+    await settingsDao.setValue(key, next.toString());
+    return ReceiptNumberUtils.format(year, next);
+  }
+
+  /// Deletes all operational business data inside a transaction.
+  /// Preserves the settings table (business configuration).
+  Future<void> factoryReset() async {
+    await transaction(() async {
+      await delete(customersTable).go();
+      await delete(deliveriesTable).go();
+      await delete(paymentsTable).go();
+      await delete(bottleTransactionsTable).go();
+      await delete(expensesTable).go();
+      await delete(dispenserSalesTable).go();
+      await delete(savingsContributionsTable).go();
+      await delete(supplyPurchasesTable).go();
+      await delete(inventoryStockTable).go();
+      await delete(suppliersTable).go();
+      await delete(savingsGoalsTable).go();
+      await _seedInventoryStock();
+    });
+  }
+
+  Future<OperationalDataCounts> getOperationalDataCounts() async {
+    final customers = await customersDao.getAll();
+    final deliveries = await deliveriesDao.getAll();
+    final payments = await paymentsDao.getAll();
+    final expenses = await expensesDao.getAll();
+    final purchases = await supplyPurchasesDao.getAll();
+    return OperationalDataCounts(
+      customers: customers.length,
+      deliveries: deliveries.length,
+      payments: payments.length,
+      expenses: expenses.length,
+      supplyPurchases: purchases.length,
+    );
+  }
+
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'tubig_track_db');
   }
+}
+
+class OperationalDataCounts {
+  final int customers;
+  final int deliveries;
+  final int payments;
+  final int expenses;
+  final int supplyPurchases;
+
+  const OperationalDataCounts({
+    required this.customers,
+    required this.deliveries,
+    required this.payments,
+    required this.expenses,
+    required this.supplyPurchases,
+  });
 }

@@ -24,6 +24,7 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
       notes: row.notes,
       expenseId: row.expenseId,
       bottleTransactionId: row.bottleTransactionId,
+      supplierId: row.supplierId,
     );
   }
 
@@ -134,6 +135,7 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
           notes: Value(purchase.notes),
           expenseId: expenseId,
           bottleTransactionId: Value(bottleTxId),
+          supplierId: Value(purchase.supplierId),
         ),
       );
     });

@@ -3,6 +3,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../update/data/repositories/backup_repository_impl.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 
@@ -23,6 +24,15 @@ class SettingsRepositoryImpl implements SettingsRepository {
     throw Exception('Database file not found');
   }
 
+  Future<Directory> _archivesDirectory() async {
+    final docs = await getApplicationDocumentsDirectory();
+    final dir = Directory(p.join(docs.path, AppConstants.archivesFolderName));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
   String _backupFileName() {
     final now = DateTime.now();
     final y = now.year.toString().padLeft(4, '0');
@@ -33,6 +43,9 @@ class SettingsRepositoryImpl implements SettingsRepository {
     return 'tubigtrack_backup_${y}_${m}_${d}_$h$min.db';
   }
 
+  int _parseInt(String? val, int fallback) =>
+      int.tryParse(val ?? '') ?? fallback;
+
   @override
   Future<AppSettings> getSettings() async {
     final totalStr = await _db.settingsDao.getValue(
@@ -41,11 +54,34 @@ class SettingsRepositoryImpl implements SettingsRepository {
     final thresholdStr = await _db.settingsDao.getValue(
       AppConstants.settingLowInventoryThreshold,
     );
+    final minBottles = await _db.settingsDao.getValue(
+      AppConstants.settingMinBottles,
+    );
+    final minGallons = await _db.settingsDao.getValue(
+      AppConstants.settingMinGallons,
+    );
+    final minCaps = await _db.settingsDao.getValue(
+      AppConstants.settingMinCaps,
+    );
+    final minWater = await _db.settingsDao.getValue(
+      AppConstants.settingMinWaterStocks,
+    );
     return AppSettings(
-      totalBottleInventory: int.tryParse(totalStr ?? '') ??
-          AppConstants.defaultBottleInventory,
-      lowInventoryThreshold: int.tryParse(thresholdStr ?? '') ??
-          AppConstants.defaultLowInventoryThreshold,
+      totalBottleInventory: _parseInt(
+        totalStr,
+        AppConstants.defaultBottleInventory,
+      ),
+      lowInventoryThreshold: _parseInt(
+        thresholdStr,
+        AppConstants.defaultLowInventoryThreshold,
+      ),
+      minBottles: _parseInt(minBottles, AppConstants.defaultMinBottles),
+      minGallons: _parseInt(minGallons, AppConstants.defaultMinGallons),
+      minCaps: _parseInt(minCaps, AppConstants.defaultMinCaps),
+      minWaterStocks: _parseInt(
+        minWater,
+        AppConstants.defaultMinWaterStocks,
+      ),
     );
   }
 
@@ -58,6 +94,22 @@ class SettingsRepositoryImpl implements SettingsRepository {
     await _db.settingsDao.setValue(
       AppConstants.settingLowInventoryThreshold,
       settings.lowInventoryThreshold.toString(),
+    );
+    await _db.settingsDao.setValue(
+      AppConstants.settingMinBottles,
+      settings.minBottles.toString(),
+    );
+    await _db.settingsDao.setValue(
+      AppConstants.settingMinGallons,
+      settings.minGallons.toString(),
+    );
+    await _db.settingsDao.setValue(
+      AppConstants.settingMinCaps,
+      settings.minCaps.toString(),
+    );
+    await _db.settingsDao.setValue(
+      AppConstants.settingMinWaterStocks,
+      settings.minWaterStocks.toString(),
     );
   }
 
@@ -97,11 +149,11 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
     buffer.writeln('=== DELIVERIES ===');
     buffer.writeln(
-      'ID,CustomerID,Quantity,PricePerBottle,Total,PaymentStatus,AmountPaid,Balance,Date,Time,DeliveryStatus,Notes',
+      'ID,CustomerID,Quantity,PricePerBottle,Total,PaymentStatus,AmountPaid,Balance,Date,Time,DeliveryStatus,Notes,ReceiptNumber',
     );
     for (final d in await _db.deliveriesDao.getAll()) {
       buffer.writeln(
-        '"${d.id}","${d.customerId}",${d.quantity},${d.pricePerBottle},${d.totalAmount},"${d.paymentStatus}",${d.amountPaid},${d.remainingBalance},"${d.deliveryDate.toIso8601String()}","${d.deliveryTime ?? ''}","${d.deliveryStatus}","${d.notes ?? ''}"',
+        '"${d.id}","${d.customerId}",${d.quantity},${d.pricePerBottle},${d.totalAmount},"${d.paymentStatus}",${d.amountPaid},${d.remainingBalance},"${d.deliveryDate.toIso8601String()}","${d.deliveryTime ?? ''}","${d.deliveryStatus}","${d.notes ?? ''}","${d.receiptNumber ?? ''}"',
       );
     }
     buffer.writeln();
@@ -152,5 +204,53 @@ class SettingsRepositoryImpl implements SettingsRepository {
         p.join(dir, 'tubigtrack_export_${DateTime.now().millisecondsSinceEpoch}.csv');
     await File(csvPath).writeAsString(buffer.toString());
     return csvPath;
+  }
+
+  @override
+  Future<bool> hasAnyBackup() async {
+    final backupRepo = BackupRepositoryImpl(_db);
+    final recoveryBackups = await backupRepo.listBackups();
+    if (recoveryBackups.isNotEmpty) return true;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final files = Directory(dir.path).listSync().whereType<File>();
+    return files.any(
+      (f) =>
+          p.basename(f.path).startsWith('tubigtrack_backup_') &&
+          f.path.endsWith('.db'),
+    );
+  }
+
+  @override
+  Future<OperationalDataCounts> getOperationalDataCounts() {
+    return _db.getOperationalDataCounts();
+  }
+
+  @override
+  Future<String> createArchive() async {
+    final source = await _resolveDatabaseFile();
+    final archiveDir = await _archivesDirectory();
+    final year = DateTime.now().year;
+    final fileName = 'TubigTrack_Archive_$year.db';
+    final target = File(p.join(archiveDir.path, fileName));
+    if (await target.exists()) {
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final alt = File(p.join(archiveDir.path, 'TubigTrack_Archive_${year}_$ts.db'));
+      await source.copy(alt.path);
+      return alt.path;
+    }
+    await source.copy(target.path);
+    return target.path;
+  }
+
+  @override
+  Future<void> archiveAndReset() async {
+    await createArchive();
+    await factoryReset();
+  }
+
+  @override
+  Future<void> factoryReset() async {
+    await _db.factoryReset();
   }
 }

@@ -10,6 +10,7 @@ import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../transactions/presentation/providers/recent_transactions_provider.dart';
 import '../../../transactions/presentation/widgets/recent_transactions_widget.dart';
 import '../../../savings/presentation/providers/savings_provider.dart';
+import '../../../savings/presentation/providers/savings_goals_provider.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/summary_card.dart';
@@ -22,6 +23,8 @@ class DashboardScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(dashboardSummaryProvider);
     final transactionsAsync = ref.watch(recentTransactionsProvider);
     final savingsAsync = ref.watch(savingsSummaryProvider);
+    final lowStockAsync = ref.watch(lowStockItemsProvider);
+    final activeGoalAsync = ref.watch(activeSavingsGoalProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -118,6 +121,30 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
 
+              lowStockAsync.when(
+                data: (items) {
+                  if (items.isEmpty) return const SizedBox.shrink();
+                  final labels = items
+                      .map((i) => '${i.label}: ${i.remaining}')
+                      .join(' • ');
+                  return Column(
+                    children: [
+                      SummaryCard(
+                        title: 'Low Stock Warning',
+                        value: '${items.length} item${items.length > 1 ? 's' : ''}',
+                        icon: Icons.warning_amber_rounded,
+                        color: AppColors.error,
+                        subtitle: labels,
+                        onTap: () => context.go('/inventory'),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
               savingsAsync.when(
                 data: (savings) => SummaryCard(
                   title: 'Savings',
@@ -133,6 +160,30 @@ class DashboardScreen extends ConsumerWidget {
                 error: (_, __) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 12),
+
+              activeGoalAsync.when(
+                data: (goal) {
+                  if (goal == null) return const SizedBox.shrink();
+                  final current = savingsAsync.value?.currentSavings ?? 0;
+                  final pct = goal.progressPercent(current);
+                  return Column(
+                    children: [
+                      SummaryCard(
+                        title: 'Savings Goal: ${goal.name}',
+                        value: '${pct.toStringAsFixed(0)}%',
+                        icon: Icons.flag_outlined,
+                        color: AppColors.primary,
+                        subtitle:
+                            '${CurrencyFormatter.format(current)} / ${CurrencyFormatter.format(goal.targetAmount)}',
+                        onTap: () => context.push('/savings/goals'),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
 
               // Unpaid Receivables — full width
               SummaryCard(

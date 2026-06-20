@@ -142,24 +142,6 @@ class InventoryScreen extends ConsumerWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final useColumn = constraints.maxWidth < 400;
-              final children = [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => context.push('/inventory/purchase-stock'),
-                    icon: const Icon(Icons.add_shopping_cart, size: 18),
-                    label: const Text('Purchase Stock'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        context.push('/inventory/supply-purchases'),
-                    icon: const Icon(Icons.history, size: 18),
-                    label: const Text('Supply Purchases'),
-                  ),
-                ),
-              ];
               if (useColumn) {
                 return Column(
                   children: [
@@ -182,10 +164,40 @@ class InventoryScreen extends ConsumerWidget {
                         label: const Text('Supply Purchases'),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/inventory/suppliers'),
+                        icon: const Icon(Icons.store_outlined, size: 18),
+                        label: const Text('Suppliers'),
+                      ),
+                    ),
                   ],
                 );
               }
-              return Row(children: children);
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => context.push('/inventory/purchase-stock'),
+                    icon: const Icon(Icons.add_shopping_cart, size: 18),
+                    label: const Text('Purchase Stock'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        context.push('/inventory/supply-purchases'),
+                    icon: const Icon(Icons.history, size: 18),
+                    label: const Text('Supply Purchases'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/inventory/suppliers'),
+                    icon: const Icon(Icons.store_outlined, size: 18),
+                    label: const Text('Suppliers'),
+                  ),
+                ],
+              );
             },
           ),
           summaryAsync.when(

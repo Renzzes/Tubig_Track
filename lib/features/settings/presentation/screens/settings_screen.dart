@@ -26,6 +26,8 @@ import '../../../update/presentation/widgets/update_coordinator.dart';
 
 import '../providers/settings_provider.dart';
 
+import 'factory_reset_screen.dart';
+
 
 
 class SettingsScreen extends ConsumerWidget {
@@ -208,11 +210,25 @@ class SettingsScreen extends ConsumerWidget {
 
             ListTile(
 
+              leading: const Icon(Icons.tune_outlined),
+
+              title: const Text('Inventory Settings'),
+
+              subtitle: const Text('Low stock thresholds for alerts'),
+
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+
+              onTap: () => context.push('/settings/inventory'),
+
+            ),
+
+            ListTile(
+
               leading: const Icon(Icons.warning_amber_outlined),
 
               title: const Text('Low Inventory Threshold'),
 
-              subtitle: Text('${settings.lowInventoryThreshold} bottles'),
+              subtitle: Text('${settings.lowInventoryThreshold} bottles (legacy)'),
 
               trailing: const Icon(Icons.edit_outlined),
 
@@ -232,7 +248,7 @@ class SettingsScreen extends ConsumerWidget {
 
             const Divider(),
 
-            const _SectionHeader(title: 'Data & Backup'),
+            const _SectionHeader(title: 'Data Management'),
 
             ListTile(
 
@@ -281,6 +297,39 @@ class SettingsScreen extends ConsumerWidget {
               trailing: const Icon(Icons.arrow_forward_ios, size: 14),
 
               onTap: () => context.push('/recovery-center'),
+
+            ),
+
+            ListTile(
+
+              leading: Icon(Icons.delete_forever_outlined, color: Colors.red[700]),
+
+              title: Text(
+                'Reset Application',
+                style: TextStyle(color: Colors.red[700]),
+              ),
+
+              subtitle: const Text(
+                'Permanently delete all operational business data',
+              ),
+
+              onTap: () => startFactoryResetFlow(context, ref),
+
+            ),
+
+            ListTile(
+
+              leading: const Icon(Icons.archive_outlined),
+
+              title: const Text('Archive & Reset'),
+
+              subtitle: const Text(
+                'Save archive backup and start a new business cycle',
+              ),
+
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+
+              onTap: () => context.push('/settings/archive-reset'),
 
             ),
 
@@ -587,7 +636,10 @@ class SettingsScreen extends ConsumerWidget {
 
       await ref.read(settingsRepositoryProvider).updateSettings(
 
-            current.copyWith(lowInventoryThreshold: result),
+            current.copyWith(
+              lowInventoryThreshold: result,
+              minBottles: result,
+            ),
 
           );
 

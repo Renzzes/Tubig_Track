@@ -1,3 +1,4 @@
+import '../../../../core/database/app_database.dart';
 import '../entities/app_settings.dart';
 
 abstract class SettingsRepository {
@@ -6,4 +7,9 @@ abstract class SettingsRepository {
   Future<String> backupDatabase();
   Future<void> restoreDatabase(String backupPath);
   Future<String> exportCSV();
+  Future<bool> hasAnyBackup();
+  Future<OperationalDataCounts> getOperationalDataCounts();
+  Future<String> createArchive();
+  Future<void> archiveAndReset();
+  Future<void> factoryReset();
 }

@@ -24,6 +24,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       deliveryTime: row.deliveryTime,
       deliveryStatus: Delivery.deliveryStatusFromString(row.deliveryStatus),
       notes: row.notes,
+      receiptNumber: row.receiptNumber,
     );
   }
 
@@ -41,6 +42,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       deliveryTime: Value(delivery.deliveryTime),
       deliveryStatus: Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
       notes: Value(delivery.notes),
+      receiptNumber: Value(delivery.receiptNumber),
     );
   }
 
@@ -168,6 +170,8 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   @override
   Future<void> createDelivery(Delivery delivery) async {
     await _db.transaction(() async {
+      final receiptNumber = delivery.receiptNumber ??
+          await _db.nextReceiptNumber(date: delivery.deliveryDate);
       await _db.deliveriesDao.insertDelivery(
         DeliveriesTableCompanion.insert(
           id: delivery.id,
@@ -184,6 +188,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           deliveryStatus:
               Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
           notes: Value(delivery.notes),
+          receiptNumber: Value(receiptNumber),
         ),
       );
       await _syncBorrowTransaction(delivery);
@@ -240,6 +245,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
             deliveryTime: Value(row.deliveryTime),
             deliveryStatus: Value(deliveryStatus),
             notes: Value(row.notes),
+            receiptNumber: Value(row.receiptNumber),
           ),
         );
       }

@@ -15,6 +15,7 @@ class Delivery {
   final String? deliveryTime;
   final DeliveryStatus deliveryStatus;
   final String? notes;
+  final String? receiptNumber;
 
   const Delivery({
     required this.id,
@@ -29,6 +30,7 @@ class Delivery {
     this.deliveryTime,
     this.deliveryStatus = DeliveryStatus.completed,
     this.notes,
+    this.receiptNumber,
   });
 
   Delivery copyWith({
@@ -44,6 +46,7 @@ class Delivery {
     String? deliveryTime,
     DeliveryStatus? deliveryStatus,
     String? notes,
+    String? receiptNumber,
   }) {
     return Delivery(
       id: id ?? this.id,
@@ -58,6 +61,7 @@ class Delivery {
       deliveryTime: deliveryTime ?? this.deliveryTime,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
       notes: notes ?? this.notes,
+      receiptNumber: receiptNumber ?? this.receiptNumber,
     );
   }
 

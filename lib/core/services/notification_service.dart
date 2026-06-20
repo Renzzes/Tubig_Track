@@ -4,6 +4,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 import '../../core/database/app_database.dart';
+import '../../core/utils/low_stock_utils.dart';
 import '../../features/overdue/data/repositories/overdue_repository_impl.dart';
 import '../../features/inventory/data/repositories/inventory_repository_impl.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
@@ -15,6 +16,7 @@ const _inventoryTask = 'tubigtrack_inventory_check';
 const overdueNotificationId = 1001;
 const deliveryNotificationId = 1002;
 const inventoryNotificationId = 1003;
+const lowStockNotificationBaseId = 1010;
 
 @pragma('vm:entry-point')
 void notificationCallbackDispatcher() {
@@ -178,15 +180,20 @@ class NotificationService {
     final inventoryRepo = InventoryRepositoryImpl(db);
     final settings = await settingsRepo.getSettings();
     final summary = await inventoryRepo.getSummary();
+    final lowItems = LowStockUtils.check(summary, settings);
 
-    if (summary.availableBottles > settings.lowInventoryThreshold) return;
+    if (lowItems.isEmpty) return;
 
-    await _show(
-      id: inventoryNotificationId,
-      title: '⚠️ Low Inventory',
-      body: 'Remaining:\n${summary.availableBottles} bottles',
-      payload: '/inventory',
-    );
+    for (var i = 0; i < lowItems.length; i++) {
+      final item = lowItems[i];
+      await _show(
+        id: lowStockNotificationBaseId + i,
+        title: '⚠️ Low Stock Alert',
+        body:
+            '${item.label} Remaining: ${item.remaining}\nConsider purchasing additional stock.',
+        payload: '/inventory',
+      );
+    }
   }
 
   static Future<void> _show({

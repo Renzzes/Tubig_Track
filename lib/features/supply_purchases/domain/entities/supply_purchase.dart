@@ -9,6 +9,7 @@ class SupplyPurchase {
   final String? notes;
   final String expenseId;
   final String? bottleTransactionId;
+  final String? supplierId;
 
   const SupplyPurchase({
     required this.id,
@@ -21,6 +22,7 @@ class SupplyPurchase {
     this.notes,
     required this.expenseId,
     this.bottleTransactionId,
+    this.supplierId,
   });
 
   String get description => '$quantity $itemType';
