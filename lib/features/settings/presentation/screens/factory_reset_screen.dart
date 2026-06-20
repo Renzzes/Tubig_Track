@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/database/app_database.dart';
@@ -8,11 +10,11 @@ import '../../../../core/database/database_refresh.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/settings_provider.dart';
 
-/// Confirmation screen — user must type RESET TUBIGTRACK to enable Reset.
+/// Confirmation screen — user must type CONFIRM to enable Reset.
 class FactoryResetConfirmScreen extends ConsumerStatefulWidget {
   const FactoryResetConfirmScreen({super.key});
 
-  static const confirmPhrase = 'RESET TUBIGTRACK';
+  static const confirmPhrase = 'CONFIRM';
 
   @override
   ConsumerState<FactoryResetConfirmScreen> createState() =>
@@ -114,8 +116,7 @@ class _FactoryResetConfirmScreenState
               const SizedBox(height: 16),
             ],
             Text(
-              'Type ${FactoryResetConfirmScreen.confirmPhrase} below to permanently erase all operational data. '
-              'This cannot be undone.',
+              'Type CONFIRM to permanently erase all data.',
               style: TextStyle(color: Colors.grey[700], height: 1.4),
               textAlign: TextAlign.center,
             ),
@@ -123,10 +124,10 @@ class _FactoryResetConfirmScreenState
             TextField(
               controller: _confirmCtrl,
               autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Type ${FactoryResetConfirmScreen.confirmPhrase}',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.edit_outlined),
+              decoration: const InputDecoration(
+                labelText: 'Type CONFIRM',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.edit_outlined),
               ),
             ),
             const Spacer(),
@@ -169,48 +170,48 @@ class FactoryResetCompleteScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Icon(
-                Icons.check_circle_outline,
-                size: 72,
-                color: Colors.green[600],
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Reset Complete',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'All operational data has been removed.\n\n'
-                'The application is ready for a new business cycle.',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey[700],
-                  height: 1.5,
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 72,
+                  color: Colors.green[600],
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              FilledButton(
-                onPressed: () {
-                  invalidateAllDataProviders(ref);
-                  context.go('/');
-                },
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
+                const SizedBox(height: 24),
+                const Text(
+                  'Reset Completed Successfully',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                  textAlign: TextAlign.center,
                 ),
-                child: const Text('Restart App'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'All TubigTrack business data has been permanently erased.\n\n'
+                  'Please reopen TubigTrack to start with a fresh database.',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey[700],
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                FilledButton(
+                  onPressed: () => SystemNavigator.pop(),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  child: const Text('Exit App'),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -251,70 +252,118 @@ Future<FactoryResetWarningAction?> showFactoryResetWarningDialog(
   return showDialog<FactoryResetWarningAction>(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) => AlertDialog(
-      icon: Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 36),
-      title: const Text('Reset TubigTrack'),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'This action will permanently delete:',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            ...[
-              'Customers',
-              'Deliveries',
-              'Payments',
-              'Inventory',
-              'Expenses',
-              'Savings',
-              'Reports',
-              'Dispenser Sales',
-              'Supply Purchases',
-              'Transaction History',
-            ].map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
+    builder: (ctx) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange[700],
+                size: 36,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Reset TubigTrack',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              SingleChildScrollView(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('• '),
-                    Expanded(child: Text(item)),
+                      const Text(
+                        'This action will permanently delete:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      ...[
+                        'Customers',
+                        'Deliveries',
+                        'Payments',
+                        'Inventory',
+                        'Expenses',
+                        'Savings',
+                        'Reports',
+                        'Dispenser Sales',
+                        'Supply Purchases',
+                        'Transaction History',
+                      ].map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• '),
+                              Expanded(child: Text(item)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'This action cannot be undone.',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'This action cannot be undone.',
-              style: TextStyle(
-                color: Colors.red[700],
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(
+                    ctx,
+                    FactoryResetWarningAction.createBackup,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Create Backup'),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(
+                        ctx,
+                        FactoryResetWarningAction.cancel,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                      onPressed: () => Navigator.pop(
+                        ctx,
+                        FactoryResetWarningAction.continueReset,
+                      ),
+                      child: const Text('Continue'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, FactoryResetWarningAction.cancel),
-          child: const Text('Cancel'),
-        ),
-        OutlinedButton(
-          onPressed: () =>
-              Navigator.pop(ctx, FactoryResetWarningAction.createBackup),
-          child: const Text('Create Backup'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-          onPressed: () =>
-              Navigator.pop(ctx, FactoryResetWarningAction.continueReset),
-          child: const Text('Continue'),
-        ),
-      ],
     ),
   );
 }
@@ -327,65 +376,151 @@ Future<FactoryResetBackupPromptAction?> showNoBackupPromptDialog(
   return showDialog<FactoryResetBackupPromptAction>(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) => AlertDialog(
-      title: const Text('No Backup Found'),
-      content: const Text(
-        'No database backup was found on this device. '
-        'We recommend creating a backup before resetting.',
+    builder: (ctx) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'No Backup Found',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No database backup was found on this device. '
+                'We recommend creating a backup before resetting.',
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(
+                        ctx,
+                        FactoryResetBackupPromptAction.cancel,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(
+                        ctx,
+                        FactoryResetBackupPromptAction.resetAnyway,
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                      child: const Text('Reset Anyway'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(
+                    ctx,
+                    FactoryResetBackupPromptAction.backupAndReset,
+                  ),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Backup & Reset'),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () =>
-              Navigator.pop(ctx, FactoryResetBackupPromptAction.cancel),
-          child: const Text('Cancel'),
-        ),
-        OutlinedButton(
-          onPressed: () =>
-              Navigator.pop(ctx, FactoryResetBackupPromptAction.resetAnyway),
-          child: const Text('Reset Anyway'),
-        ),
-        FilledButton(
-          onPressed: () =>
-              Navigator.pop(ctx, FactoryResetBackupPromptAction.backupAndReset),
-          child: const Text('Backup & Reset'),
-        ),
-      ],
     ),
   );
 }
 
-/// Entry point from Settings — orchestrates the full reset flow.
-Future<void> startFactoryResetFlow(BuildContext context, WidgetRef ref) async {
-  final warningAction = await showFactoryResetWarningDialog(context);
-  if (warningAction == null ||
-      warningAction == FactoryResetWarningAction.cancel) {
-    return;
-  }
+/// Shown after a backup is created during the reset flow.
+/// Returns true when the user chooses to continue to reset confirmation.
+Future<bool> showBackupCreatedSuccessDialog(
+  BuildContext context,
+  String backupPath,
+) async {
+  final fileName = p.basename(backupPath);
 
-  if (warningAction == FactoryResetWarningAction.createBackup) {
-    try {
-      final path =
-          await ref.read(settingsRepositoryProvider).backupDatabase();
-      if (context.mounted) {
-        await Share.shareXFiles(
-          [XFile(path)],
-          text: 'TubigTrack Database Backup',
-        );
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup created successfully')),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup failed: $e')),
-        );
-      }
-    }
-    return;
-  }
+  final result = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.green[600], size: 40),
+              const SizedBox(height: 12),
+              const Text(
+                'Backup Created Successfully',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'File:\n$fileName',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[700], height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Share.shareXFiles(
+                      [XFile(backupPath)],
+                      text: 'TubigTrack Database Backup',
+                    );
+                  },
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('Share Backup'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Continue Reset'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
+  return result ?? false;
+}
+
+Future<void> _proceedToResetConfirmation(
+  BuildContext context,
+  WidgetRef ref,
+) async {
   final hasBackup = await ref.read(settingsRepositoryProvider).hasAnyBackup();
   if (!hasBackup && context.mounted) {
     final backupAction = await showNoBackupPromptDialog(context);
@@ -395,12 +530,12 @@ Future<void> startFactoryResetFlow(BuildContext context, WidgetRef ref) async {
     }
     if (backupAction == FactoryResetBackupPromptAction.backupAndReset) {
       try {
-        await ref.read(settingsRepositoryProvider).backupDatabase();
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Backup created')),
-          );
-        }
+        final path =
+            await ref.read(settingsRepositoryProvider).backupDatabase();
+        if (!context.mounted) return;
+        final continueReset =
+            await showBackupCreatedSuccessDialog(context, path);
+        if (!continueReset || !context.mounted) return;
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -415,4 +550,34 @@ Future<void> startFactoryResetFlow(BuildContext context, WidgetRef ref) async {
   if (context.mounted) {
     context.push('/settings/factory-reset/confirm');
   }
+}
+
+/// Entry point from Settings — orchestrates the full reset flow.
+Future<void> startFactoryResetFlow(BuildContext context, WidgetRef ref) async {
+  final warningAction = await showFactoryResetWarningDialog(context);
+  if (warningAction == null ||
+      warningAction == FactoryResetWarningAction.cancel) {
+    return;
+  }
+
+  if (warningAction == FactoryResetWarningAction.createBackup) {
+    try {
+      final path =
+          await ref.read(settingsRepositoryProvider).backupDatabase();
+      if (!context.mounted) return;
+      final continueReset =
+          await showBackupCreatedSuccessDialog(context, path);
+      if (!continueReset || !context.mounted) return;
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Backup failed: $e')),
+        );
+      }
+      return;
+    }
+  }
+
+  if (!context.mounted) return;
+  await _proceedToResetConfirmation(context, ref);
 }

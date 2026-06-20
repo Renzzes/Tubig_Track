@@ -17,6 +17,9 @@ class AboutScreen extends StatelessWidget {
     'Notifications',
     'Self Update System',
     'Savings Monitoring',
+    'Supplier Directory',
+    'Low Stock Alerts',
+    'Savings Goals',
   ];
 
   @override
