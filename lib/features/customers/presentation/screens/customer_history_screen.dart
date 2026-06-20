@@ -348,6 +348,14 @@ class _InventoryHistoryScreenState extends ConsumerState<InventoryHistoryScreen>
         return Icons.add_shopping_cart;
       case TransactionType.damaged:
         return Icons.broken_image_outlined;
+      case TransactionType.missing:
+        return Icons.help_outline;
+      case TransactionType.donation:
+        return Icons.volunteer_activism_outlined;
+      case TransactionType.adjustment:
+        return Icons.tune_outlined;
+      case TransactionType.audit:
+        return Icons.fact_check_outlined;
     }
   }
 }

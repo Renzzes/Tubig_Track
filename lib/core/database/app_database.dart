@@ -15,6 +15,8 @@ import 'tables/supply_purchases_table.dart';
 import 'tables/inventory_stock_table.dart';
 import 'tables/suppliers_table.dart';
 import 'tables/savings_goals_table.dart';
+import 'tables/inventory_audits_table.dart';
+import 'tables/inventory_adjustments_table.dart';
 
 import 'daos/customers_dao.dart';
 import 'daos/deliveries_dao.dart';
@@ -28,6 +30,8 @@ import 'daos/supply_purchases_dao.dart';
 import 'daos/inventory_stock_dao.dart';
 import 'daos/suppliers_dao.dart';
 import 'daos/savings_goals_dao.dart';
+import 'daos/inventory_audits_dao.dart';
+import 'daos/inventory_adjustments_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -45,6 +49,8 @@ part 'app_database.g.dart';
     InventoryStockTable,
     SuppliersTable,
     SavingsGoalsTable,
+    InventoryAuditsTable,
+    InventoryAdjustmentsTable,
   ],
   daos: [
     CustomersDao,
@@ -59,6 +65,8 @@ part 'app_database.g.dart';
     InventoryStockDao,
     SuppliersDao,
     SavingsGoalsDao,
+    InventoryAuditsDao,
+    InventoryAdjustmentsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -66,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration {
@@ -110,6 +118,16 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(deliveriesTable, deliveriesTable.receiptNumber);
           await m.addColumn(supplyPurchasesTable, supplyPurchasesTable.supplierId);
           await _seedStockThresholds();
+        }
+        if (from < 7) {
+          await m.addColumn(
+            bottleTransactionsTable,
+            bottleTransactionsTable.reason,
+          );
+        }
+        if (from < 8) {
+          await m.createTable(inventoryAuditsTable);
+          await m.createTable(inventoryAdjustmentsTable);
         }
       },
     );
@@ -203,6 +221,8 @@ class AppDatabase extends _$AppDatabase {
       await delete(inventoryStockTable).go();
       await delete(suppliersTable).go();
       await delete(savingsGoalsTable).go();
+      await delete(inventoryAuditsTable).go();
+      await delete(inventoryAdjustmentsTable).go();
       await _seedInventoryStock();
     });
   }

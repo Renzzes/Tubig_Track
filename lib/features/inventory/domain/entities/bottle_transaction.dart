@@ -1,4 +1,13 @@
-enum TransactionType { borrow, ret, damaged, purchase }
+enum TransactionType {
+  borrow,
+  ret,
+  damaged,
+  purchase,
+  missing,
+  donation,
+  adjustment,
+  audit,
+}
 
 class BottleTransaction {
   final String id;
@@ -6,6 +15,7 @@ class BottleTransaction {
   final TransactionType transactionType;
   final int quantity;
   final DateTime date;
+  final String? reason;
   final String? notes;
 
   const BottleTransaction({
@@ -14,8 +24,12 @@ class BottleTransaction {
     required this.transactionType,
     required this.quantity,
     required this.date,
+    this.reason,
     this.notes,
   });
+
+  /// Delivery-linked borrow rows cannot be edited manually.
+  bool get isDeliveryLinked => id.endsWith('_borrow');
 
   static TransactionType typeFromString(String s) {
     switch (s) {
@@ -25,6 +39,14 @@ class BottleTransaction {
         return TransactionType.damaged;
       case 'purchase':
         return TransactionType.purchase;
+      case 'missing':
+        return TransactionType.missing;
+      case 'donation':
+        return TransactionType.donation;
+      case 'adjustment':
+        return TransactionType.adjustment;
+      case 'audit':
+        return TransactionType.audit;
       default:
         return TransactionType.borrow;
     }
@@ -38,6 +60,14 @@ class BottleTransaction {
         return 'damaged';
       case TransactionType.purchase:
         return 'purchase';
+      case TransactionType.missing:
+        return 'missing';
+      case TransactionType.donation:
+        return 'donation';
+      case TransactionType.adjustment:
+        return 'adjustment';
+      case TransactionType.audit:
+        return 'audit';
       case TransactionType.borrow:
         return 'borrow';
     }
@@ -51,6 +81,14 @@ class BottleTransaction {
         return 'Damaged';
       case TransactionType.purchase:
         return 'Purchase';
+      case TransactionType.missing:
+        return 'Missing';
+      case TransactionType.donation:
+        return 'Donation';
+      case TransactionType.adjustment:
+        return 'Adjustment';
+      case TransactionType.audit:
+        return 'Audit';
       case TransactionType.borrow:
         return 'Borrow';
     }

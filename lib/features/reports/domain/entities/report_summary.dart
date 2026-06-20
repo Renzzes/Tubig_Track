@@ -48,6 +48,18 @@ class ReportSummary {
   final double totalManualSavings;
   final double netSavings;
 
+  // Inventory snapshot
+  final int totalBottlesOwned;
+  final int availableBottles;
+  final int bottlesWithCustomers;
+  final int damagedBottles;
+  final int missingBottles;
+  final int donatedBottles;
+  final int totalAudits;
+  final DateTime? lastAuditDate;
+  final int auditMissingBottles;
+  final int totalAdjustmentQuantity;
+
   const ReportSummary({
     required this.period,
     required this.startDate,
@@ -73,5 +85,15 @@ class ReportSummary {
     required this.manualSavingsInPeriod,
     required this.totalManualSavings,
     required this.netSavings,
+    required this.totalBottlesOwned,
+    required this.availableBottles,
+    required this.bottlesWithCustomers,
+    required this.damagedBottles,
+    required this.missingBottles,
+    required this.donatedBottles,
+    required this.totalAudits,
+    required this.lastAuditDate,
+    required this.auditMissingBottles,
+    required this.totalAdjustmentQuantity,
   });
 }

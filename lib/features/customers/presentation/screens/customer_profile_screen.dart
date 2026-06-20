@@ -532,6 +532,18 @@ class CustomerProfileScreen extends ConsumerWidget {
                       case TransactionType.purchase:
                         color = AppColors.primary;
                         icon = Icons.shopping_cart_outlined;
+                      case TransactionType.missing:
+                        color = AppColors.missing;
+                        icon = Icons.help_outline;
+                      case TransactionType.donation:
+                        color = Colors.deepPurple;
+                        icon = Icons.volunteer_activism_outlined;
+                      case TransactionType.adjustment:
+                        color = Colors.indigo;
+                        icon = Icons.tune_outlined;
+                      case TransactionType.audit:
+                        color = Colors.blueGrey;
+                        icon = Icons.fact_check_outlined;
                     }
                     return Card(
                       margin: const EdgeInsets.only(bottom: 6),

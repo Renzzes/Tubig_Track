@@ -10,6 +10,7 @@ class AppColors {
   static const Color success = Color(0xFF2E7D32);
   static const Color warning = Color(0xFFF57F17);
   static const Color error = Color(0xFFC62828);
+  static const Color missing = Color(0xFF616161);
 
   static const Color paid = Color(0xFF2E7D32);
   static const Color unpaid = Color(0xFFC62828);

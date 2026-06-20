@@ -8,6 +8,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
+import '../../domain/entities/inventory_summary.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/inventory_stat_card.dart';
@@ -29,8 +30,21 @@ class InventoryScreen extends ConsumerWidget {
     );
   }
 
-  void _openEditSheet(BuildContext context, WidgetRef ref,
-      BottleTransaction transaction) {
+  void _openEditSheet(
+    BuildContext context,
+    WidgetRef ref,
+    BottleTransaction transaction,
+  ) {
+    if (transaction.isDeliveryLinked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Delivery-linked transactions must be edited from the delivery record.',
+          ),
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -42,8 +56,22 @@ class InventoryScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteTransaction(BuildContext context, WidgetRef ref,
-      BottleTransaction tx) async {
+  Future<void> _deleteTransaction(
+    BuildContext context,
+    WidgetRef ref,
+    BottleTransaction tx,
+  ) async {
+    if (tx.isDeliveryLinked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Delivery-linked transactions must be deleted from the delivery record.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -65,11 +93,19 @@ class InventoryScreen extends ConsumerWidget {
       ),
     );
     if (confirmed == true) {
-      await ref.read(inventoryRepositoryProvider).deleteTransaction(tx.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction deleted')),
-        );
+      try {
+        await ref.read(inventoryRepositoryProvider).deleteTransaction(tx.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Transaction deleted')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$e')),
+          );
+        }
       }
     }
   }
@@ -94,329 +130,374 @@ class InventoryScreen extends ConsumerWidget {
       body: ResponsiveContent(
         padding: EdgeInsets.all(context.pageHorizontalPadding),
         child: ListView(
-        children: [
-          // Stats grid
-          summaryAsync.when(
-            data: (s) => ResponsiveStatGrid(
+          children: [
+            summaryAsync.when(
+              data: (s) => Column(
+                children: [
+                  ResponsiveStatGrid(
+                    children: [
+                      InventoryStatCard(
+                        label: 'Total Bottles Owned',
+                        value: '${s.totalBottlesOwned}',
+                        icon: Icons.inventory_2,
+                        color: AppColors.primary,
+                        subtitle: 'Initial + Purchased − Donated',
+                      ),
+                      InventoryStatCard(
+                        label: 'Available Bottles',
+                        value: '${s.availableBottles}',
+                        icon: Icons.check_circle_outline,
+                        color: AppColors.success,
+                        subtitle: 'Ready for delivery',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ResponsiveStatGrid(
+                    children: [
+                      InventoryStatCard(
+                        label: 'Bottles With Customers',
+                        value: '${s.bottlesWithCustomers}',
+                        icon: Icons.people_outline,
+                        color: AppColors.warning,
+                        subtitle: 'Delivered − Returned',
+                      ),
+                      InventoryStatCard(
+                        label: 'Damaged Bottles',
+                        value: '${s.damagedBottles}',
+                        icon: Icons.broken_image_outlined,
+                        color: AppColors.error,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  InventoryStatCard(
+                    label: 'Missing Bottles',
+                    value: '${s.missingBottles}',
+                    icon: Icons.help_outline,
+                    color: AppColors.missing,
+                    subtitle: 'Unaccounted for',
+                  ),
+                ],
+              ),
+              loading: () => const LoadingOverlay(),
+              error: (e, _) => Text('Error: $e'),
+            ),
+            const SizedBox(height: 20),
+
+            summaryAsync.when(
+              data: (s) => _WaterInventorySection(summary: s),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              'Supply Management',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final useColumn = constraints.maxWidth < 400;
+                if (useColumn) {
+                  return Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              context.push('/inventory/purchase-stock'),
+                          icon: const Icon(Icons.add_shopping_cart, size: 18),
+                          label: const Text('Purchase Stock'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              context.push('/inventory/supply-purchases'),
+                          icon: const Icon(Icons.history, size: 18),
+                          label: const Text('Supply Purchases'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/inventory/suppliers'),
+                          icon: const Icon(Icons.store_outlined, size: 18),
+                          label: const Text('Suppliers'),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/inventory/purchase-stock'),
+                      icon: const Icon(Icons.add_shopping_cart, size: 18),
+                      label: const Text('Purchase Stock'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          context.push('/inventory/supply-purchases'),
+                      icon: const Icon(Icons.history, size: 18),
+                      label: const Text('Supply Purchases'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/inventory/suppliers'),
+                      icon: const Icon(Icons.store_outlined, size: 18),
+                      label: const Text('Suppliers'),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+
+            Text(
+              'Audit & Reconciliation',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                InventoryStatCard(
-                  label: 'Total Bottles',
-                  value: '${s.totalBottles}',
-                  icon: Icons.inventory_2,
-                  color: AppColors.primary,
-                  subtitle: 'Initial + Purchased − Damaged',
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/inventory/audit'),
+                  icon: const Icon(Icons.fact_check_outlined, size: 18),
+                  label: const Text('Audit Inventory'),
                 ),
-                InventoryStatCard(
-                  label: 'Available',
-                  value: '${s.availableBottles}',
-                  icon: Icons.check_circle_outline,
-                  color: AppColors.success,
-                  subtitle: 'Total − Borrowed',
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/inventory/audit-history'),
+                  icon: const Icon(Icons.history_toggle_off, size: 18),
+                  label: const Text('Audit History'),
                 ),
-                InventoryStatCard(
-                  label: 'Borrowed',
-                  value: '${s.borrowedOutstanding}',
-                  icon: Icons.arrow_upward,
-                  color: AppColors.warning,
-                  subtitle: 'with customers',
-                ),
-                InventoryStatCard(
-                  label: 'Damaged',
-                  value: '${s.damagedBottles}',
-                  icon: Icons.broken_image_outlined,
-                  color: AppColors.error,
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/inventory/adjustments'),
+                  icon: const Icon(Icons.tune_outlined, size: 18),
+                  label: const Text('Adjustment History'),
                 ),
               ],
             ),
-            loading: () => const LoadingOverlay(),
-            error: (e, _) => Text('Error: $e'),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // Supply management
-          Text(
-            'Supply Management',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final useColumn = constraints.maxWidth < 400;
-              if (useColumn) {
-                return Column(
+            Text(
+              'Record Transaction',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = context.actionGridColumns;
+                final aspectRatio = context.isSmallPhone ? 2.0 : 2.3;
+                return GridView.count(
+                  crossAxisCount: columns,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: aspectRatio,
                   children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            context.push('/inventory/purchase-stock'),
-                        icon: const Icon(Icons.add_shopping_cart, size: 18),
-                        label: const Text('Purchase Stock'),
+                    _ActionButton(
+                      label: 'Return Bottles',
+                      icon: Icons.arrow_downward,
+                      color: AppColors.success,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.ret,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () =>
-                            context.push('/inventory/supply-purchases'),
-                        icon: const Icon(Icons.history, size: 18),
-                        label: const Text('Supply Purchases'),
+                    _ActionButton(
+                      label: 'Damaged',
+                      icon: Icons.broken_image_outlined,
+                      color: AppColors.error,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.damaged,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => context.push('/inventory/suppliers'),
-                        icon: const Icon(Icons.store_outlined, size: 18),
-                        label: const Text('Suppliers'),
+                    _ActionButton(
+                      label: 'Purchase Bottles',
+                      icon: Icons.shopping_cart_outlined,
+                      color: AppColors.primary,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.purchase,
+                      ),
+                    ),
+                    _ActionButton(
+                      label: 'Manual Borrow',
+                      icon: Icons.arrow_upward,
+                      color: AppColors.warning,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.borrow,
+                      ),
+                    ),
+                    _ActionButton(
+                      label: 'Inventory Adjustment',
+                      icon: Icons.tune_outlined,
+                      color: Colors.indigo,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.adjustment,
+                      ),
+                    ),
+                    _ActionButton(
+                      label: 'Missing Bottles',
+                      icon: Icons.help_outline,
+                      color: AppColors.missing,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.missing,
+                      ),
+                    ),
+                    _ActionButton(
+                      label: 'Donate Bottles',
+                      icon: Icons.volunteer_activism_outlined,
+                      color: Colors.deepPurple,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.donation,
                       ),
                     ),
                   ],
                 );
-              }
-              return Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => context.push('/inventory/purchase-stock'),
-                    icon: const Icon(Icons.add_shopping_cart, size: 18),
-                    label: const Text('Purchase Stock'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        context.push('/inventory/supply-purchases'),
-                    icon: const Icon(Icons.history, size: 18),
-                    label: const Text('Supply Purchases'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () => context.push('/inventory/suppliers'),
-                    icon: const Icon(Icons.store_outlined, size: 18),
-                    label: const Text('Suppliers'),
-                  ),
-                ],
-              );
-            },
-          ),
-          summaryAsync.when(
-            data: (s) {
-              if (s.gallonsStock == 0 &&
-                  s.capsStock == 0 &&
-                  s.waterStocks == 0 &&
-                  s.othersStock == 0) {
-                return const SizedBox.shrink();
-              }
-              return Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (s.gallonsStock > 0)
-                      Chip(label: Text('Gallons: ${s.gallonsStock}')),
-                    if (s.capsStock > 0)
-                      Chip(label: Text('Caps: ${s.capsStock}')),
-                    if (s.waterStocks > 0)
-                      Chip(label: Text('Water Stocks: ${s.waterStocks}')),
-                    if (s.othersStock > 0)
-                      Chip(label: Text('Others: ${s.othersStock}')),
-                  ],
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          const SizedBox(height: 20),
+              },
+            ),
+            const SizedBox(height: 24),
 
-          // Action buttons
-          Text(
-            'Record Transaction',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = context.actionGridColumns;
-              final aspectRatio = context.isSmallPhone ? 2.2 : 2.5;
-              return GridView.count(
-                crossAxisCount: columns,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: aspectRatio,
-                children: [
-              _ActionButton(
-                label: 'Return Bottles',
-                icon: Icons.arrow_downward,
-                color: AppColors.success,
-                onTap: () => _openTransactionSheet(
-                  context,
-                  ref,
-                  TransactionType.ret,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Transaction History',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
-              ),
-              _ActionButton(
-                label: 'Damaged',
-                icon: Icons.broken_image_outlined,
-                color: AppColors.error,
-                onTap: () => _openTransactionSheet(
-                  context,
-                  ref,
-                  TransactionType.damaged,
+                TextButton(
+                  onPressed: () => context.push('/inventory/history'),
+                  child: const Text('View All'),
                 ),
-              ),
-              _ActionButton(
-                label: 'Purchase Bottles',
-                icon: Icons.shopping_cart_outlined,
-                color: AppColors.primary,
-                onTap: () => _openTransactionSheet(
-                  context,
-                  ref,
-                  TransactionType.purchase,
-                ),
-              ),
-              _ActionButton(
-                label: 'Manual Borrow',
-                icon: Icons.arrow_upward,
-                color: AppColors.warning,
-                onTap: () => _openTransactionSheet(
-                  context,
-                  ref,
-                  TransactionType.borrow,
-                ),
-              ),
-            ],
-          );
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Transaction history
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Transaction History',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              TextButton(
-                onPressed: () => context.push('/inventory/history'),
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Swipe left to delete • Tap to edit',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-          ),
-          const SizedBox(height: 8),
-          transactionsAsync.when(
-            data: (transactions) {
-              if (transactions.isEmpty) {
-                return const EmptyStateWidget(
-                  message: 'No transactions yet',
-                  icon: Icons.swap_horiz,
-                );
-              }
-              final customerMap = customersAsync.when(
-                data: (customers) =>
-                    {for (final c in customers) c.id: c.name},
-                loading: () => <String, String>{},
-                error: (_, __) => <String, String>{},
-              );
-              return Column(
-                children: transactions.map((tx) {
-                  Color color;
-                  IconData icon;
-                  switch (tx.transactionType) {
-                    case TransactionType.borrow:
-                      color = AppColors.warning;
-                      icon = Icons.arrow_upward;
-                    case TransactionType.ret:
-                      color = AppColors.success;
-                      icon = Icons.arrow_downward;
-                    case TransactionType.damaged:
-                      color = AppColors.error;
-                      icon = Icons.broken_image_outlined;
-                    case TransactionType.purchase:
-                      color = AppColors.primary;
-                      icon = Icons.shopping_cart_outlined;
-                  }
-                  final label =
-                      BottleTransaction.typeLabel(tx.transactionType);
-                  final customerName = tx.customerId != null
-                      ? customerMap[tx.customerId] ?? 'Unknown'
-                      : null;
-
-                  return Dismissible(
-                    key: Key(tx.id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.delete_outline,
-                          color: AppColors.error),
-                    ),
-                    confirmDismiss: (_) async {
-                      await _deleteTransaction(context, ref, tx);
-                      return false; // Stream handles the removal
-                    },
-                    child: Card(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      child: ListTile(
-                        onTap: () => _openEditSheet(context, ref, tx),
-                        leading: CircleAvatar(
-                          backgroundColor: color.withValues(alpha: 0.1),
-                          child: Icon(icon, color: color, size: 20),
-                        ),
-                        title: Text(
-                          '$label${customerName != null ? ' — $customerName' : ''}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(DateFormatter.format(tx.date)),
-                            if (tx.notes != null) Text(tx.notes!),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${tx.quantity} btl',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                color: color,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(Icons.edit_outlined,
-                                size: 16, color: Colors.grey[400]),
-                          ],
-                        ),
-                      ),
-                    ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Swipe left to delete • Tap to edit',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            ),
+            const SizedBox(height: 8),
+            transactionsAsync.when(
+              data: (transactions) {
+                if (transactions.isEmpty) {
+                  return const EmptyStateWidget(
+                    message: 'No transactions yet',
+                    icon: Icons.swap_horiz,
                   );
-                }).toList(),
-              );
-            },
-            loading: () => const LoadingOverlay(),
-            error: (e, _) => Text('Error: $e'),
-          ),
-        ],
-      ),
+                }
+                final customerMap = customersAsync.when(
+                  data: (customers) =>
+                      {for (final c in customers) c.id: c.name},
+                  loading: () => <String, String>{},
+                  error: (_, __) => <String, String>{},
+                );
+                final preview = transactions.take(10).toList();
+                return Column(
+                  children: preview.map((tx) {
+                    final color = _colorForType(tx.transactionType);
+                    final icon = _iconForType(tx.transactionType);
+                    final label =
+                        BottleTransaction.typeLabel(tx.transactionType);
+                    final customerName = tx.customerId != null
+                        ? customerMap[tx.customerId] ?? 'Unknown'
+                        : null;
+
+                    return Dismissible(
+                      key: Key(tx.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: AppColors.error,
+                        ),
+                      ),
+                      confirmDismiss: (_) async {
+                        await _deleteTransaction(context, ref, tx);
+                        return false;
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        child: ListTile(
+                          onTap: () => _openEditSheet(context, ref, tx),
+                          leading: CircleAvatar(
+                            backgroundColor: color.withValues(alpha: 0.1),
+                            child: Icon(icon, color: color, size: 20),
+                          ),
+                          title: Text(
+                            '$label${customerName != null ? ' — $customerName' : ''}',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(DateFormatter.format(tx.date)),
+                              if (tx.reason != null && tx.reason!.isNotEmpty)
+                                Text(tx.reason!),
+                              if (tx.notes != null) Text(tx.notes!),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${tx.quantity} btl',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: color,
+                                ),
+                              ),
+                              if (!tx.isDeliveryLinked) ...[
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit_outlined,
+                                  size: 16,
+                                  color: Colors.grey[400],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const LoadingOverlay(),
+              error: (e, _) => Text('Error: $e'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -431,7 +512,7 @@ class InventoryScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Enter the initial number of bottles owned (before transactions).',
+              'Enter the initial number of bottles owned before transactions.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -465,6 +546,139 @@ class InventoryScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  static Color _colorForType(TransactionType type) {
+    switch (type) {
+      case TransactionType.borrow:
+        return AppColors.warning;
+      case TransactionType.ret:
+        return AppColors.success;
+      case TransactionType.damaged:
+        return AppColors.error;
+      case TransactionType.purchase:
+        return AppColors.primary;
+      case TransactionType.missing:
+        return AppColors.missing;
+      case TransactionType.donation:
+        return Colors.deepPurple;
+      case TransactionType.adjustment:
+        return Colors.indigo;
+      case TransactionType.audit:
+        return Colors.blueGrey;
+    }
+  }
+
+  static IconData _iconForType(TransactionType type) {
+    switch (type) {
+      case TransactionType.borrow:
+        return Icons.arrow_upward;
+      case TransactionType.ret:
+        return Icons.arrow_downward;
+      case TransactionType.damaged:
+        return Icons.broken_image_outlined;
+      case TransactionType.purchase:
+        return Icons.shopping_cart_outlined;
+      case TransactionType.missing:
+        return Icons.help_outline;
+      case TransactionType.donation:
+        return Icons.volunteer_activism_outlined;
+      case TransactionType.adjustment:
+        return Icons.tune_outlined;
+      case TransactionType.audit:
+        return Icons.fact_check_outlined;
+    }
+  }
+}
+
+class _WaterInventorySection extends StatelessWidget {
+  final InventorySummary summary;
+
+  const _WaterInventorySection({required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final gallons = summary.gallonsStock;
+    final waterStocks = summary.waterStocks;
+    final caps = summary.capsStock;
+    final others = summary.othersStock;
+
+    if (gallons == 0 && waterStocks == 0 && caps == 0 && others == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Water Inventory',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.cyan.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.cyan.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.cyan.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.water_drop_outlined,
+                      color: Colors.cyan,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$gallons',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                        const Text(
+                          'Gallons Available',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.cyan,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (waterStocks > 0 || caps > 0 || others > 0) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                if (waterStocks > 0)
+                  Text('Water Stocks: $waterStocks'),
+                if (caps > 0) Text('Caps: $caps'),
+                if (others > 0) Text('Others: $others'),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

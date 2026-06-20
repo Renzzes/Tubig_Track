@@ -110,11 +110,11 @@ class DashboardScreen extends ConsumerWidget {
                     onTap: () => context.go('/inventory'),
                   ),
                   SummaryCard(
-                    title: 'Borrowed Bottles',
+                    title: 'Bottles With Customers',
                     value: '${summary.borrowedBottles}',
                     icon: Icons.people_outline,
                     color: AppColors.warning,
-                    subtitle: 'with customers',
+                    subtitle: 'outside business',
                     onTap: () => context.go('/inventory'),
                   ),
                 ],
@@ -144,6 +144,24 @@ class DashboardScreen extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (_, __) => const SizedBox.shrink(),
               ),
+
+              if (summary.lastInventoryAuditDate == null ||
+                  DateTime.now()
+                          .difference(summary.lastInventoryAuditDate!)
+                          .inDays >=
+                      30) ...[
+                SummaryCard(
+                  title: 'Inventory Audit Recommended',
+                  value: summary.lastInventoryAuditDate == null
+                      ? 'No audits yet'
+                      : 'Last audit: ${DateTime.now().difference(summary.lastInventoryAuditDate!).inDays} days ago',
+                  icon: Icons.fact_check_outlined,
+                  color: AppColors.warning,
+                  subtitle: 'Perform inventory audit',
+                  onTap: () => context.push('/inventory/audit'),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               savingsAsync.when(
                 data: (savings) => SummaryCard(

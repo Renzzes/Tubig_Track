@@ -6,10 +6,11 @@ class BottleTransactionsTable extends Table {
 
   TextColumn get id => text()();
   TextColumn get customerId => text().nullable()();
-  // transactionType: 'borrow' | 'return' | 'damaged' | 'purchase'
+  // transactionType: borrow | return | damaged | purchase | missing | donation
   TextColumn get transactionType => text()();
   IntColumn get quantity => integer()();
   DateTimeColumn get date => dateTime().withDefault(currentDateAndTime)();
+  TextColumn get reason => text().nullable()();
   TextColumn get notes => text().nullable()();
 
   @override

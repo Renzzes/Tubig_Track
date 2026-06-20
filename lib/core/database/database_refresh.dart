@@ -24,6 +24,9 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(filteredDeliveriesProvider);
   ref.invalidate(bottleTransactionsStreamProvider);
   ref.invalidate(inventorySummaryProvider);
+  ref.invalidate(inventoryAuditsStreamProvider);
+  ref.invalidate(inventoryAdjustmentsStreamProvider);
+  ref.invalidate(inventoryAuditSummaryProvider);
   ref.invalidate(expensesStreamProvider);
   ref.invalidate(dispenserSalesStreamProvider);
   ref.invalidate(dashboardSummaryProvider);

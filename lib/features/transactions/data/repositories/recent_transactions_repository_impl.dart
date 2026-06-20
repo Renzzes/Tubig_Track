@@ -119,6 +119,14 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           type = RecentTransactionType.bottleDamaged;
         case 'purchase':
           type = RecentTransactionType.bottlePurchase;
+        case 'missing':
+          type = RecentTransactionType.bottleMissing;
+        case 'donation':
+          type = RecentTransactionType.bottleDonation;
+        case 'adjustment':
+          type = RecentTransactionType.bottleAdjustment;
+        case 'audit':
+          type = RecentTransactionType.bottleAudit;
         default:
           type = RecentTransactionType.bottleBorrow;
       }
@@ -134,7 +142,9 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           subtitle: '${t.quantity} bottles',
           amount: t.quantity.toDouble(),
           isCredit: type == RecentTransactionType.bottleReturn ||
-              type == RecentTransactionType.bottlePurchase,
+              type == RecentTransactionType.bottlePurchase ||
+              (type == RecentTransactionType.bottleAdjustment &&
+                  t.quantity > 0),
           customerId: t.customerId,
           customerName: customerName,
         ),
@@ -166,6 +176,14 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
         return 'Inventory Purchase';
       case RecentTransactionType.bottleDamaged:
         return 'Damaged Bottles';
+      case RecentTransactionType.bottleMissing:
+        return 'Missing Bottles';
+      case RecentTransactionType.bottleDonation:
+        return 'Donated Bottles';
+      case RecentTransactionType.bottleAdjustment:
+        return 'Inventory Adjustment';
+      case RecentTransactionType.bottleAudit:
+        return 'Inventory Audit';
       case RecentTransactionType.bottleReturn:
         return 'Bottle Return';
       default:

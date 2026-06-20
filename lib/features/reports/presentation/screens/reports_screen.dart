@@ -136,6 +136,26 @@ class ReportsScreen extends ConsumerWidget {
               pw.Divider(),
               _pdfRow('Net Profit', CurrencyFormatter.format(report.netProfit), bold: true),
               pw.SizedBox(height: 20),
+              pw.Text('Inventory', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              _pdfRow('Total Bottles Owned', '${report.totalBottlesOwned}'),
+              _pdfRow('Available Bottles', '${report.availableBottles}'),
+              _pdfRow('Bottles With Customers', '${report.bottlesWithCustomers}'),
+              _pdfRow('Damaged Bottles', '${report.damagedBottles}'),
+              _pdfRow('Missing Bottles', '${report.missingBottles}'),
+              _pdfRow('Donated Bottles', '${report.donatedBottles}'),
+              _pdfRow('Inventory Audits', '${report.totalAudits}'),
+              _pdfRow(
+                'Last Audit',
+                report.lastAuditDate != null
+                    ? DateFormatter.format(report.lastAuditDate!)
+                    : 'Never',
+              ),
+              _pdfRow('Missing Bottles Found', '${report.auditMissingBottles}'),
+              _pdfRow(
+                'Adjustment Quantity',
+                '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
+              ),
+              pw.SizedBox(height: 10),
               _pdfRow('Total Deliveries', '${report.totalDeliveries}'),
               _pdfRow('Bottles Delivered', '${report.totalBottlesDelivered}'),
               _pdfRow('Payments Received',
@@ -266,6 +286,51 @@ class ReportsScreen extends ConsumerWidget {
       sheet.appendRow([
         xl.TextCellValue('Net Profit'),
         xl.DoubleCellValue(report.netProfit),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Inventory')]);
+      sheet.appendRow([
+        xl.TextCellValue('Total Bottles Owned'),
+        xl.IntCellValue(report.totalBottlesOwned),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Available Bottles'),
+        xl.IntCellValue(report.availableBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Bottles With Customers'),
+        xl.IntCellValue(report.bottlesWithCustomers),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Damaged Bottles'),
+        xl.IntCellValue(report.damagedBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Missing Bottles'),
+        xl.IntCellValue(report.missingBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Donated Bottles'),
+        xl.IntCellValue(report.donatedBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Inventory Audits'),
+        xl.IntCellValue(report.totalAudits),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Last Audit'),
+        xl.TextCellValue(
+          report.lastAuditDate != null
+              ? DateFormatter.format(report.lastAuditDate!)
+              : 'Never',
+        ),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Missing Bottles Found'),
+        xl.IntCellValue(report.auditMissingBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Adjustment Quantity'),
+        xl.IntCellValue(report.totalAdjustmentQuantity),
       ]);
       sheet.appendRow([
         xl.TextCellValue('Total Deliveries'),
@@ -542,6 +607,58 @@ class _ReportContent extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
+
+        // Inventory snapshot
+        _SectionHeader(
+          title: 'Inventory',
+          icon: Icons.inventory_2_outlined,
+          color: AppColors.primary,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Total Bottles Owned',
+          value: '${report.totalBottlesOwned}',
+        ),
+        _MetricRow(
+          label: 'Available Bottles',
+          value: '${report.availableBottles}',
+        ),
+        _MetricRow(
+          label: 'Bottles With Customers',
+          value: '${report.bottlesWithCustomers}',
+        ),
+        _MetricRow(
+          label: 'Damaged Bottles',
+          value: '${report.damagedBottles}',
+        ),
+        _MetricRow(
+          label: 'Missing Bottles',
+          value: '${report.missingBottles}',
+        ),
+        _MetricRow(
+          label: 'Donated Bottles',
+          value: '${report.donatedBottles}',
+        ),
+        _MetricRow(
+          label: 'Inventory Audits',
+          value: '${report.totalAudits}',
+        ),
+        _MetricRow(
+          label: 'Last Audit',
+          value: report.lastAuditDate != null
+              ? DateFormatter.format(report.lastAuditDate!)
+              : 'Never',
+        ),
+        _MetricRow(
+          label: 'Missing Bottles Found',
+          value: '${report.auditMissingBottles}',
+        ),
+        _MetricRow(
+          label: 'Adjustment Quantity',
+          value:
+              '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
+        ),
+        const SizedBox(height: 32),
 
         // Delivery activity section
         _SectionHeader(

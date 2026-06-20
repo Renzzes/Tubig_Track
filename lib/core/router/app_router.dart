@@ -27,6 +27,9 @@ import '../../features/deliveries/presentation/screens/deliveries_screen.dart';
 import '../../features/deliveries/presentation/screens/add_delivery_screen.dart';
 
 import '../../features/inventory/presentation/screens/inventory_screen.dart';
+import '../../features/inventory/presentation/screens/inventory_audit_screen.dart';
+import '../../features/inventory/presentation/screens/inventory_audit_history_screen.dart';
+import '../../features/inventory/presentation/screens/inventory_adjustment_history_screen.dart';
 
 import '../../features/settings/presentation/screens/archive_reset_screen.dart';
 
@@ -354,6 +357,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/inventory/history',
 
         builder: (context, state) => const InventoryHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/audit',
+
+        builder: (context, state) => const InventoryAuditScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/audit-history',
+
+        builder: (context, state) => const InventoryAuditHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/adjustments',
+
+        builder: (context, state) => const InventoryAdjustmentHistoryScreen(),
 
       ),
 

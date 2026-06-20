@@ -1,6 +1,6 @@
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../../overdue/data/repositories/overdue_repository_impl.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -28,25 +28,8 @@ class DashboardRepositoryImpl implements DashboardRepository {
 
     final todayDeliveriesCount = await _db.deliveriesDao.getTodayCount();
 
-    final initialStr = await _db.settingsDao.getValue(
-      AppConstants.settingTotalBottleInventory,
-    );
-    final initialInventory = int.tryParse(initialStr ?? '') ??
-        AppConstants.defaultBottleInventory;
-
-    final borrowed =
-        await _db.bottleTransactionsDao.getTotalByType('borrow');
-    final returned =
-        await _db.bottleTransactionsDao.getTotalByType('return');
-    final damaged =
-        await _db.bottleTransactionsDao.getTotalByType('damaged');
-    final purchased =
-        await _db.bottleTransactionsDao.getTotalByType('purchase');
-
-    final totalBottles = initialInventory + purchased - damaged;
-    final borrowedOutstanding = (borrowed - returned).clamp(0, 999999);
-    final availableBottles =
-        (totalBottles - borrowedOutstanding).clamp(0, 999999);
+    final inventory = await InventoryRepositoryImpl(_db).getSummary();
+    final auditSummary = await InventoryRepositoryImpl(_db).getAuditSummary();
 
     final unpaidReceivables = await _db.deliveriesDao.getTotalReceivables();
     final totalCustomers = await _db.customersDao.getCount();
@@ -75,12 +58,13 @@ class DashboardRepositoryImpl implements DashboardRepository {
       todayExpenses: todayExpenses,
       todayProfit: todayProfit,
       todayDeliveriesCount: todayDeliveriesCount,
-      availableBottles: availableBottles,
-      borrowedBottles: borrowedOutstanding,
+      availableBottles: inventory.availableBottles,
+      borrowedBottles: inventory.bottlesWithCustomers,
       unpaidReceivables: unpaidReceivables,
       totalCustomers: totalCustomers,
       overdueCustomerCount: overdueSummary.customerCount,
       overdueTotalAmount: overdueSummary.totalAmount,
+      lastInventoryAuditDate: auditSummary.lastAuditDate,
       upcomingDeliveries: upcomingDeliveries,
     );
   }

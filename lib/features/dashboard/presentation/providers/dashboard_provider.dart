@@ -20,6 +20,8 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   // Watch live streams — when any of these change, this provider re-evaluates.
   ref.watch(deliveriesStreamProvider);
   ref.watch(bottleTransactionsStreamProvider);
+  ref.watch(inventoryAuditsStreamProvider);
+  ref.watch(inventoryAdjustmentsStreamProvider);
   ref.watch(expensesStreamProvider);
   ref.watch(dispenserSalesStreamProvider);
   ref.watch(overdueSummaryProvider);

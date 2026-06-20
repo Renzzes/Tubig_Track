@@ -25,6 +25,7 @@ class DashboardSummary {
   final int totalCustomers;
   final int overdueCustomerCount;
   final double overdueTotalAmount;
+  final DateTime? lastInventoryAuditDate;
   final List<UpcomingDeliveryItem> upcomingDeliveries;
 
   const DashboardSummary({
@@ -38,6 +39,7 @@ class DashboardSummary {
     required this.totalCustomers,
     required this.overdueCustomerCount,
     required this.overdueTotalAmount,
+    required this.lastInventoryAuditDate,
     required this.upcomingDeliveries,
   });
 }

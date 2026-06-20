@@ -6,6 +6,10 @@ enum RecentTransactionType {
   bottleReturn,
   bottlePurchase,
   bottleDamaged,
+  bottleMissing,
+  bottleDonation,
+  bottleAdjustment,
+  bottleAudit,
   dispenserSale,
   savingsAddition,
   supplyPurchase,
@@ -56,6 +60,14 @@ class RecentTransaction {
         return 'Inventory Purchase';
       case RecentTransactionType.bottleDamaged:
         return 'Damaged Bottles';
+      case RecentTransactionType.bottleMissing:
+        return 'Missing Bottles';
+      case RecentTransactionType.bottleDonation:
+        return 'Donated Bottles';
+      case RecentTransactionType.bottleAdjustment:
+        return 'Inventory Adjustment';
+      case RecentTransactionType.bottleAudit:
+        return 'Inventory Audit';
       case RecentTransactionType.dispenserSale:
         return 'Dispenser Sale';
       case RecentTransactionType.savingsAddition:

@@ -30,6 +30,10 @@ class TransactionActivityHandler {
       case RecentTransactionType.bottleReturn:
       case RecentTransactionType.bottlePurchase:
       case RecentTransactionType.bottleDamaged:
+      case RecentTransactionType.bottleMissing:
+      case RecentTransactionType.bottleDonation:
+      case RecentTransactionType.bottleAdjustment:
+      case RecentTransactionType.bottleAudit:
         context.push('/inventory');
     }
   }

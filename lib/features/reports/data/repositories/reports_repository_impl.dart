@@ -3,6 +3,7 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/expense_category_utils.dart';
 import '../../domain/entities/report_summary.dart';
 import '../../domain/repositories/reports_repository.dart';
+import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../../savings/data/repositories/savings_repository_impl.dart';
 
 class ReportsRepositoryImpl implements ReportsRepository {
@@ -117,6 +118,9 @@ class ReportsRepositoryImpl implements ReportsRepository {
         savingsSummary.currentSavings - savingsSummary.manualAdditions;
     final netSavings = savingsSummary.currentSavings;
 
+    final inventory = await InventoryRepositoryImpl(_db).getSummary();
+    final auditSummary = await InventoryRepositoryImpl(_db).getAuditSummary();
+
     return ReportSummary(
       period: period,
       startDate: start,
@@ -142,6 +146,16 @@ class ReportsRepositoryImpl implements ReportsRepository {
       manualSavingsInPeriod: manualInPeriod,
       totalManualSavings: savingsSummary.manualAdditions,
       netSavings: netSavings,
+      totalBottlesOwned: inventory.totalBottlesOwned,
+      availableBottles: inventory.availableBottles,
+      bottlesWithCustomers: inventory.bottlesWithCustomers,
+      damagedBottles: inventory.damagedBottles,
+      missingBottles: inventory.missingBottles,
+      donatedBottles: inventory.donatedBottles,
+      totalAudits: auditSummary.totalAudits,
+      lastAuditDate: auditSummary.lastAuditDate,
+      auditMissingBottles: auditSummary.missingBottlesFound,
+      totalAdjustmentQuantity: auditSummary.adjustmentQuantity,
     );
   }
 }
