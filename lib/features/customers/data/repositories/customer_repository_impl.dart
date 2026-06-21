@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/inventory_calculator.dart';
+import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../domain/entities/customer.dart';
 import '../../domain/repositories/customer_repository.dart';
 
@@ -18,6 +19,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
       address: row.address,
       notes: row.notes,
       pendingPhysicalBottleCount: row.pendingPhysicalBottleCount,
+      customerOwnedBottlesHeld: row.customerOwnedBottlesHeld,
+      lastPhysicalCountDate: row.lastPhysicalCountDate,
+      lastPhysicalCountVerified: row.lastPhysicalCountVerified,
       createdAt: row.createdAt,
     );
   }
@@ -157,12 +161,18 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final depositBalance =
         await _db.customerDepositsDao.getBalanceForCustomer(customerId);
 
+    final customerRow = await _db.customersDao.getById(customerId);
+    final customerOwnedHeld = customerRow?.customerOwnedBottlesHeld ?? 0;
+    final customerEntity = customerRow != null ? _map(customerRow) : null;
+
     return CustomerStats(
       borrowedBottles: borrowed,
       returnedBottles: returned,
       damagedBottles: damaged,
       outstandingBottles: bottlesHeld,
       bottlesHeld: bottlesHeld,
+      customerOwnedBottlesHeld: customerOwnedHeld,
+      totalBottlesAtCustomer: bottlesHeld + customerOwnedHeld,
       unpaidBalance: unpaidBalance,
       depositBalance: depositBalance,
       totalAmountPaid: totalAmountPaid,
@@ -173,6 +183,10 @@ class CustomerRepositoryImpl implements CustomerRepository {
       lastActivityDate: lastActivityDate,
       hasInitialBalance: hasInitialBalance,
       initialBottleBalance: initialBottleBalance,
+      lastPhysicalCountDate: customerEntity?.lastPhysicalCountDate,
+      daysSinceLastPhysicalCountLabel: customerEntity != null
+          ? BottleVerificationUtils.daysSinceLabel(customerEntity)
+          : 'Never Verified',
     );
   }
 }

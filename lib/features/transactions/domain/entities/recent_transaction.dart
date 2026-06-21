@@ -16,6 +16,7 @@ enum RecentTransactionType {
   depositAdded,
   depositUsed,
   depositAdjustment,
+  walkInOperation,
 }
 
 class RecentTransaction {
@@ -106,6 +107,8 @@ class RecentTransaction {
         return 'Deposit Used';
       case RecentTransactionType.depositAdjustment:
         return 'Deposit Adjustment';
+      case RecentTransactionType.walkInOperation:
+        return 'Walk-In Operation';
     }
   }
 

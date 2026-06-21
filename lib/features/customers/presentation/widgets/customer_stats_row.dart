@@ -15,7 +15,7 @@ class CustomerStatsRow extends StatelessWidget {
       spacing: 8,
       children: [
         _StatBox(
-          label: 'Bottles Held',
+          label: 'Business-Owned Held',
           value: '${stats.bottlesHeld}',
           icon: Icons.inventory_2_outlined,
           color: AppColors.primary,

@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'TubigTrack';
-  static const String appVersion = '1.4.7';
+  static const String appVersion = '1.6.0';
   static const String applicationId = 'com.tubigtrack.tubig_track';
 
   /// GitHub Releases API for self-update.
@@ -72,6 +72,11 @@ class AppConstants {
 
   static String initialBalanceTransactionId(String customerId) =>
       '${customerId}_initial_balance';
+
+  static const String customerOwnedEventSetBalance = 'set_balance';
+  static const String customerOwnedEventAdjustBalance = 'adjust_balance';
+  static const String customerOwnedEventCollected = 'collected';
+  static const String customerOwnedEventDeliveryFilled = 'delivery_filled';
 
   static const String paymentStatusPaid = 'paid';
   static const String paymentStatusUnpaid = 'unpaid';

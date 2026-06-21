@@ -22,6 +22,8 @@ class TransactionActivityHandler {
         context.push('/expenses');
       case RecentTransactionType.dispenserSale:
         context.push('/dispenser-sales');
+      case RecentTransactionType.walkInOperation:
+        context.push('/walk-in-operations');
       case RecentTransactionType.savingsAddition:
         context.push('/savings');
       case RecentTransactionType.supplyPurchase:

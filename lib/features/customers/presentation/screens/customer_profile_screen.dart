@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
-import '../../../../core/utils/bottle_balance_utils.dart';
+import '../../../../core/utils/customer_bottle_ownership_utils.dart';
+import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../../core/utils/bottle_variance_utils.dart';
 import '../../../../core/utils/customer_status_utils.dart';
 import '../../../../core/utils/responsive.dart';
@@ -12,6 +13,7 @@ import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../deliveries/domain/entities/delivery.dart';
 import '../../../deliveries/presentation/providers/deliveries_provider.dart';
+import '../../../inventory/domain/entities/customer_owned_bottle_log.dart';
 import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
@@ -19,6 +21,8 @@ import '../../../deposits/domain/entities/customer_deposit.dart';
 import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customers_provider.dart';
+import '../utils/customer_statement_export.dart';
+import '../widgets/customer_bottle_reconcile_dialog.dart';
 import '../widgets/customer_stats_row.dart';
 
 class CustomerProfileScreen extends ConsumerWidget {
@@ -38,6 +42,8 @@ class CustomerProfileScreen extends ConsumerWidget {
     final depositsAsync =
         ref.watch(customerDepositsStreamProvider(customerId));
     final allTransactionsAsync = ref.watch(bottleTransactionsStreamProvider);
+    final ownedLogsAsync =
+        ref.watch(customerOwnedLogsStreamProvider(customerId));
 
     return Scaffold(
       appBar: AppBar(
@@ -50,10 +56,30 @@ class CustomerProfileScreen extends ConsumerWidget {
           customerAsync.when(
             data: (c) {
               if (c == null) return const SizedBox();
-              return IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () =>
-                    context.push('/customers/$customerId/edit'),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.directions_walk_outlined),
+                    tooltip: 'Start Customer Visit',
+                    onPressed: () =>
+                        context.push('/customers/$customerId/visit'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    tooltip: 'Print Statement',
+                    onPressed: () => CustomerStatementExport.exportPdf(
+                      context,
+                      ref,
+                      customerId,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () =>
+                        context.push('/customers/$customerId/edit'),
+                  ),
+                ],
               );
             },
             loading: () => const SizedBox(),
@@ -73,6 +99,15 @@ class CustomerProfileScreen extends ConsumerWidget {
                 txs.where((t) => t.customerId == customerId).toList(),
             loading: () => <BottleTransaction>[],
             error: (_, __) => <BottleTransaction>[],
+          );
+          final ownedLogs = ownedLogsAsync.when(
+            data: (logs) => logs,
+            loading: () => <CustomerOwnedBottleLog>[],
+            error: (_, __) => <CustomerOwnedBottleLog>[],
+          );
+          final ownershipLedger = buildCustomerOwnershipLedger(
+            transactions: customerTransactions,
+            logs: ownedLogs,
           );
 
           return ResponsiveContent(
@@ -221,21 +256,79 @@ class CustomerProfileScreen extends ConsumerWidget {
                           'Customer Analytics',
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Bottle Ownership Summary',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Total Bottles At Customer',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: Colors.grey[700]),
+                              ),
+                              Text(
+                                '${stats.totalBottlesAtCustomer}',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         _AnalyticsRow(
-                          label: 'Current Bottles Held',
-                          value: '${stats.bottlesHeld} Bottles',
+                          label: 'Business-Owned',
+                          value: '${stats.bottlesHeld}',
                         ),
                         _AnalyticsRow(
-                          label: 'Total Delivered',
+                          label: 'Customer-Owned',
+                          value: '${stats.customerOwnedBottlesHeld}',
+                        ),
+                        const Divider(height: 24),
+                        _AnalyticsRow(
+                          label: 'Last Physical Count',
+                          value: BottleVerificationUtils.lastPhysicalCountLabel(
+                            customer,
+                          ),
+                        ),
+                        _AnalyticsRow(
+                          label: 'Physical Count Status',
+                          value: BottleVerificationUtils.statusFor(customer)
+                              .label,
+                        ),
+                        _AnalyticsRow(
+                          label: 'Days Since Last Physical Count',
+                          value: stats.daysSinceLastPhysicalCountLabel,
+                        ),
+                        const Divider(height: 24),
+                        _AnalyticsRow(
+                          label: 'Total Business-Owned Delivered',
                           value: '${stats.borrowedBottles}',
                         ),
                         _AnalyticsRow(
-                          label: 'Total Collected',
+                          label: 'Total Business-Owned Collected',
                           value: '${stats.returnedBottles}',
                         ),
                         _AnalyticsRow(
-                          label: 'Outstanding Bottles',
+                          label: 'Outstanding Business-Owned',
                           value: '${stats.bottlesHeld}',
                         ),
                         _AnalyticsRow(
@@ -309,8 +402,12 @@ class CustomerProfileScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 12),
                             _AnalyticsRow(
-                              label: 'Current Held',
+                              label: 'Business-Owned Held',
                               value: '${stats.bottlesHeld} Bottles',
+                            ),
+                            _AnalyticsRow(
+                              label: 'Customer-Owned Held',
+                              value: '${stats.customerOwnedBottlesHeld} Bottles',
                             ),
                             if (pending.isNotEmpty) ...[
                               _AnalyticsRow(
@@ -373,6 +470,120 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
+              // Bottle Ownership
+              statsAsync.when(
+                data: (stats) {
+                  final verificationStatus =
+                      BottleVerificationUtils.statusFor(customer);
+                  return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Bottle Ownership',
+                                style:
+                                    Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            _PhysicalCountStatusBadge(
+                              status: verificationStatus,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Total Bottles At Customer',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${stats.totalBottlesAtCustomer} Bottles',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w800,
+                                  color:
+                                      Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _AnalyticsRow(
+                          label: 'Business-Owned Bottles',
+                          value: '${stats.bottlesHeld}',
+                        ),
+                        _AnalyticsRow(
+                          label: 'Customer-Owned Bottles',
+                          value: '${stats.customerOwnedBottlesHeld}',
+                        ),
+                        const Divider(height: 20),
+                        _AnalyticsRow(
+                          label: 'Last Physical Count',
+                          value: BottleVerificationUtils.lastPhysicalCountLabel(
+                            customer,
+                          ),
+                        ),
+                        _AnalyticsRow(
+                          label: 'Status',
+                          value: verificationStatus.label,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push(
+                                  '/customers/$customerId/set-customer-owned-balance',
+                                ),
+                                icon: const Icon(Icons.playlist_add),
+                                label: const Text('Set Customer-Owned'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push(
+                                  '/customers/$customerId/adjust-customer-owned-bottles',
+                                ),
+                                icon: const Icon(Icons.tune_outlined),
+                                label: const Text('Adjust Customer-Owned'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                },
+                loading: () => const SizedBox(),
+                error: (_, __) => const SizedBox(),
+              ),
+              const SizedBox(height: 16),
+
               // Bottle Management — primary bottle tracking hub
               statsAsync.when(
                 data: (stats) => Card(
@@ -408,7 +619,7 @@ class CustomerProfileScreen extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Current Bottles Held',
+                                      'Business-Owned Bottles Held',
                                       style:
                                           Theme.of(context).textTheme.bodySmall,
                                     ),
@@ -441,8 +652,8 @@ class CustomerProfileScreen extends ConsumerWidget {
                                 ),
                                 label: Text(
                                   stats.hasInitialBalance
-                                      ? 'Edit'
-                                      : 'Set Initial Balance',
+                                      ? 'Edit Business-Owned'
+                                      : 'Set Business-Owned Balance',
                                 ),
                               ),
                             ),
@@ -453,7 +664,7 @@ class CustomerProfileScreen extends ConsumerWidget {
                                   '/customers/$customerId/adjust-bottles',
                                 ),
                                 icon: const Icon(Icons.tune_outlined),
-                                label: const Text('Adjust Balance'),
+                                label: const Text('Adjust Business-Owned'),
                               ),
                             ),
                           ],
@@ -476,10 +687,11 @@ class CustomerProfileScreen extends ConsumerWidget {
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: () => _showReconcileDialog(
+                            onPressed: () => CustomerBottleReconcileDialog.show(
                               context,
                               ref,
-                              stats.bottlesHeld,
+                              customerId: customerId,
+                              expectedBottles: stats.bottlesHeld,
                             ),
                             icon: const Icon(Icons.balance_outlined),
                             label: const Text('Reconcile Bottles'),
@@ -490,7 +702,7 @@ class CustomerProfileScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         _AnalyticsRow(
-                          label: 'Outstanding Bottles',
+                          label: 'Outstanding Business-Owned',
                           value: '${stats.bottlesHeld}',
                         ),
                         _AnalyticsRow(
@@ -513,28 +725,37 @@ class CustomerProfileScreen extends ConsumerWidget {
               // Bottle Ledger — timeline style
               _SectionHeader(
                 title: 'Bottle Ledger',
-                count: customerTransactions.isNotEmpty
-                    ? buildCustomerBottleLedger(customerTransactions).length
-                    : null,
+                count: ownershipLedger.isNotEmpty ? ownershipLedger.length : null,
                 onViewAll: () => context.push(
                   '/customers/$customerId/history/bottles',
                 ),
               ),
               const SizedBox(height: 8),
-              if (customerTransactions.isEmpty)
+              if (ownershipLedger.isEmpty)
                 const EmptyStateWidget(
                   message: 'No bottle movements yet',
                   icon: Icons.inventory_2_outlined,
                 )
               else
-                _BottleLedgerTimeline(
-                  entries: buildCustomerBottleLedger(customerTransactions)
-                      .take(5)
-                      .toList(),
+                _OwnershipLedgerTimeline(
+                  entries: ownershipLedger.take(5).toList(),
                 ),
               const SizedBox(height: 16),
 
-              // Primary actions — delivery, collect, payment
+              // Primary actions — visit, delivery, collect, payment
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () =>
+                      context.push('/customers/$customerId/visit'),
+                  icon: const Icon(Icons.directions_walk_outlined),
+                  label: const Text('Start Customer Visit'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               Column(
                 children: [
                   Row(
@@ -868,223 +1089,6 @@ class CustomerProfileScreen extends ConsumerWidget {
     );
   }
 
-  void _showReconcileDialog(
-    BuildContext context,
-    WidgetRef ref,
-    int expectedBottles,
-  ) {
-    final ctrl = TextEditingController(text: expectedBottles.toString());
-    final reasonCtrl = TextEditingController();
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) {
-          final actual = int.tryParse(ctrl.text) ?? expectedBottles;
-          final variance = actual - expectedBottles;
-          final varianceColor = BottleVarianceUtils.colorFor(variance);
-          final hasMissing = variance < 0;
-          final hasExcess = variance > 0;
-
-          return AlertDialog(
-            title: const Text('Bottle Reconciliation'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ReconcileRow(
-                    label: 'Expected Bottles',
-                    value: '$expectedBottles',
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: ctrl,
-                    keyboardType: TextInputType.number,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Actual Count',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: reasonCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Reason (optional)',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (variance != 0) ...[
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: varianceColor.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: varianceColor.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _ReconcileRow(
-                            label: 'Variance',
-                            value: variance > 0 ? '+$variance' : '$variance',
-                            valueColor: varianceColor,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            hasMissing
-                                ? '⚠ Missing Bottles: ${variance.abs()}'
-                                : 'Excess Bottles: ${variance.abs()}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: varianceColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ] else
-                    const Text(
-                      'Bottles match. No adjustment needed.',
-                      style: TextStyle(color: AppColors.success),
-                    ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              if (variance == 0)
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    try {
-                      await ref
-                          .read(inventoryRepositoryProvider)
-                          .recordCustomerBottleReconciliation(
-                            customerId: customerId,
-                            expectedCount: expectedBottles,
-                            actualCount: actual,
-                            reason: reasonCtrl.text.trim().isEmpty
-                                ? null
-                                : reasonCtrl.text.trim(),
-                            applyAdjustment: false,
-                          );
-                    } catch (_) {}
-                  },
-                  child: const Text('Log'),
-                ),
-              if (variance != 0) ...[
-                OutlinedButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    try {
-                      await ref
-                          .read(inventoryRepositoryProvider)
-                          .recordCustomerBottleReconciliation(
-                            customerId: customerId,
-                            expectedCount: expectedBottles,
-                            actualCount: actual,
-                            reason: reasonCtrl.text.trim().isEmpty
-                                ? null
-                                : reasonCtrl.text.trim(),
-                            applyAdjustment: false,
-                          );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Physical count recorded.'),
-                          ),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Save Count'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    if (!context.mounted) return;
-                    final confirmMsg = hasExcess
-                        ? 'This customer has ${variance.abs()} excess bottles.\n\nApply correction?'
-                        : 'This customer has ${variance.abs()} missing bottles.\n\nApply correction?';
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (c) => AlertDialog(
-                        title: Text(
-                          hasExcess ? 'Excess Bottles' : 'Missing Bottles',
-                        ),
-                        content: Text(confirmMsg),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(c, false),
-                            child: const Text('Cancel'),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(c, true),
-                            child: const Text('Confirm'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed == true && context.mounted) {
-                      try {
-                        await ref
-                            .read(inventoryRepositoryProvider)
-                            .recordCustomerBottleReconciliation(
-                              customerId: customerId,
-                              expectedCount: expectedBottles,
-                              actualCount: actual,
-                              reason: reasonCtrl.text.trim().isEmpty
-                                  ? (hasMissing
-                                      ? 'Customer Lost Bottles'
-                                      : 'Excess Bottles')
-                                  : reasonCtrl.text.trim(),
-                              applyAdjustment: true,
-                            );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                hasMissing
-                                    ? 'Adjusted: ${variance.abs()} missing bottles recorded.'
-                                    : 'Adjusted: ${variance.abs()} excess bottles recorded.',
-                              ),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  child: const Text('Apply Correction'),
-                ),
-              ],
-            ],
-          );
-        },
-      ),
-    );
-  }
-
   Widget _statusBadge(CustomerStats stats) {
     final info = CustomerStatusUtils.infoFor(stats);
     final color = Color(info.colorValue);
@@ -1238,11 +1242,38 @@ class _AnalyticsRow extends StatelessWidget {
   }
 }
 
-/// Timeline-style bottle ledger shown on the customer profile.
-class _BottleLedgerTimeline extends StatelessWidget {
-  final List<CustomerBottleLedgerEntry> entries;
+class _PhysicalCountStatusBadge extends StatelessWidget {
+  final PhysicalCountStatus status;
 
-  const _BottleLedgerTimeline({required this.entries});
+  const _PhysicalCountStatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(status.colorValue);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        status.listBadgeLabel,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// Timeline-style ownership ledger on the customer profile.
+class _OwnershipLedgerTimeline extends StatelessWidget {
+  final List<CustomerBottleOwnershipLedgerEntry> entries;
+
+  const _OwnershipLedgerTimeline({required this.entries});
 
   @override
   Widget build(BuildContext context) {
@@ -1250,11 +1281,9 @@ class _BottleLedgerTimeline extends StatelessWidget {
       children: List.generate(entries.length, (i) {
         final entry = entries[i];
         final isLast = i == entries.length - 1;
-        final isIncrease = entry.quantityDelta > 0;
-        final dotColor = isIncrease ? AppColors.success : AppColors.warning;
-        final deltaStr = isIncrease
-            ? '+${entry.quantityDelta}'
-            : '${entry.quantityDelta}';
+        final hasIncrease = (entry.businessOwnedDelta ?? 0) > 0 ||
+            (entry.customerOwnedDelta ?? 0) > 0;
+        final dotColor = hasIncrease ? AppColors.success : AppColors.warning;
 
         return IntrinsicHeight(
           child: Row(
@@ -1291,7 +1320,7 @@ class _BottleLedgerTimeline extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        DateFormatter.format(entry.transaction.date),
+                        DateFormatter.format(entry.date),
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey[500],
@@ -1299,36 +1328,38 @@ class _BottleLedgerTimeline extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              ledgerHeadline(entry),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            deltaStr,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                              color: dotColor,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        entry.headline,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
+                      if (entry.hasBusinessDelta || entry.hasCustomerOwnedDelta)
+                        Text(
+                          ownershipLedgerSubtitle(entry),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[700],
+                          ),
+                        ),
                       const SizedBox(height: 2),
                       Text(
-                        'Balance: ${entry.balanceAfter}',
+                        'Balance After: ${ownershipBalanceAfterLabel(entry)}',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                         ),
                       ),
+                      if (entry.notes != null && entry.notes!.isNotEmpty)
+                        Text(
+                          entry.notes!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -1337,39 +1368,6 @@ class _BottleLedgerTimeline extends StatelessWidget {
           ),
         );
       }),
-    );
-  }
-}
-
-class _ReconcileRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _ReconcileRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(color: AppColors.textSecondary),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: valueColor,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -2,6 +2,7 @@ import '../constants/app_constants.dart';
 import '../../features/inventory/domain/entities/customer_bottle_reconciliation.dart';
 import '../../features/inventory/domain/entities/bottle_transaction.dart';
 import '../../features/supply_purchases/domain/entities/supply_purchase.dart';
+import '../../features/walk_in_operations/domain/entities/walk_in_sale.dart';
 import '../utils/currency_formatter.dart';
 
 enum BusinessTimelineFilter {
@@ -13,6 +14,7 @@ enum BusinessTimelineFilter {
   suppliers,
   audits,
   reconciliations,
+  walkInOperations,
 }
 
 class BusinessTimelineEntry {
@@ -43,6 +45,7 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
   required List<({String label, double amount, DateTime date, String? customerName})>
       deposits,
   List<CustomerBottleReconciliation> reconciliations = const [],
+  List<WalkInSale> walkInSales = const [],
 }) {
   final entries = <BusinessTimelineEntry>[];
 
@@ -140,6 +143,22 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
         headline: 'Received Payment ${CurrencyFormatter.format(p.amount)}',
         subtitle: p.customerName,
         category: BusinessTimelineFilter.payments,
+      ),
+    );
+  }
+
+  for (final sale in walkInSales) {
+    final name = sale.customerId != null
+        ? (customerNames[sale.customerId!] ?? WalkInSale.walkInCustomerLabel)
+        : WalkInSale.walkInCustomerLabel;
+    entries.add(
+      BusinessTimelineEntry(
+        date: sale.date,
+        headline: '${sale.walkInType.timelineLabel} — $name',
+        subtitle:
+            '${sale.quantityDescription} • ${CurrencyFormatter.format(sale.totalAmount)}',
+        category: BusinessTimelineFilter.walkInOperations,
+        entityId: sale.id,
       ),
     );
   }

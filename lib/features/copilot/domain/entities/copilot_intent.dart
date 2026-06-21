@@ -19,6 +19,18 @@ enum CopilotIntent {
   getCustomersWithDeposits,
   getCustomersWithBottlesAndOverdue,
   getCustomerMostDeliveries,
+  getCustomersNeedingReconciliation,
+  getNeverVerifiedCustomers,
+  getCustomersWithMissingBottles,
+  getCustomersWithOverdueBalances,
+  getTotalCustomerOwnedBottles,
+  getCustomerStatementSummary,
+
+  // ── Walk-In Operations (v1.6.0) ───────────────────────────────────────────
+  getWalkInRevenue,
+  getWalkInRefillsThisMonth,
+  getWalkInExchangesThisMonth,
+  compareWalkInsVsDeliveries,
 
   // ── Bottles & Inventory ───────────────────────────────────────────────────
   getMissingBottles,

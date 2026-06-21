@@ -3,12 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/app_text_field.dart';
-import '../../../customers/presentation/providers/customers_provider.dart';
-import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
+import '../providers/customers_provider.dart';
 
 class CollectBottlesScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -22,14 +20,16 @@ class CollectBottlesScreen extends ConsumerStatefulWidget {
 
 class _CollectBottlesScreenState extends ConsumerState<CollectBottlesScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _quantityCtrl = TextEditingController();
+  final _businessQtyCtrl = TextEditingController(text: '0');
+  final _customerOwnedQtyCtrl = TextEditingController(text: '0');
   final _notesCtrl = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _quantityCtrl.dispose();
+    _businessQtyCtrl.dispose();
+    _customerOwnedQtyCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -51,34 +51,33 @@ class _CollectBottlesScreenState extends ConsumerState<CollectBottlesScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final qty = int.parse(_quantityCtrl.text.trim());
-      final stats =
-          await ref.read(customerRepositoryProvider).getCustomerStats(
-                widget.customerId,
-              );
-      if (qty > stats.bottlesHeld) {
-        throw StateError(
-          'Cannot collect more than ${stats.bottlesHeld} bottles currently held.',
-        );
+      final businessQty = int.parse(_businessQtyCtrl.text.trim());
+      final customerOwnedQty = int.parse(_customerOwnedQtyCtrl.text.trim());
+      if (businessQty == 0 && customerOwnedQty == 0) {
+        throw StateError('Enter at least one bottle quantity to collect.');
       }
 
-      await ref.read(inventoryRepositoryProvider).recordTransaction(
-            BottleTransaction(
-              id: const Uuid().v4(),
-              customerId: widget.customerId,
-              transactionType: TransactionType.ret,
-              quantity: qty,
-              date: _selectedDate,
-              notes: _notesCtrl.text.trim().isEmpty
-                  ? 'Collected $qty Bottles'
-                  : _notesCtrl.text.trim(),
-            ),
+      await ref.read(inventoryRepositoryProvider).collectBottlesFromCustomer(
+            customerId: widget.customerId,
+            businessOwnedCollected: businessQty,
+            customerOwnedCollected: customerOwnedQty,
+            date: _selectedDate,
+            notes: _notesCtrl.text.trim().isEmpty
+                ? null
+                : _notesCtrl.text.trim(),
           );
+
+      ref.invalidate(customerStatsProvider(widget.customerId));
+      ref.invalidate(bottleTransactionsStreamProvider);
+      refreshInventoryProviders(ref);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Collected $qty bottles'),
+            content: Text(
+              'Collected $businessQty business-owned and '
+              '$customerOwnedQty customer-owned bottles',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -111,38 +110,34 @@ class _CollectBottlesScreenState extends ConsumerState<CollectBottlesScreen> {
               data: (c) => Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        backgroundColor:
-                            AppColors.primary.withValues(alpha: 0.1),
-                        child: Text(
-                          c?.name[0].toUpperCase() ?? '?',
-                          style: const TextStyle(color: AppColors.primary),
-                        ),
+                      Text(
+                        c?.name ?? '',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                      statsAsync.when(
+                        data: (s) => Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              c?.name ?? '',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            statsAsync.when(
-                              data: (s) => Text(
-                                'Currently holding ${s.bottlesHeld} bottles',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
+                              'Business-Owned Held: ${s.bottlesHeld}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
                               ),
-                              loading: () => const SizedBox(),
-                              error: (_, __) => const SizedBox(),
+                            ),
+                            Text(
+                              'Customer-Owned Held: ${s.customerOwnedBottlesHeld}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
+                        loading: () => const SizedBox(),
+                        error: (_, __) => const SizedBox(),
                       ),
                     ],
                   ),
@@ -158,21 +153,44 @@ class _CollectBottlesScreenState extends ConsumerState<CollectBottlesScreen> {
             ),
             const SizedBox(height: 16),
             AppTextField(
-              label: 'Quantity Collected *',
-              controller: _quantityCtrl,
+              label: 'Business-Owned Bottles Collected',
+              controller: _businessQtyCtrl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               prefixIcon: const Icon(Icons.inventory_2_outlined),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Required';
                 final n = int.tryParse(v);
-                if (n == null || n <= 0) return 'Enter a valid quantity';
+                if (n == null || n < 0) return 'Enter a valid quantity';
                 final held = statsAsync.value?.bottlesHeld;
                 if (held != null && n > held) {
-                  return 'Customer only holds $held bottles';
+                  return 'Only $held business-owned bottles held';
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              label: 'Customer-Owned Bottles Collected',
+              controller: _customerOwnedQtyCtrl,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              prefixIcon: const Icon(Icons.person_outline),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Required';
+                final n = int.tryParse(v);
+                if (n == null || n < 0) return 'Enter a valid quantity';
+                final held = statsAsync.value?.customerOwnedBottlesHeld;
+                if (held != null && n > held) {
+                  return 'Only $held customer-owned bottles held';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Only business-owned collections affect inventory.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             const SizedBox(height: 12),
             ListTile(

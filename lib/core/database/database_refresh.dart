@@ -16,6 +16,7 @@ import '../../features/supply_purchases/presentation/providers/supply_purchase_p
 import '../../features/suppliers/presentation/providers/suppliers_provider.dart';
 import '../../features/deposits/presentation/providers/deposits_provider.dart';
 import '../../features/copilot/presentation/providers/copilot_provider.dart';
+import '../../features/walk_in_operations/presentation/providers/walk_in_provider.dart';
 
 /// Invalidates all data providers after a database restore or reset.
 void invalidateAllDataProviders(WidgetRef ref) {
@@ -33,6 +34,7 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(inventoryAuditSummaryProvider);
   ref.invalidate(expensesStreamProvider);
   ref.invalidate(dispenserSalesStreamProvider);
+  ref.invalidate(walkInSalesStreamProvider);
   ref.invalidate(dashboardSummaryProvider);
   ref.invalidate(appSettingsProvider);
   ref.invalidate(reportSummaryProvider);

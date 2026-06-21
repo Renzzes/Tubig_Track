@@ -5,6 +5,10 @@ import '../../domain/entities/report_summary.dart';
 import '../../domain/repositories/reports_repository.dart';
 import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../../savings/data/repositories/savings_repository_impl.dart';
+import '../../../../core/utils/bottle_verification_utils.dart';
+import '../../../../core/utils/inventory_health_utils.dart';
+import '../../../walk_in_operations/domain/entities/walk_in_sale.dart';
+import '../../../customers/data/repositories/customer_repository_impl.dart';
 
 class ReportsRepositoryImpl implements ReportsRepository {
   final AppDatabase _db;
@@ -49,7 +53,9 @@ class ReportsRepositoryImpl implements ReportsRepository {
         await _db.deliveriesDao.getTotalSalesForDateRange(start, end);
     final dispenserSales =
         await _db.dispenserSalesDao.getTotalForDateRange(start, end);
-    final totalSales = deliverySales + dispenserSales;
+    final walkInRevenue =
+        await _db.walkInSalesDao.getTotalRevenueForDateRange(start, end);
+    final totalSales = deliverySales + dispenserSales + walkInRevenue;
 
     final expenseRows = await _db.expensesDao.getByDateRange(start, end);
     final expenseData = expenseRows
@@ -104,6 +110,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
 
     final paymentsReceived =
         await _db.paymentsDao.getTotalForDateRange(start, end);
+    final paymentsInPeriod =
+        await _db.paymentsDao.getByDateRange(start, end);
 
     final deliveries = await _db.deliveriesDao.getByDateRange(start, end);
     final totalBottles =
@@ -144,11 +152,72 @@ class ReportsRepositoryImpl implements ReportsRepository {
       }
     }
 
+    final ownedLogsInPeriod =
+        await _db.customerOwnedBottleLogsDao.getByDateRange(start, end);
+    var periodCustomerOwnedCollected = 0;
+    var periodCustomerOwnedDelivered = 0;
+    for (final log in ownedLogsInPeriod) {
+      if (log.customerOwnedDelta < 0) {
+        periodCustomerOwnedCollected += log.customerOwnedDelta.abs();
+      } else if (log.customerOwnedDelta > 0 &&
+          log.eventType == 'delivery_filled') {
+        periodCustomerOwnedDelivered += log.customerOwnedDelta;
+      }
+    }
+
     final depositHeld = await _db.customerDepositsDao.getTotalDepositsHeld();
     final depositCustomers =
         await _db.customerDepositsDao.getCustomersWithDepositsCount();
     final depositAdded = await _db.customerDepositsDao.getTotalAdded();
     final depositUsed = await _db.customerDepositsDao.getTotalUsed();
+
+    final allCustomers = await CustomerRepositoryImpl(_db).getAll();
+    final verification = BottleVerificationUtils.summarize(allCustomers);
+
+    var totalCustomerOwned = 0;
+    for (final c in allCustomers) {
+      totalCustomerOwned += c.customerOwnedBottlesHeld;
+    }
+
+    var periodCollections = 0;
+    for (final t in bottleTxsInPeriod) {
+      if (t.transactionType == 'return') periodCollections += t.quantity;
+    }
+
+    final supplyPurchasesInPeriod =
+        await _db.supplyPurchasesDao.getByDateRange(start, end);
+
+    final consistency =
+        await InventoryRepositoryImpl(_db).validateConsistency();
+    final health = InventoryHealthUtils.compute(consistency);
+    final healthLabel = InventoryHealthUtils.label(health);
+
+    final timelineSummary =
+        '${deliveries.length} deliveries, $periodCollections bottles collected, '
+        '${paymentsInPeriod.length} payments, '
+        '${supplyPurchasesInPeriod.length} supplier deliveries, '
+        '${await _db.walkInSalesDao.getCountForDateRange(start, end)} walk-in operations '
+        'in this period.';
+
+    final walkInRows = await _db.walkInSalesDao.getByDateRange(start, end);
+    final customerNameMap = {for (final c in allCustomers) c.id: c.name};
+    final walkInDetails = walkInRows.map((row) {
+      final type = WalkInTypeX.fromStorage(row.walkInType);
+      final qty = switch (type) {
+        WalkInType.businessBottles => row.businessOwnedQuantity,
+        WalkInType.customerRefill => row.customerOwnedQuantity,
+        WalkInType.exchange => row.businessOwnedQuantity,
+      };
+      return WalkInReportLine(
+        date: row.date,
+        typeLabel: type.label,
+        customerName: row.customerId != null
+            ? (customerNameMap[row.customerId] ?? WalkInSale.walkInCustomerLabel)
+            : WalkInSale.walkInCustomerLabel,
+        quantity: qty,
+        amount: row.totalAmount,
+      );
+    }).toList();
 
     return ReportSummary(
       period: period,
@@ -185,6 +254,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
       periodDonatedBottles: periodDonatedBottles,
       periodDamagedBottles: periodDamagedBottles,
       periodMissingBottles: periodMissingBottles,
+      periodCustomerOwnedCollected: periodCustomerOwnedCollected,
+      periodCustomerOwnedDelivered: periodCustomerOwnedDelivered,
       totalAudits: auditSummary.totalAudits,
       lastAuditDate: auditSummary.lastAuditDate,
       auditMissingBottles: auditSummary.missingBottlesFound,
@@ -194,6 +265,30 @@ class ReportsRepositoryImpl implements ReportsRepository {
       totalDepositsAdded: depositAdded,
       totalDepositsUsed: depositUsed,
       currentDepositLiability: depositHeld,
+      verifiedCustomers: verification.verified,
+      customersNeedingReconciliation: verification.needsReconciliation,
+      notVerifiedCustomers: verification.notVerified,
+      totalCustomerOwnedBottles: totalCustomerOwned,
+      inventoryHealthLabel: healthLabel,
+      periodCollections: periodCollections,
+      periodPaymentsCount: paymentsInPeriod.length,
+      periodSupplierDeliveries: supplyPurchasesInPeriod.length,
+      businessTimelineSummary: timelineSummary,
+      walkInRevenue: walkInRevenue,
+      walkInTransactionCount: walkInRows.length,
+      walkInBusinessBottleSalesCount: await _db.walkInSalesDao
+          .countByTypeForDateRange('BUSINESS_BOTTLES', start, end),
+      walkInCustomerRefillsCount: await _db.walkInSalesDao
+          .countByTypeForDateRange('CUSTOMER_REFILL', start, end),
+      walkInExchangeCount: await _db.walkInSalesDao
+          .countByTypeForDateRange('EXCHANGE', start, end),
+      walkInBusinessBottleRevenue: await _db.walkInSalesDao
+          .revenueByTypeForDateRange('BUSINESS_BOTTLES', start, end),
+      walkInRefillRevenue: await _db.walkInSalesDao
+          .revenueByTypeForDateRange('CUSTOMER_REFILL', start, end),
+      walkInExchangeRevenue: await _db.walkInSalesDao
+          .revenueByTypeForDateRange('EXCHANGE', start, end),
+      walkInDetails: walkInDetails,
     );
   }
 }

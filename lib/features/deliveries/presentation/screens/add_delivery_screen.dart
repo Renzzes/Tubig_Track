@@ -34,6 +34,7 @@ class AddDeliveryScreen extends ConsumerStatefulWidget {
 class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   final _formKey = GlobalKey<FormState>();
   final _quantityCtrl = TextEditingController(text: '1');
+  final _customerOwnedFilledCtrl = TextEditingController(text: '0');
   final _priceCtrl = TextEditingController(
     text: AppConstants.defaultPricePerBottle.toStringAsFixed(2),
   );
@@ -114,6 +115,8 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
       _isEditMode = true;
       _selectedCustomer = matched;
       _quantityCtrl.text = delivery.quantity.toString();
+      _customerOwnedFilledCtrl.text =
+          delivery.customerOwnedBottlesFilled.toString();
       _priceCtrl.text = delivery.pricePerBottle.toStringAsFixed(2);
       _paymentStatus = delivery.paymentStatus;
       _deliveryStatus = delivery.deliveryStatus;
@@ -174,6 +177,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   @override
   void dispose() {
     _quantityCtrl.dispose();
+    _customerOwnedFilledCtrl.dispose();
     _priceCtrl.dispose();
     _amountPaidCtrl.dispose();
     _notesCtrl.dispose();
@@ -266,6 +270,8 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     }
 
     final qty = int.parse(_quantityCtrl.text.trim());
+    final customerOwnedFilled =
+        int.tryParse(_customerOwnedFilledCtrl.text.trim()) ?? 0;
     if (_deliveryStatus == DeliveryStatus.completed) {
       final stats = await ref
           .read(customerRepositoryProvider)
@@ -280,15 +286,26 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ConfirmRow(label: 'Customer', value: _selectedCustomer!.name),
-              _ConfirmRow(label: 'Delivered', value: '$qty Bottles'),
               _ConfirmRow(
-                label: 'Current Held',
-                value: '${stats.bottlesHeld} Bottles',
+                label: 'Business-Owned Delivered',
+                value: '$qty Bottles',
               ),
+              if (customerOwnedFilled > 0)
+                _ConfirmRow(
+                  label: 'Customer-Owned Filled',
+                  value: '$customerOwnedFilled Bottles',
+                ),
               _ConfirmRow(
-                label: 'New Held',
-                value: '${stats.bottlesHeld + qty} Bottles',
+                label: 'Business-Owned Held',
+                value: '${stats.bottlesHeld} → ${stats.bottlesHeld + qty}',
               ),
+              if (customerOwnedFilled > 0)
+                _ConfirmRow(
+                  label: 'Customer-Owned Held',
+                  value:
+                      '${stats.customerOwnedBottlesHeld} → '
+                      '${stats.customerOwnedBottlesHeld + customerOwnedFilled}',
+                ),
               const SizedBox(height: 12),
               const Text('Confirm Delivery?'),
             ],
@@ -359,6 +376,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         deliveryDate: _selectedDate,
         deliveryTime: _deliveryTimeString,
         deliveryStatus: _deliveryStatus,
+        customerOwnedBottlesFilled: customerOwnedFilled,
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
 
@@ -586,7 +604,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                         Expanded(
                           flex: 2,
                           child: AppTextField(
-                            label: 'Quantity *',
+                            label: 'Business-Owned Bottles Delivered *',
                             controller: _quantityCtrl,
                             keyboardType: TextInputType.number,
                             inputFormatters: [
@@ -627,6 +645,26 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 12),
+                    AppTextField(
+                      label: 'Customer-Owned Bottles Filled',
+                      controller: _customerOwnedFilledCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        final n = int.tryParse(v);
+                        if (n == null || n < 0) return 'Invalid';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Only business-owned bottles affect inventory.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 12),
                     Container(

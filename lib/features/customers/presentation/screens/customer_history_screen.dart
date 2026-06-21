@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
-import '../../../../core/utils/bottle_balance_utils.dart';
+import '../../../../core/utils/customer_bottle_ownership_utils.dart';
 import '../../../../shared/widgets/history_filter_bar.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../deliveries/domain/entities/delivery.dart';
 import '../../../deliveries/presentation/providers/deliveries_provider.dart';
+import '../../../inventory/domain/entities/customer_owned_bottle_log.dart';
 import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../../payments/domain/entities/payment.dart';
@@ -152,19 +152,30 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
 
   Widget _buildBottleTx() {
     final async = ref.watch(bottleTransactionsStreamProvider);
+    final logsAsync =
+        ref.watch(customerOwnedLogsStreamProvider(widget.customerId));
     return async.when(
       data: (all) {
-        final items = all.where((t) => t.customerId == widget.customerId).toList();
-        final ledger = buildCustomerBottleLedger(items).where((entry) {
-          if (!isInDateRange(entry.transaction.date, _startDate, _endDate)) {
+        final items =
+            all.where((t) => t.customerId == widget.customerId).toList();
+        final logs = logsAsync.when(
+          data: (l) => l,
+          loading: () => <CustomerOwnedBottleLog>[],
+          error: (_, __) => <CustomerOwnedBottleLog>[],
+        );
+        final ledger = buildCustomerOwnershipLedger(
+          transactions: items,
+          logs: logs,
+        ).where((entry) {
+          if (!isInDateRange(entry.date, _startDate, _endDate)) {
             return false;
           }
           final q = _searchCtrl.text.trim().toLowerCase();
           if (q.isEmpty) return true;
-          return entry.actionLabel.toLowerCase().contains(q) ||
-              entry.transaction.quantity.toString().contains(q) ||
-              entry.balanceAfter.toString().contains(q) ||
-              (entry.transaction.notes?.toLowerCase().contains(q) ?? false);
+          return entry.headline.toLowerCase().contains(q) ||
+              ownershipLedgerSubtitle(entry).toLowerCase().contains(q) ||
+              ownershipBalanceAfterLabel(entry).contains(q) ||
+              (entry.notes?.toLowerCase().contains(q) ?? false);
         }).toList();
 
         if (ledger.isEmpty) {
@@ -185,29 +196,20 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
             itemCount: visible.length,
             itemBuilder: (_, i) {
               final entry = visible[i];
-              final sign = entry.isIncrease ? '+' : '-';
-              final color =
-                  entry.isIncrease ? AppColors.warning : AppColors.success;
               return ListTile(
-                title: Text(entry.actionLabel),
-                subtitle: Text(
-                  '${DateFormatter.format(entry.transaction.date)}${entry.transaction.notes != null ? ' • ${entry.transaction.notes}' : ''}',
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                title: Text(entry.headline),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(DateFormatter.format(entry.date)),
+                    if (entry.hasBusinessDelta || entry.hasCustomerOwnedDelta)
+                      Text(ownershipLedgerSubtitle(entry)),
                     Text(
-                      '$sign${entry.transaction.quantity}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: color,
-                      ),
+                      'Balance After: ${ownershipBalanceAfterLabel(entry)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    Text(
-                      'Balance: ${entry.balanceAfter}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
+                    if (entry.notes != null && entry.notes!.isNotEmpty)
+                      Text(entry.notes!),
                   ],
                 ),
               );

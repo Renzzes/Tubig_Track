@@ -62,6 +62,45 @@ class DashboardScreen extends ConsumerWidget {
               _QuickActions(context: context),
               const SizedBox(height: 20),
 
+              if (summary.hasActionRequired) ...[
+                const Text(
+                  'Action Required',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (summary.customersNeedingReconciliation > 0)
+                  _ActionAlertTile(
+                    icon: Icons.verified_user_outlined,
+                    label:
+                        '${summary.customersNeedingReconciliation} Customer${summary.customersNeedingReconciliation > 1 ? 's' : ''} Need Reconciliation',
+                    onTap: () => context.go('/customers'),
+                  ),
+                if (summary.customersWithMissingBottles > 0)
+                  _ActionAlertTile(
+                    icon: Icons.search_off_outlined,
+                    label:
+                        '${summary.customersWithMissingBottles} Customer${summary.customersWithMissingBottles > 1 ? 's' : ''} Have Missing Bottles',
+                    onTap: () => context.go('/customers'),
+                  ),
+                if (summary.overdueCustomerCount > 0)
+                  _ActionAlertTile(
+                    icon: Icons.warning_amber_rounded,
+                    label:
+                        '${summary.overdueCustomerCount} Overdue Balance${summary.overdueCustomerCount > 1 ? 's' : ''}',
+                    onTap: () => context.push('/overdue'),
+                  ),
+                if (summary.inventoryAuditRecommended)
+                  _ActionAlertTile(
+                    icon: Icons.fact_check_outlined,
+                    label: 'Inventory Audit Recommended',
+                    onTap: () => context.push('/inventory/audit'),
+                  ),
+                const SizedBox(height: 20),
+              ],
+
               // Copilot card
               _CopilotCard(context: context),
               const SizedBox(height: 12),
@@ -103,7 +142,7 @@ class DashboardScreen extends ConsumerWidget {
                     value: CurrencyFormatter.format(summary.todaySales),
                     icon: Icons.trending_up,
                     color: AppColors.success,
-                    subtitle: 'Delivery + Dispenser',
+                    subtitle: 'Delivery + Dispenser + Walk-In',
                     onTap: () => context.go('/deliveries'),
                   ),
                   SummaryCard(
@@ -121,6 +160,36 @@ class DashboardScreen extends ConsumerWidget {
                     color: AppColors.warning,
                     subtitle: 'Tap for customer list',
                     onTap: () => context.push('/inventory/customer-balances'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              ResponsiveStatGrid(
+                children: [
+                  SummaryCard(
+                    title: "Today's Walk-In Sales",
+                    value: '${summary.todayWalkInSalesCount}',
+                    icon: Icons.storefront_outlined,
+                    color: AppColors.success,
+                    subtitle: 'Operations today',
+                    onTap: () => context.push('/walk-in-operations'),
+                  ),
+                  SummaryCard(
+                    title: "Today's Walk-In Revenue",
+                    value: CurrencyFormatter.format(summary.todayWalkInRevenue),
+                    icon: Icons.payments_outlined,
+                    color: AppColors.success,
+                    subtitle: 'Paid immediately',
+                    onTap: () => context.push('/walk-in-operations'),
+                  ),
+                  SummaryCard(
+                    title: "Today's Walk-In Bottles",
+                    value: '${summary.todayWalkInBottles}',
+                    icon: Icons.water_drop_outlined,
+                    color: AppColors.primary,
+                    subtitle: 'Bottles moved',
+                    onTap: () => context.push('/walk-in-operations'),
                   ),
                 ],
               ),
@@ -350,6 +419,39 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+class _ActionAlertTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionAlertTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.warning.withValues(alpha: 0.4)),
+        ),
+        tileColor: AppColors.warning.withValues(alpha: 0.08),
+        leading: Icon(icon, color: AppColors.warning),
+        title: Text(
+          '⚠ $label',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
 class _QuickActions extends StatelessWidget {
   final BuildContext context;
 
@@ -406,6 +508,16 @@ class _QuickActions extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
+                  onPressed: () => context.push('/walk-in-operations'),
+                  icon: const Icon(Icons.storefront_outlined, size: 18),
+                  label: const Text('Walk-In Operations'),
+                  style: outlinedStyle,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
                   onPressed: () => context.go('/customers'),
                   icon: const Icon(Icons.people_outline, size: 18),
                   label: const Text('Customers'),
@@ -451,6 +563,19 @@ class _QuickActions extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/walk-in-operations'),
+                    icon: const Icon(Icons.storefront_outlined, size: 18),
+                    label: const Text('Walk-In'),
+                    style: outlinedStyle,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => context.go('/customers'),

@@ -101,10 +101,36 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           sourceId: s.id,
           type: RecentTransactionType.dispenserSale,
           date: s.date,
-          title: 'Walk-in Sale',
+          title: 'Dispenser Sale',
           subtitle: s.notes,
           amount: s.amount,
           isCredit: true,
+        ),
+      );
+    }
+
+    for (final w in await _db.walkInSalesDao.getAll()) {
+      final typeLabel = switch (w.walkInType) {
+        'BUSINESS_BOTTLES' => 'Business Bottles',
+        'CUSTOMER_REFILL' => 'Customer Refill',
+        'EXCHANGE' => 'Bottle Exchange',
+        _ => 'Walk-In',
+      };
+      items.add(
+        RecentTransaction(
+          id: 'walkin_${w.id}',
+          sourceId: w.id,
+          type: RecentTransactionType.walkInOperation,
+          date: w.date,
+          title: typeLabel,
+          subtitle: w.customerId != null
+              ? customerMap[w.customerId]
+              : 'Walk-In Customer',
+          amount: w.totalAmount,
+          isCredit: true,
+          customerId: w.customerId,
+          customerName:
+              w.customerId != null ? customerMap[w.customerId] : null,
         ),
       );
     }

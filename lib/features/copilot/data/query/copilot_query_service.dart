@@ -2,6 +2,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/bottle_verification_utils.dart';
+import '../../../customers/domain/entities/customer.dart';
 import '../../domain/entities/copilot_intent.dart';
 import '../../domain/query/business_query_handler.dart';
 
@@ -71,6 +73,27 @@ class CopilotQueryService implements BusinessQueryHandler {
         return getCustomersWithBottlesAndOverdue(db);
       case CopilotIntent.getCustomerMostDeliveries:
         return getCustomerMostDeliveries(db);
+      case CopilotIntent.getCustomersNeedingReconciliation:
+        return getCustomersNeedingReconciliation(db);
+      case CopilotIntent.getNeverVerifiedCustomers:
+        return getNeverVerifiedCustomers(db);
+      case CopilotIntent.getCustomersWithMissingBottles:
+        return getCustomersWithMissingBottles(db);
+      case CopilotIntent.getCustomersWithOverdueBalances:
+        return getOverdueCustomers(db);
+      case CopilotIntent.getTotalCustomerOwnedBottles:
+        return getTotalCustomerOwnedBottles(db);
+      case CopilotIntent.getCustomerStatementSummary:
+        final name = _extractName(question);
+        return getCustomerStatementSummarySafe(db, name);
+      case CopilotIntent.getWalkInRevenue:
+        return getWalkInRevenue(db, question);
+      case CopilotIntent.getWalkInRefillsThisMonth:
+        return getWalkInRefillsThisMonth(db);
+      case CopilotIntent.getWalkInExchangesThisMonth:
+        return getWalkInExchangesThisMonth(db);
+      case CopilotIntent.compareWalkInsVsDeliveries:
+        return compareWalkInsVsDeliveries(db);
       case CopilotIntent.getMissingBottles:
         return getMissingBottles(db);
       case CopilotIntent.getDamagedBottles:
@@ -400,6 +423,234 @@ class CopilotQueryService implements BusinessQueryHandler {
     return buf.toString().trim();
   }
 
+  // ── BOTTLE VERIFICATION ───────────────────────────────────────────────────
+
+  Future<String> getCustomersNeedingReconciliation(AppDatabase db) async {
+    final customers = _mapCustomers(await db.customersDao.getAll());
+    final stale = BottleVerificationUtils.customersNeedingReconciliation(
+      customers,
+    );
+    if (stale.isEmpty) {
+      return 'All customers with a recorded physical count were verified within the last $physicalCountVerificationWindowDays days.';
+    }
+    final buf = StringBuffer(
+      '${stale.length} customer${stale.length > 1 ? 's need' : ' needs'} bottle reconciliation (last count over $physicalCountVerificationWindowDays days ago):\n',
+    );
+    for (final c in stale.take(15)) {
+      final days = BottleVerificationUtils.daysSinceLabel(c);
+      buf.writeln('• ${c.name} — last count $days ago');
+    }
+    if (stale.length > 15) buf.writeln('... and ${stale.length - 15} more');
+    return buf.toString().trim();
+  }
+
+  Future<String> getNeverVerifiedCustomers(AppDatabase db) async {
+    final customers = _mapCustomers(await db.customersDao.getAll());
+    final unverified = BottleVerificationUtils.neverVerifiedCustomers(
+      customers,
+    );
+    if (unverified.isEmpty) {
+      return 'Every customer has at least one recorded physical bottle count.';
+    }
+    final buf = StringBuffer(
+      '${unverified.length} customer${unverified.length > 1 ? 's have' : ' has'} never been physically verified:\n',
+    );
+    for (final c in unverified.take(15)) {
+      buf.writeln('• ${c.name}');
+    }
+    if (unverified.length > 15) {
+      buf.writeln('... and ${unverified.length - 15} more');
+    }
+    return buf.toString().trim();
+  }
+
+  Future<String> getCustomersWithMissingBottles(AppDatabase db) async {
+    final customers = _mapCustomers(await db.customersDao.getAll());
+    final balances = await db.bottleTransactionsDao.getCustomerBottleBalances();
+    final missing = <Customer>[];
+
+    for (final c in customers) {
+      final held = balances[c.id] ?? 0;
+      final variance = c.bottleVariance(held);
+      if (variance != null && variance < 0) missing.add(c);
+    }
+
+    if (missing.isEmpty) {
+      return 'No customers currently have recorded missing bottles.';
+    }
+
+    final buf = StringBuffer(
+      '${missing.length} customer${missing.length > 1 ? 's have' : ' has'} missing bottles:\n',
+    );
+    for (final c in missing.take(15)) {
+      final held = balances[c.id] ?? 0;
+      final variance = c.bottleVariance(held)!;
+      buf.writeln('• ${c.name} — ${variance.abs()} missing (expected ${c.pendingPhysicalBottleCount}, held $held)');
+    }
+    if (missing.length > 15) {
+      buf.writeln('... and ${missing.length - 15} more');
+    }
+    return buf.toString().trim();
+  }
+
+  Future<String> getTotalCustomerOwnedBottles(AppDatabase db) async {
+    final customers = _mapCustomers(await db.customersDao.getAll());
+    var total = 0;
+    var withOwned = 0;
+    for (final c in customers) {
+      if (c.customerOwnedBottlesHeld > 0) {
+        withOwned++;
+        total += c.customerOwnedBottlesHeld;
+      }
+    }
+    if (total == 0) {
+      return 'No customer-owned bottles are currently tracked.';
+    }
+    return '$total customer-owned bottle${total > 1 ? 's' : ''} '
+        'across $withOwned customer${withOwned > 1 ? 's' : ''}. '
+        'These are not included in business inventory.';
+  }
+
+  Future<String> getCustomerStatementSummarySafe(
+    AppDatabase db,
+    String? name,
+  ) async {
+    if (name == null || name.isEmpty) {
+      return 'Please specify a customer name. Example: "Statement summary for Ivy"';
+    }
+    try {
+      return await _buildCustomerStatementSummary(db, name);
+    } on StateError {
+      return await _customerNotFound(name);
+    }
+  }
+
+  Future<String> _buildCustomerStatementSummary(
+    AppDatabase db,
+    String nameLike,
+  ) async {
+    final customers = await db.customersDao.getAll();
+    final row = customers.firstWhere(
+      (c) => c.name.toLowerCase().contains(nameLike.toLowerCase()),
+      orElse: () => throw StateError('not found'),
+    );
+    final customer = _mapCustomers([row]).first;
+    final depositBalance =
+        await db.customerDepositsDao.getBalanceForCustomer(customer.id);
+    final balances = await db.bottleTransactionsDao.getCustomerBottleBalances();
+    final businessHeld = balances[customer.id] ?? 0;
+    final customerOwned = customer.customerOwnedBottlesHeld;
+    final totalAtCustomer = businessHeld + customerOwned;
+
+    final deliveries = await db.deliveriesDao.getUnpaidByCustomer(customer.id);
+    final unpaid =
+        deliveries.fold(0.0, (sum, d) => sum + d.remainingBalance);
+
+    final payments = await db.paymentsDao.getByCustomer(customer.id);
+    final totalPaid = payments.fold(0.0, (sum, p) => sum + p.amount);
+
+    return 'Customer Statement Summary: ${customer.name}\n\n'
+        'Bottle Summary:\n'
+        '• Business-owned held: $businessHeld\n'
+        '• Customer-owned held: $customerOwned\n'
+        '• Total at customer: $totalAtCustomer\n\n'
+        'Financial Summary:\n'
+        '• Outstanding balance: ${_fmt(unpaid)}\n'
+        '• Deposit balance: ${_fmt(depositBalance)}\n'
+        '• Total paid: ${_fmt(totalPaid)}\n\n'
+        'Verification: ${BottleVerificationUtils.statusFor(customer).label}\n'
+        'Last physical count: ${BottleVerificationUtils.lastPhysicalCountLabel(customer)}';
+  }
+
+  Future<String> getWalkInRevenue(AppDatabase db, String question) async {
+    final q = question.toLowerCase();
+    final isYear =
+        q.contains('this year') || q.contains('year') || q.contains('annual');
+    final now = DateTime.now();
+    late DateTime start;
+    late DateTime end;
+    if (isYear) {
+      start = DateTime(now.year, 1, 1);
+      end = DateTime(now.year, 12, 31, 23, 59, 59);
+    } else {
+      start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    }
+    final revenue =
+        await db.walkInSalesDao.getTotalRevenueForDateRange(start, end);
+    final count = await db.walkInSalesDao.getCountForDateRange(start, end);
+    if (count == 0) {
+      return 'No walk-in operations recorded for this period.';
+    }
+    final label = isYear ? 'this year' : 'this month';
+    return 'Walk-in revenue $label: ${_fmt(revenue)} from $count operation${count > 1 ? 's' : ''}.';
+  }
+
+  Future<String> getWalkInRefillsThisMonth(AppDatabase db) async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    final count = await db.walkInSalesDao.countByTypeForDateRange(
+      'CUSTOMER_REFILL',
+      start,
+      end,
+    );
+    if (count == 0) {
+      return 'No customer bottle refills recorded this month.';
+    }
+    return '$count customer bottle refill${count > 1 ? 's' : ''} this month.';
+  }
+
+  Future<String> getWalkInExchangesThisMonth(AppDatabase db) async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    final count = await db.walkInSalesDao.countByTypeForDateRange(
+      'EXCHANGE',
+      start,
+      end,
+    );
+    if (count == 0) {
+      return 'No bottle exchanges recorded this month.';
+    }
+    return '$count bottle exchange${count > 1 ? 's' : ''} this month.';
+  }
+
+  Future<String> compareWalkInsVsDeliveries(AppDatabase db) async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    final end = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    final walkInRevenue =
+        await db.walkInSalesDao.getTotalRevenueForDateRange(start, end);
+    final walkInCount =
+        await db.walkInSalesDao.getCountForDateRange(start, end);
+    final deliveryRevenue =
+        await db.deliveriesDao.getTotalSalesForDateRange(start, end);
+    final deliveries = await db.deliveriesDao.getByDateRange(start, end);
+    return 'This month:\n'
+        '• Walk-In: $walkInCount operations, ${_fmt(walkInRevenue)} revenue\n'
+        '• Deliveries: ${deliveries.length} completed, ${_fmt(deliveryRevenue)} revenue';
+  }
+
+  List<Customer> _mapCustomers(List<CustomersTableData> rows) {
+    return rows
+        .map(
+          (row) => Customer(
+            id: row.id,
+            name: row.name,
+            phone: row.phone,
+            address: row.address,
+            notes: row.notes,
+            pendingPhysicalBottleCount: row.pendingPhysicalBottleCount,
+            customerOwnedBottlesHeld: row.customerOwnedBottlesHeld,
+            lastPhysicalCountDate: row.lastPhysicalCountDate,
+            lastPhysicalCountVerified: row.lastPhysicalCountVerified,
+            createdAt: row.createdAt,
+          ),
+        )
+        .toList();
+  }
+
   Future<List<String>> _inactiveCustomerList(AppDatabase db, int days) async {
     final customers = await db.customersDao.getAll();
     final deliveries = await db.deliveriesDao.getAll();
@@ -514,13 +765,19 @@ class CopilotQueryService implements BusinessQueryHandler {
     final paymentStatus = unpaidBalance > 0 ? 'Has unpaid balance' : 'Fully paid';
 
     return '$title: ${customer.name}\n\n'
+        'Bottle Summary:\n'
+        '• Business-owned held: $bottleBalance\n'
+        '• Customer-owned held: ${customer.customerOwnedBottlesHeld}\n'
+        '• Total at customer: ${bottleBalance + customer.customerOwnedBottlesHeld}\n\n'
+        'Financial Summary:\n'
         '• Outstanding balance: ${_fmt(unpaidBalance)}\n'
         '• Deposit balance: ${_fmt(depositBalance)}\n'
-        '• Bottles held: $bottleBalance\n'
+        '• Total paid: ${_fmt(totalRevenue - unpaidBalance)}\n\n'
         '• Lifetime revenue: ${_fmt(totalRevenue)}\n'
         '• Total deliveries: $completedCount\n'
         '• Last delivery: ${lastDelivery != null ? DateFormat('MMM d, yyyy').format(lastDelivery) : 'None'}\n'
-        '• Payment status: $paymentStatus';
+        '• Payment status: $paymentStatus\n'
+        '• Verification: ${BottleVerificationUtils.statusFor(_mapCustomers([customer]).first).label}';
   }
 
   // ── SPECIFIC CUSTOMER BALANCE ─────────────────────────────────────────────

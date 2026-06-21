@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:excel/excel.dart' as xl;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../../../../core/services/business_report_pdf_builder.dart';
+import '../../../../core/services/pdf_export_actions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
@@ -31,7 +32,7 @@ class ReportsScreen extends ConsumerWidget {
             data: (r) => PopupMenuButton<String>(
               icon: const Icon(Icons.download_outlined),
               onSelected: (value) {
-                if (value == 'pdf') _exportPDF(context, r);
+                if (value == 'pdf') _exportFullBusinessReport(context, r);
                 if (value == 'excel') _exportExcel(context, r);
               },
               itemBuilder: (_) => [
@@ -41,7 +42,7 @@ class ReportsScreen extends ConsumerWidget {
                     children: [
                       Icon(Icons.picture_as_pdf_outlined, size: 18),
                       SizedBox(width: 8),
-                      Text('Export as PDF'),
+                      Text('Export Full Business Report'),
                     ],
                   ),
                 ),
@@ -76,7 +77,11 @@ class ReportsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Expanded(
             child: reportAsync.when(
-              data: (report) => _ReportContent(report: report),
+              data: (report) => _ReportContent(
+                report: report,
+                onExportFullReport: () =>
+                    _exportFullBusinessReport(context, report),
+              ),
               loading: () => const LoadingOverlay(),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
@@ -86,138 +91,19 @@ class ReportsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _exportPDF(BuildContext context, ReportSummary report) async {
+  Future<void> _exportFullBusinessReport(
+    BuildContext context,
+    ReportSummary report,
+  ) async {
     try {
-      final pdf = pw.Document();
-      final title =
-          '${_periodLabel(report.period)} Report (${DateFormatter.formatShort(report.startDate)} - ${DateFormatter.formatShort(report.endDate)})';
-
-      pdf.addPage(
-        pw.Page(
-          build: (pw.Context ctx) => pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'TubigTrack - Financial Report',
-                style: pw.TextStyle(
-                  fontSize: 20,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(title),
-              pw.SizedBox(height: 20),
-              pw.Divider(),
-              pw.SizedBox(height: 10),
-              pw.Text('Revenue', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              _pdfRow('Delivery Revenue', CurrencyFormatter.format(report.deliverySales)),
-              _pdfRow('Dispenser Revenue', CurrencyFormatter.format(report.dispenserSales)),
-              _pdfRow('Total Sales', CurrencyFormatter.format(report.totalSales), bold: true),
-              pw.SizedBox(height: 10),
-              pw.Text('Supplies Purchased', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              _pdfRow('Supplies', CurrencyFormatter.format(report.suppliesExpenses)),
-              _pdfRow('Other Supplies', CurrencyFormatter.format(report.otherSuppliesExpenses)),
-              _pdfRow('Total Supplies Purchased',
-                  CurrencyFormatter.format(report.totalSuppliesPurchased), bold: true),
-              pw.SizedBox(height: 10),
-              pw.Text('Expenses', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              _pdfRow('Operations', CurrencyFormatter.format(report.operationsExpenses)),
-              _pdfRow('Maintenance', CurrencyFormatter.format(report.maintenanceExpenses)),
-              _pdfRow('Utilities', CurrencyFormatter.format(report.utilitiesExpenses)),
-              _pdfRow('Miscellaneous', CurrencyFormatter.format(report.miscellaneousExpenses)),
-              _pdfRow('Total Expenses', CurrencyFormatter.format(report.totalExpenses), bold: true),
-              pw.SizedBox(height: 10),
-              pw.Text('Savings Summary', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              _pdfRow('Current Savings', CurrencyFormatter.format(report.currentSavings)),
-              _pdfRow('Manual Savings Additions',
-                  CurrencyFormatter.format(report.totalManualSavings)),
-              _pdfRow('Net Savings', CurrencyFormatter.format(report.netSavings), bold: true),
-              pw.SizedBox(height: 10),
-              pw.Divider(),
-              _pdfRow('Net Profit', CurrencyFormatter.format(report.netProfit), bold: true),
-              pw.SizedBox(height: 10),
-              pw.Text(
-                'Inventory Ownership Changes',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              _pdfRow(
-                'Purchased New Bottles',
-                '+${report.periodPurchasedNewBottles}',
-              ),
-              _pdfRow(
-                'Donated Bottles',
-                '-${report.periodDonatedBottles}',
-              ),
-              _pdfRow(
-                'Damaged Bottles',
-                '-${report.periodDamagedBottles}',
-              ),
-              _pdfRow(
-                'Missing Bottles',
-                '-${report.periodMissingBottles}',
-              ),
-              pw.SizedBox(height: 10),
-              pw.Text('Inventory', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              _pdfRow('Total Bottles Owned', '${report.totalBottlesOwned}'),
-              _pdfRow('Filled Bottles Available', '${report.availableBottles}'),
-              _pdfRow('Bottles With Customers', '${report.bottlesWithCustomers}'),
-              _pdfRow('Damaged Bottles', '${report.damagedBottles}'),
-              _pdfRow('Missing Bottles', '${report.missingBottles}'),
-              _pdfRow('Donated Bottles', '${report.donatedBottles}'),
-              _pdfRow('Inventory Audits', '${report.totalAudits}'),
-              _pdfRow(
-                'Last Audit',
-                report.lastAuditDate != null
-                    ? DateFormatter.format(report.lastAuditDate!)
-                    : 'Never',
-              ),
-              _pdfRow('Missing Bottles Found', '${report.auditMissingBottles}'),
-              _pdfRow(
-                'Adjustment Quantity',
-                '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
-              ),
-              pw.SizedBox(height: 10),
-              pw.Text(
-                'Customer Deposits',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
-              _pdfRow(
-                'Total Deposits Held',
-                CurrencyFormatter.format(report.totalDepositsHeld),
-              ),
-              _pdfRow(
-                'Active Customers With Deposits',
-                '${report.activeCustomersWithDeposits}',
-              ),
-              _pdfRow(
-                'Total Deposits Added',
-                CurrencyFormatter.format(report.totalDepositsAdded),
-              ),
-              _pdfRow(
-                'Total Deposits Used',
-                CurrencyFormatter.format(report.totalDepositsUsed),
-              ),
-              _pdfRow(
-                'Current Deposit Liability',
-                CurrencyFormatter.format(report.currentDepositLiability),
-              ),
-              pw.SizedBox(height: 10),
-              _pdfRow('Total Deliveries', '${report.totalDeliveries}'),
-              _pdfRow('Bottles Delivered', '${report.totalBottlesDelivered}'),
-              _pdfRow('Payments Received',
-                  CurrencyFormatter.format(report.totalPaymentsReceived)),
-            ],
-          ),
-        ),
-      );
-
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/tubigtrack_report.pdf');
-      await file.writeAsBytes(await pdf.save());
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'TubigTrack Report',
+      final pdf = await BusinessReportPdfBuilder.build(report);
+      final bytes = await pdf.save();
+      if (!context.mounted) return;
+      await PdfExportActions.showOptions(
+        context,
+        bytes: bytes,
+        fileName: 'tubigtrack_business_report.pdf',
+        shareText: 'TubigTrack Full Business Report',
       );
     } catch (e) {
       if (context.mounted) {
@@ -226,29 +112,6 @@ class ReportsScreen extends ConsumerWidget {
         );
       }
     }
-  }
-
-  pw.Widget _pdfRow(String label, String value, {bool bold = false}) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 3),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(
-            label,
-            style: bold
-                ? pw.TextStyle(fontWeight: pw.FontWeight.bold)
-                : null,
-          ),
-          pw.Text(
-            value,
-            style: bold
-                ? pw.TextStyle(fontWeight: pw.FontWeight.bold)
-                : null,
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _exportExcel(BuildContext context, ReportSummary report) async {
@@ -428,6 +291,75 @@ class ReportsScreen extends ConsumerWidget {
         xl.TextCellValue('Payments Received'),
         xl.DoubleCellValue(report.totalPaymentsReceived),
       ]);
+      sheet.appendRow([xl.TextCellValue('Customer Bottle Verification')]);
+      sheet.appendRow([
+        xl.TextCellValue('Verified'),
+        xl.IntCellValue(report.verifiedCustomers),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Needs Reconciliation'),
+        xl.IntCellValue(report.customersNeedingReconciliation),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Not Verified'),
+        xl.IntCellValue(report.notVerifiedCustomers),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Customer-Owned Bottles (Total)'),
+        xl.IntCellValue(report.totalCustomerOwnedBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Inventory Health'),
+        xl.TextCellValue(report.inventoryHealthLabel),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Bottles Collected (Period)'),
+        xl.IntCellValue(report.periodCollections),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Supplier Deliveries (Period)'),
+        xl.IntCellValue(report.periodSupplierDeliveries),
+      ]);
+
+      final walkInSheet = excel['Walk-In Sales'];
+      walkInSheet.appendRow([xl.TextCellValue('Walk-In Operations')]);
+      walkInSheet.appendRow([
+        xl.TextCellValue('Business Bottle Sales'),
+        xl.IntCellValue(report.walkInBusinessBottleSalesCount),
+      ]);
+      walkInSheet.appendRow([
+        xl.TextCellValue('Customer Refills'),
+        xl.IntCellValue(report.walkInCustomerRefillsCount),
+      ]);
+      walkInSheet.appendRow([
+        xl.TextCellValue('Exchanges'),
+        xl.IntCellValue(report.walkInExchangeCount),
+      ]);
+      walkInSheet.appendRow([
+        xl.TextCellValue('Revenue'),
+        xl.DoubleCellValue(report.walkInRevenue),
+      ]);
+      walkInSheet.appendRow([
+        xl.TextCellValue('Transaction Count'),
+        xl.IntCellValue(report.walkInTransactionCount),
+      ]);
+      walkInSheet.appendRow([xl.TextCellValue('')]);
+      walkInSheet.appendRow([
+        xl.TextCellValue('Date'),
+        xl.TextCellValue('Type'),
+        xl.TextCellValue('Customer'),
+        xl.TextCellValue('Quantity'),
+        xl.TextCellValue('Amount'),
+      ]);
+      for (final line in report.walkInDetails) {
+        walkInSheet.appendRow([
+          xl.TextCellValue(DateFormatter.formatShort(line.date)),
+          xl.TextCellValue(line.typeLabel),
+          xl.TextCellValue(line.customerName),
+          xl.IntCellValue(line.quantity),
+          xl.DoubleCellValue(line.amount),
+        ]);
+      }
 
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/tubigtrack_report.xlsx');
@@ -447,25 +379,16 @@ class ReportsScreen extends ConsumerWidget {
       }
     }
   }
-
-  String _periodLabel(ReportPeriod period) {
-    switch (period) {
-      case ReportPeriod.daily:
-        return 'Daily';
-      case ReportPeriod.weekly:
-        return 'Weekly';
-      case ReportPeriod.monthly:
-        return 'Monthly';
-      case ReportPeriod.yearly:
-        return 'Yearly';
-    }
-  }
 }
 
 class _ReportContent extends ConsumerWidget {
   final ReportSummary report;
+  final VoidCallback onExportFullReport;
 
-  const _ReportContent({required this.report});
+  const _ReportContent({
+    required this.report,
+    required this.onExportFullReport,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -496,6 +419,13 @@ class _ReportContent extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+
+        OutlinedButton.icon(
+          onPressed: onExportFullReport,
+          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+          label: const Text('Export Full Business Report'),
         ),
         const SizedBox(height: 16),
 
@@ -714,6 +644,48 @@ class _ReportContent extends ConsumerWidget {
           label: 'Missing Bottles',
           value: '-${report.periodMissingBottles}',
         ),
+        if (report.periodCustomerOwnedCollected > 0 ||
+            report.periodCustomerOwnedDelivered > 0) ...[
+          const SizedBox(height: 16),
+          _SectionHeader(
+            title: 'Customer-Owned Bottle Activity',
+            icon: Icons.person_outline,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 8),
+          _MetricRow(
+            label: 'Collected Customer-Owned Bottles',
+            value: '${report.periodCustomerOwnedCollected}',
+          ),
+          _MetricRow(
+            label: 'Delivered Customer-Owned Bottles',
+            value: '${report.periodCustomerOwnedDelivered}',
+          ),
+        ],
+        if (report.verifiedCustomers +
+                report.customersNeedingReconciliation +
+                report.notVerifiedCustomers >
+            0) ...[
+          const SizedBox(height: 16),
+          _SectionHeader(
+            title: 'Customer Bottle Verification',
+            icon: Icons.verified_user_outlined,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 8),
+          _MetricRow(
+            label: 'Verified Customers',
+            value: '${report.verifiedCustomers}',
+          ),
+          _MetricRow(
+            label: 'Needs Reconciliation',
+            value: '${report.customersNeedingReconciliation}',
+          ),
+          _MetricRow(
+            label: 'Not Verified',
+            value: '${report.notVerifiedCustomers}',
+          ),
+        ],
         const SizedBox(height: 16),
 
         // Inventory snapshot
@@ -794,7 +766,37 @@ class _ReportContent extends ConsumerWidget {
           label: 'Current Deposit Liability',
           value: CurrencyFormatter.format(report.currentDepositLiability),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
+
+        _SectionHeader(
+          title: 'Walk-In Operations',
+          icon: Icons.storefront_outlined,
+          color: AppColors.success,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Business Bottle Sales',
+          value: '${report.walkInBusinessBottleSalesCount}',
+        ),
+        _MetricRow(
+          label: 'Customer Bottle Refills',
+          value: '${report.walkInCustomerRefillsCount}',
+        ),
+        _MetricRow(
+          label: 'Bottle Exchanges',
+          value: '${report.walkInExchangeCount}',
+        ),
+        _MetricRow(
+          label: 'Walk-In Revenue',
+          value: CurrencyFormatter.format(report.walkInRevenue),
+          isTotal: true,
+          color: AppColors.success,
+        ),
+        _MetricRow(
+          label: 'Transaction Count',
+          value: '${report.walkInTransactionCount}',
+        ),
+        const SizedBox(height: 16),
 
         // Delivery activity section
         _SectionHeader(

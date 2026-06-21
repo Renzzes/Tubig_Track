@@ -249,3 +249,22 @@ Future<void> migrateV13RemoveInProgressBorrows(AppDatabase db) async {
 Future<void> migrateV16SeparateInventoryFinancial(AppDatabase db) async {
   await db.settingsDao.setValue('financial_calculation_version', '2');
 }
+
+/// Backfill physical count verification from reconciliation history.
+Future<void> migrateV18PhysicalCountVerification(AppDatabase db) async {
+  final reconciliations =
+      await db.customerBottleReconciliationsDao.getAll();
+  final latestByCustomer = <String, DateTime>{};
+  for (final row in reconciliations) {
+    final existing = latestByCustomer[row.customerId];
+    if (existing == null || row.createdAt.isAfter(existing)) {
+      latestByCustomer[row.customerId] = row.createdAt;
+    }
+  }
+  for (final entry in latestByCustomer.entries) {
+    await db.customersDao.updatePhysicalCountVerification(
+      entry.key,
+      entry.value,
+    );
+  }
+}

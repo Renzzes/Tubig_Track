@@ -5,6 +5,7 @@ import '../../../../core/services/inventory_state_effects.dart';
 import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/utils/payment_status_utils.dart';
 import '../../../inventory/domain/entities/bottle_transaction.dart';
+import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../domain/entities/delivery.dart';
 import '../../domain/repositories/delivery_repository.dart';
 
@@ -28,6 +29,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       deliveryTime: row.deliveryTime,
       deliveryStatus: Delivery.deliveryStatusFromString(row.deliveryStatus),
       collectedEmptyBottles: row.collectedEmptyBottles,
+      customerOwnedBottlesFilled: row.customerOwnedBottlesFilled,
       notes: row.notes,
       receiptNumber: row.receiptNumber,
     );
@@ -48,6 +50,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       deliveryTime: Value(delivery.deliveryTime),
       deliveryStatus: Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
       collectedEmptyBottles: Value(delivery.collectedEmptyBottles),
+      customerOwnedBottlesFilled: Value(delivery.customerOwnedBottlesFilled),
       notes: Value(delivery.notes),
       receiptNumber: Value(delivery.receiptNumber),
     );
@@ -114,6 +117,18 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         delivery.quantity,
       );
     }
+  }
+
+  Future<void> _syncCustomerOwnedFilled(Delivery delivery) async {
+    await InventoryRepositoryImpl(_db).syncDeliveryCustomerOwnedFilled(
+      deliveryId: delivery.id,
+      customerId: delivery.customerId,
+      businessOwnedDelivered: delivery.quantity,
+      customerOwnedFilled: delivery.customerOwnedBottlesFilled,
+      date: delivery.deliveryDate,
+      isCompleted: delivery.deliveryStatus == DeliveryStatus.completed,
+      notes: delivery.notes,
+    );
   }
 
   Future<void> _syncDepositTransactions(
@@ -248,11 +263,13 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           deliveryStatus:
               Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
           collectedEmptyBottles: Value(delivery.collectedEmptyBottles),
+          customerOwnedBottlesFilled: Value(delivery.customerOwnedBottlesFilled),
           notes: Value(delivery.notes),
           receiptNumber: Value(receiptNumber),
         ),
       );
       await _syncBorrowTransaction(delivery);
+      await _syncCustomerOwnedFilled(delivery);
       await _syncDepositTransactions(
         delivery,
         cashReceived: cashReceived ?? delivery.amountPaid,
@@ -265,6 +282,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     await _db.transaction(() async {
       await _db.deliveriesDao.updateDelivery(_companion(delivery));
       await _syncBorrowTransaction(delivery);
+      await _syncCustomerOwnedFilled(delivery);
       await _syncDepositTransactions(
         delivery,
         cashReceived: cashReceived ?? delivery.amountPaid,
@@ -301,6 +319,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       }
 
       await _db.customerDepositsDao.deleteByDelivery(id);
+      await InventoryRepositoryImpl(_db).reverseDeliveryCustomerOwnedFilled(id);
       await _db.paymentsDao.deleteByDelivery(id);
       await _db.deliveriesDao.deleteDelivery(id);
     });

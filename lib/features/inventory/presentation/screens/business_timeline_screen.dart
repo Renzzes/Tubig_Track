@@ -15,6 +15,8 @@ import '../../../payments/presentation/providers/payments_provider.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
 import '../../domain/entities/customer_bottle_reconciliation.dart';
 import '../providers/inventory_provider.dart';
+import '../../../walk_in_operations/domain/entities/walk_in_sale.dart';
+import '../../../walk_in_operations/presentation/providers/walk_in_provider.dart';
 
 class BusinessTimelineScreen extends ConsumerStatefulWidget {
   const BusinessTimelineScreen({super.key});
@@ -36,6 +38,7 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
     final depositsAsync = ref.watch(allCustomerDepositsStreamProvider);
     final customersAsync = ref.watch(customersStreamProvider);
     final reconciliationsAsync = ref.watch(bottleReconciliationsStreamProvider);
+    final walkInAsync = ref.watch(walkInSalesStreamProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Business Timeline')),
@@ -75,6 +78,11 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
                           data: (c) => {for (final x in c) x.id: x.name},
                           loading: () => <String, String>{},
                           error: (_, __) => <String, String>{},
+                        );
+                        final walkInSales = walkInAsync.when(
+                          data: (s) => s,
+                          loading: () => <WalkInSale>[],
+                          error: (_, __) => <WalkInSale>[],
                         );
                         final linkedIds = purchases
                             .map((p) => p.bottleTransactionId)
@@ -120,6 +128,7 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
                               )
                               .toList(),
                           reconciliations: reconciliations,
+                          walkInSales: walkInSales,
                         );
                         final filtered =
                             filterBusinessTimeline(all, _filter);
@@ -221,6 +230,7 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
         BusinessTimelineFilter.suppliers => 'Suppliers',
         BusinessTimelineFilter.audits => 'Audits',
         BusinessTimelineFilter.reconciliations => 'Reconciliations',
+        BusinessTimelineFilter.walkInOperations => 'Walk-In',
       };
 
   String _depositLabel(CustomerDeposit d) {

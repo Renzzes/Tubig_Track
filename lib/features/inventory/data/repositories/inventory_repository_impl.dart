@@ -13,6 +13,7 @@ import '../../domain/entities/inventory_audit_summary.dart';
 import '../../domain/entities/customer_bottle_reconciliation.dart';
 import '../../domain/entities/inventory_summary.dart';
 import '../../domain/entities/customer_bottle_balance.dart';
+import '../../domain/entities/customer_owned_bottle_log.dart';
 import '../../domain/repositories/inventory_repository.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
@@ -674,5 +675,290 @@ class InventoryRepositoryImpl implements InventoryRepository {
         actualCount: null,
       );
     }
+
+    await _db.customersDao.updatePhysicalCountVerification(customerId, now);
+  }
+
+  CustomerOwnedBottleLog _mapOwnedLog(CustomerOwnedBottleLogsTableData row) {
+    return CustomerOwnedBottleLog(
+      id: row.id,
+      customerId: row.customerId,
+      eventType: CustomerOwnedBottleEventTypeX.fromDb(row.eventType),
+      businessOwnedDelta: row.businessOwnedDelta,
+      customerOwnedDelta: row.customerOwnedDelta,
+      businessOwnedAfter: row.businessOwnedAfter,
+      customerOwnedAfter: row.customerOwnedAfter,
+      date: row.date,
+      notes: row.notes,
+      deliveryId: row.deliveryId,
+      bottleTransactionId: row.bottleTransactionId,
+    );
+  }
+
+  Future<int> _businessOwnedHeld(String customerId) async {
+    final borrowed = await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'borrow',
+      customerId,
+    );
+    final returned = await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'return',
+      customerId,
+    );
+    final adjustments =
+        await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'customer_adjustment',
+      customerId,
+    );
+    return InventoryCalculator.customerBottlesHeld(
+      delivered: borrowed,
+      collected: returned,
+      manualAdjustments: adjustments,
+    );
+  }
+
+  Future<void> _insertOwnedLog({
+    required String customerId,
+    required CustomerOwnedBottleEventType eventType,
+    required int businessOwnedDelta,
+    required int customerOwnedDelta,
+    required int businessOwnedAfter,
+    required int customerOwnedAfter,
+    required DateTime date,
+    String? notes,
+    String? deliveryId,
+    String? bottleTransactionId,
+  }) async {
+    await _db.customerOwnedBottleLogsDao.insertLog(
+      CustomerOwnedBottleLogsTableCompanion.insert(
+        id: const Uuid().v4(),
+        customerId: customerId,
+        eventType: eventType.dbValue,
+        businessOwnedDelta: Value(businessOwnedDelta),
+        customerOwnedDelta: Value(customerOwnedDelta),
+        businessOwnedAfter: businessOwnedAfter,
+        customerOwnedAfter: customerOwnedAfter,
+        date: date,
+        notes: Value(notes),
+        deliveryId: Value(deliveryId),
+        bottleTransactionId: Value(bottleTransactionId),
+      ),
+    );
+  }
+
+  @override
+  Future<int> getCustomerOwnedBottlesHeld(String customerId) async {
+    final row = await _db.customersDao.getById(customerId);
+    return row?.customerOwnedBottlesHeld ?? 0;
+  }
+
+  @override
+  Future<List<CustomerOwnedBottleLog>> getCustomerOwnedLogs(
+    String customerId,
+  ) async {
+    final rows = await _db.customerOwnedBottleLogsDao.getByCustomer(customerId);
+    return rows.map(_mapOwnedLog).toList();
+  }
+
+  @override
+  Stream<List<CustomerOwnedBottleLog>> watchCustomerOwnedLogs(String customerId) {
+    return _db.customerOwnedBottleLogsDao
+        .watchByCustomer(customerId)
+        .map((rows) => rows.map(_mapOwnedLog).toList());
+  }
+
+  @override
+  Future<void> setCustomerOwnedBottleBalance({
+    required String customerId,
+    required int quantity,
+    DateTime? date,
+    String? notes,
+  }) async {
+    if (quantity < 0) {
+      throw ArgumentError('Customer-owned balance cannot be negative.');
+    }
+    final when = date ?? DateTime.now();
+    await _db.transaction(() async {
+      final businessHeld = await _businessOwnedHeld(customerId);
+      final current = await getCustomerOwnedBottlesHeld(customerId);
+      await _db.customersDao.updateCustomerOwnedBottlesHeld(
+        customerId,
+        quantity,
+      );
+      await _insertOwnedLog(
+        customerId: customerId,
+        eventType: CustomerOwnedBottleEventType.setBalance,
+        businessOwnedDelta: 0,
+        customerOwnedDelta: quantity - current,
+        businessOwnedAfter: businessHeld,
+        customerOwnedAfter: quantity,
+        date: when,
+        notes: notes ?? 'Set Customer-Owned Bottle Balance',
+      );
+    });
+  }
+
+  @override
+  Future<void> adjustCustomerOwnedBottleBalance({
+    required String customerId,
+    required int quantityDelta,
+    String? reason,
+    String? notes,
+    DateTime? date,
+  }) async {
+    if (quantityDelta == 0) return;
+    final when = date ?? DateTime.now();
+    await _db.transaction(() async {
+      final businessHeld = await _businessOwnedHeld(customerId);
+      final current = await getCustomerOwnedBottlesHeld(customerId);
+      final next = current + quantityDelta;
+      if (next < 0) {
+        throw StateError(
+          'Adjustment would result in negative customer-owned bottles held.',
+        );
+      }
+      await _db.customersDao.updateCustomerOwnedBottlesHeld(customerId, next);
+      await _insertOwnedLog(
+        customerId: customerId,
+        eventType: CustomerOwnedBottleEventType.adjustBalance,
+        businessOwnedDelta: 0,
+        customerOwnedDelta: quantityDelta,
+        businessOwnedAfter: businessHeld,
+        customerOwnedAfter: next,
+        date: when,
+        notes: notes ?? reason ?? 'Adjust Customer-Owned Bottle Balance',
+      );
+    });
+  }
+
+  @override
+  Future<void> collectBottlesFromCustomer({
+    required String customerId,
+    required int businessOwnedCollected,
+    required int customerOwnedCollected,
+    DateTime? date,
+    String? notes,
+  }) async {
+    if (businessOwnedCollected < 0 || customerOwnedCollected < 0) {
+      throw ArgumentError('Collection quantities cannot be negative.');
+    }
+    if (businessOwnedCollected == 0 && customerOwnedCollected == 0) return;
+
+    final when = date ?? DateTime.now();
+    final businessHeld = await _businessOwnedHeld(customerId);
+    final customerOwnedHeld = await getCustomerOwnedBottlesHeld(customerId);
+
+    if (businessOwnedCollected > businessHeld) {
+      throw StateError(
+        'Cannot collect more than $businessHeld business-owned bottles held.',
+      );
+    }
+    if (customerOwnedCollected > customerOwnedHeld) {
+      throw StateError(
+        'Cannot collect more than $customerOwnedHeld customer-owned bottles held.',
+      );
+    }
+
+    await _db.transaction(() async {
+      String? bottleTxId;
+      if (businessOwnedCollected > 0) {
+        bottleTxId = const Uuid().v4();
+        await _effects.applyTransaction(
+          TransactionType.ret,
+          businessOwnedCollected,
+        );
+        await _insertTransactionRow(
+          BottleTransaction(
+            id: bottleTxId,
+            customerId: customerId,
+            transactionType: TransactionType.ret,
+            quantity: businessOwnedCollected,
+            date: when,
+            notes: notes ??
+                'Collected $businessOwnedCollected business-owned bottles',
+          ),
+        );
+      }
+
+      final newCustomerOwned = customerOwnedHeld - customerOwnedCollected;
+      if (customerOwnedCollected > 0) {
+        await _db.customersDao.updateCustomerOwnedBottlesHeld(
+          customerId,
+          newCustomerOwned,
+        );
+      }
+
+      await _insertOwnedLog(
+        customerId: customerId,
+        eventType: CustomerOwnedBottleEventType.collected,
+        businessOwnedDelta: -businessOwnedCollected,
+        customerOwnedDelta: -customerOwnedCollected,
+        businessOwnedAfter: businessHeld - businessOwnedCollected,
+        customerOwnedAfter: newCustomerOwned,
+        date: when,
+        notes: notes,
+        bottleTransactionId: bottleTxId,
+      );
+    });
+  }
+
+  @override
+  Future<void> reverseDeliveryCustomerOwnedFilled(String deliveryId) async {
+    final existing =
+        await _db.customerOwnedBottleLogsDao.getByDeliveryId(deliveryId);
+    if (existing == null) return;
+
+    await _db.transaction(() async {
+      final customerId = existing.customerId;
+      final current = await getCustomerOwnedBottlesHeld(customerId);
+      final reversed = (current - existing.customerOwnedDelta).clamp(0, 999999);
+      await _db.customersDao.updateCustomerOwnedBottlesHeld(
+        customerId,
+        reversed,
+      );
+      await _db.customerOwnedBottleLogsDao.deleteByDeliveryId(deliveryId);
+    });
+  }
+
+  @override
+  Future<void> syncDeliveryCustomerOwnedFilled({
+    required String deliveryId,
+    required String customerId,
+    required int businessOwnedDelivered,
+    required int customerOwnedFilled,
+    required DateTime date,
+    required bool isCompleted,
+    String? notes,
+  }) async {
+    await reverseDeliveryCustomerOwnedFilled(deliveryId);
+
+    if (!isCompleted ||
+        (businessOwnedDelivered == 0 && customerOwnedFilled == 0)) {
+      return;
+    }
+
+    await _db.transaction(() async {
+      final customerOwnedHeld = await getCustomerOwnedBottlesHeld(customerId);
+      final newCustomerOwned = customerOwnedHeld + customerOwnedFilled;
+      if (customerOwnedFilled > 0) {
+        await _db.customersDao.updateCustomerOwnedBottlesHeld(
+          customerId,
+          newCustomerOwned,
+        );
+      }
+      final businessHeld = await _businessOwnedHeld(customerId);
+
+      await _insertOwnedLog(
+        customerId: customerId,
+        eventType: CustomerOwnedBottleEventType.deliveryFilled,
+        businessOwnedDelta: businessOwnedDelivered,
+        customerOwnedDelta: customerOwnedFilled,
+        businessOwnedAfter: businessHeld,
+        customerOwnedAfter: newCustomerOwned,
+        date: date,
+        notes: notes,
+        deliveryId: deliveryId,
+        bottleTransactionId: '${deliveryId}_borrow',
+      );
+    });
   }
 }

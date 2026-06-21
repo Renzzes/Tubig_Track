@@ -1,5 +1,7 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/bottle_verification_utils.dart';
+import '../../../customers/data/repositories/customer_repository_impl.dart';
 import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../../overdue/data/repositories/overdue_repository_impl.dart';
 import '../../domain/entities/dashboard_summary.dart';
@@ -20,7 +22,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
         await _db.deliveriesDao.getTotalSalesForDateRange(start, end);
     final dispenserSales =
         await _db.dispenserSalesDao.getTotalForDateRange(start, end);
-    final todaySales = deliverySales + dispenserSales;
+    final walkInRevenue =
+        await _db.walkInSalesDao.getTotalRevenueForDateRange(start, end);
+    final todaySales = deliverySales + dispenserSales + walkInRevenue;
 
     final todayExpenses =
         await _db.expensesDao.getTotalForDateRange(start, end);
@@ -56,6 +60,28 @@ class DashboardRepositoryImpl implements DashboardRepository {
     final customerDepositsHeld =
         await _db.customerDepositsDao.getTotalDepositsHeld();
 
+    final domainCustomers = await CustomerRepositoryImpl(_db).getAll();
+    final verification = BottleVerificationUtils.summarize(domainCustomers);
+    final bottleBalances =
+        await _db.bottleTransactionsDao.getCustomerBottleBalances();
+
+    var customersWithMissingBottles = 0;
+    for (final c in domainCustomers) {
+      final held = bottleBalances[c.id] ?? 0;
+      final variance = c.bottleVariance(held);
+      if (variance != null && variance < 0) {
+        customersWithMissingBottles++;
+      }
+    }
+
+    final auditRecommended = auditSummary.lastAuditDate == null ||
+        DateTime.now().difference(auditSummary.lastAuditDate!).inDays >= 30;
+
+    final todayWalkInCount =
+        await _db.walkInSalesDao.getCountForDateRange(start, end);
+    final todayWalkInBottles =
+        await _db.walkInSalesDao.totalBottlesForDateRange(start, end);
+
     return DashboardSummary(
       todaySales: todaySales,
       todayExpenses: todayExpenses,
@@ -70,6 +96,12 @@ class DashboardRepositoryImpl implements DashboardRepository {
       lastInventoryAuditDate: auditSummary.lastAuditDate,
       customerDepositsHeld: customerDepositsHeld,
       upcomingDeliveries: upcomingDeliveries,
+      customersNeedingReconciliation: verification.needsReconciliation,
+      customersWithMissingBottles: customersWithMissingBottles,
+      inventoryAuditRecommended: auditRecommended,
+      todayWalkInSalesCount: todayWalkInCount,
+      todayWalkInRevenue: walkInRevenue,
+      todayWalkInBottles: todayWalkInBottles,
     );
   }
 }

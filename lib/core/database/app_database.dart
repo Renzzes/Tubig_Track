@@ -20,6 +20,8 @@ import 'tables/inventory_adjustments_table.dart';
 import 'tables/customer_deposits_table.dart';
 import 'tables/copilot_messages_table.dart';
 import 'tables/customer_bottle_reconciliations_table.dart';
+import 'tables/customer_owned_bottle_logs_table.dart';
+import 'tables/walk_in_sales_table.dart';
 
 import 'daos/customers_dao.dart';
 import 'daos/deliveries_dao.dart';
@@ -38,6 +40,8 @@ import 'daos/inventory_adjustments_dao.dart';
 import 'daos/customer_deposits_dao.dart';
 import 'daos/copilot_messages_dao.dart';
 import 'daos/customer_bottle_reconciliations_dao.dart';
+import 'daos/customer_owned_bottle_logs_dao.dart';
+import 'daos/walk_in_sales_dao.dart';
 import 'migrations/inventory_state_migration.dart';
 
 part 'app_database.g.dart';
@@ -61,6 +65,8 @@ part 'app_database.g.dart';
     CustomerDepositsTable,
     CopilotMessagesTable,
     CustomerBottleReconciliationsTable,
+    CustomerOwnedBottleLogsTable,
+    WalkInSalesTable,
   ],
   daos: [
     CustomersDao,
@@ -80,6 +86,8 @@ part 'app_database.g.dart';
     CustomerDepositsDao,
     CopilotMessagesDao,
     CustomerBottleReconciliationsDao,
+    CustomerOwnedBottleLogsDao,
+    WalkInSalesDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -87,7 +95,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration {
@@ -174,6 +182,31 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 16) {
           await migrateV16SeparateInventoryFinancial(this);
+        }
+        if (from < 17) {
+          await m.addColumn(
+            customersTable,
+            customersTable.customerOwnedBottlesHeld,
+          );
+          await m.addColumn(
+            deliveriesTable,
+            deliveriesTable.customerOwnedBottlesFilled,
+          );
+          await m.createTable(customerOwnedBottleLogsTable);
+        }
+        if (from < 18) {
+          await m.addColumn(
+            customersTable,
+            customersTable.lastPhysicalCountDate,
+          );
+          await m.addColumn(
+            customersTable,
+            customersTable.lastPhysicalCountVerified,
+          );
+          await migrateV18PhysicalCountVerification(this);
+        }
+        if (from < 19) {
+          await m.createTable(walkInSalesTable);
         }
       },
     );
@@ -278,6 +311,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(bottleTransactionsTable).go();
       await delete(expensesTable).go();
       await delete(dispenserSalesTable).go();
+      await delete(walkInSalesTable).go();
       await delete(savingsContributionsTable).go();
       await delete(supplyPurchasesTable).go();
       await delete(inventoryStockTable).go();
@@ -287,6 +321,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(inventoryAdjustmentsTable).go();
       await delete(customerDepositsTable).go();
       await delete(customerBottleReconciliationsTable).go();
+      await delete(customerOwnedBottleLogsTable).go();
       await delete(copilotMessagesTable).go();
       await _seedInventoryStock();
       await resetInventoryStateSettings(this);

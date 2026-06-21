@@ -29,6 +29,16 @@ class DashboardSummary {
   final double customerDepositsHeld;
   final List<UpcomingDeliveryItem> upcomingDeliveries;
 
+  /// Action Required alerts (v1.5.0).
+  final int customersNeedingReconciliation;
+  final int customersWithMissingBottles;
+  final bool inventoryAuditRecommended;
+
+  /// Walk-in operations today (v1.6.0).
+  final int todayWalkInSalesCount;
+  final double todayWalkInRevenue;
+  final int todayWalkInBottles;
+
   const DashboardSummary({
     required this.todaySales,
     required this.todayExpenses,
@@ -43,5 +53,17 @@ class DashboardSummary {
     required this.lastInventoryAuditDate,
     required this.customerDepositsHeld,
     required this.upcomingDeliveries,
+    required this.customersNeedingReconciliation,
+    required this.customersWithMissingBottles,
+    required this.inventoryAuditRecommended,
+    required this.todayWalkInSalesCount,
+    required this.todayWalkInRevenue,
+    required this.todayWalkInBottles,
   });
+
+  bool get hasActionRequired =>
+      customersNeedingReconciliation > 0 ||
+      customersWithMissingBottles > 0 ||
+      overdueCustomerCount > 0 ||
+      inventoryAuditRecommended;
 }

@@ -5,6 +5,9 @@ class Customer {
   final String? address;
   final String? notes;
   final int? pendingPhysicalBottleCount;
+  final int customerOwnedBottlesHeld;
+  final DateTime? lastPhysicalCountDate;
+  final bool lastPhysicalCountVerified;
   final DateTime createdAt;
 
   const Customer({
@@ -14,6 +17,9 @@ class Customer {
     this.address,
     this.notes,
     this.pendingPhysicalBottleCount,
+    this.customerOwnedBottlesHeld = 0,
+    this.lastPhysicalCountDate,
+    this.lastPhysicalCountVerified = false,
     required this.createdAt,
   });
 
@@ -24,6 +30,9 @@ class Customer {
     String? address,
     String? notes,
     int? pendingPhysicalBottleCount,
+    int? customerOwnedBottlesHeld,
+    DateTime? lastPhysicalCountDate,
+    bool? lastPhysicalCountVerified,
     bool clearPendingPhysical = false,
     DateTime? createdAt,
   }) {
@@ -36,6 +45,12 @@ class Customer {
       pendingPhysicalBottleCount: clearPendingPhysical
           ? null
           : (pendingPhysicalBottleCount ?? this.pendingPhysicalBottleCount),
+      customerOwnedBottlesHeld:
+          customerOwnedBottlesHeld ?? this.customerOwnedBottlesHeld,
+      lastPhysicalCountDate:
+          lastPhysicalCountDate ?? this.lastPhysicalCountDate,
+      lastPhysicalCountVerified:
+          lastPhysicalCountVerified ?? this.lastPhysicalCountVerified,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -53,6 +68,8 @@ class CustomerStats {
   final int damagedBottles;
   final int outstandingBottles;
   final int bottlesHeld;
+  final int customerOwnedBottlesHeld;
+  final int totalBottlesAtCustomer;
   final double unpaidBalance;
   final double depositBalance;
   final double totalAmountPaid;
@@ -63,6 +80,8 @@ class CustomerStats {
   final DateTime? lastActivityDate;
   final bool hasInitialBalance;
   final int initialBottleBalance;
+  final DateTime? lastPhysicalCountDate;
+  final String daysSinceLastPhysicalCountLabel;
 
   const CustomerStats({
     required this.borrowedBottles,
@@ -70,6 +89,8 @@ class CustomerStats {
     required this.damagedBottles,
     required this.outstandingBottles,
     required this.bottlesHeld,
+    required this.customerOwnedBottlesHeld,
+    required this.totalBottlesAtCustomer,
     required this.unpaidBalance,
     required this.depositBalance,
     required this.totalAmountPaid,
@@ -80,6 +101,8 @@ class CustomerStats {
     this.lastActivityDate,
     this.hasInitialBalance = false,
     this.initialBottleBalance = 0,
+    this.lastPhysicalCountDate,
+    this.daysSinceLastPhysicalCountLabel = 'Never Verified',
   });
 
   double get totalBalance => unpaidBalance + totalAmountPaid;

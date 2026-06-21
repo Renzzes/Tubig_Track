@@ -24,6 +24,9 @@ class DeliveriesTable extends Table {
       text().withDefault(const Constant('completed'))();
   IntColumn get collectedEmptyBottles =>
       integer().withDefault(const Constant(0))();
+  /// Customer-owned bottles filled during this delivery (no inventory impact).
+  IntColumn get customerOwnedBottlesFilled =>
+      integer().withDefault(const Constant(0))();
   TextColumn get notes => text().nullable()();
   TextColumn get receiptNumber => text().nullable()();
 

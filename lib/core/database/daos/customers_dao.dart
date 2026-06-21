@@ -57,6 +57,24 @@ class CustomersDao extends DatabaseAccessor<AppDatabase>
     final row = await query.getSingle();
     return row.read(countExpr) ?? 0;
   }
+
+  Future<void> updateCustomerOwnedBottlesHeld(String customerId, int count) {
+    return (update(customersTable)..where((t) => t.id.equals(customerId)))
+        .write(CustomersTableCompanion(
+      customerOwnedBottlesHeld: Value(count),
+    ));
+  }
+
+  Future<void> updatePhysicalCountVerification(
+    String customerId,
+    DateTime date,
+  ) {
+    return (update(customersTable)..where((t) => t.id.equals(customerId)))
+        .write(CustomersTableCompanion(
+      lastPhysicalCountDate: Value(date),
+      lastPhysicalCountVerified: const Value(true),
+    ));
+  }
 }
 
 typedef CustomerTableData = CustomersTableData;

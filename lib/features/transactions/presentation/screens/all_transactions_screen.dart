@@ -54,6 +54,8 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
         return 'Inventory Audit';
       case RecentTransactionType.dispenserSale:
         return 'Dispenser Sale';
+      case RecentTransactionType.walkInOperation:
+        return 'Walk-In Operation';
       case RecentTransactionType.savingsAddition:
         return 'Savings Addition';
       case RecentTransactionType.supplyPurchase:

@@ -1,4 +1,5 @@
 import '../entities/customer_bottle_reconciliation.dart';
+import '../entities/customer_owned_bottle_log.dart';
 import '../entities/customer_bottle_balance.dart';
 import '../entities/bottle_transaction.dart';
 import '../entities/inventory_adjustment.dart';
@@ -60,4 +61,45 @@ abstract class InventoryRepository {
   Future<List<CustomerBottleReconciliation>> getReconciliationsByCustomer(
     String customerId,
   );
+
+  Future<int> getCustomerOwnedBottlesHeld(String customerId);
+
+  Future<List<CustomerOwnedBottleLog>> getCustomerOwnedLogs(String customerId);
+
+  Stream<List<CustomerOwnedBottleLog>> watchCustomerOwnedLogs(String customerId);
+
+  Future<void> setCustomerOwnedBottleBalance({
+    required String customerId,
+    required int quantity,
+    DateTime? date,
+    String? notes,
+  });
+
+  Future<void> adjustCustomerOwnedBottleBalance({
+    required String customerId,
+    required int quantityDelta,
+    String? reason,
+    String? notes,
+    DateTime? date,
+  });
+
+  Future<void> collectBottlesFromCustomer({
+    required String customerId,
+    required int businessOwnedCollected,
+    required int customerOwnedCollected,
+    DateTime? date,
+    String? notes,
+  });
+
+  Future<void> syncDeliveryCustomerOwnedFilled({
+    required String deliveryId,
+    required String customerId,
+    required int businessOwnedDelivered,
+    required int customerOwnedFilled,
+    required DateTime date,
+    required bool isCompleted,
+    String? notes,
+  });
+
+  Future<void> reverseDeliveryCustomerOwnedFilled(String deliveryId);
 }

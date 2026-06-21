@@ -18,6 +18,9 @@ import '../../features/customers/presentation/screens/customer_profile_screen.da
 import '../../features/customers/presentation/screens/collect_bottles_screen.dart';
 import '../../features/customers/presentation/screens/set_initial_bottle_balance_screen.dart';
 import '../../features/customers/presentation/screens/adjust_customer_bottle_balance_screen.dart';
+import '../../features/customers/presentation/screens/set_customer_owned_bottle_balance_screen.dart';
+import '../../features/customers/presentation/screens/adjust_customer_owned_bottle_balance_screen.dart';
+import '../../features/customers/presentation/screens/customer_visit_screen.dart';
 
 import '../../features/savings/presentation/screens/savings_detail_screen.dart';
 
@@ -62,6 +65,7 @@ import '../../features/payments/presentation/screens/receive_payment_screen.dart
 import '../../features/expenses/presentation/screens/expenses_screen.dart';
 
 import '../../features/dispenser_sales/presentation/screens/dispenser_sales_screen.dart';
+import '../../features/walk_in_operations/presentation/screens/walk_in_operations_screen.dart';
 
 import '../../features/settings/presentation/screens/settings_screen.dart';
 
@@ -245,6 +249,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
+        path: '/customers/:id/visit',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerVisitScreen(customerId: id);
+        },
+      ),
+
+      GoRoute(
 
         path: '/customers/:id/payment',
 
@@ -301,6 +313,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(
+        path: '/customers/:id/set-customer-owned-balance',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return SetCustomerOwnedBottleBalanceScreen(customerId: id);
+        },
+      ),
+
+      GoRoute(
+        path: '/customers/:id/adjust-customer-owned-bottles',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return AdjustCustomerOwnedBottleBalanceScreen(customerId: id);
+        },
+      ),
+
+      GoRoute(
 
         path: '/deliveries/:id/edit',
 
@@ -341,6 +369,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         builder: (context, state) => const DispenserSalesScreen(),
 
+      ),
+
+      GoRoute(
+        path: '/walk-in-operations',
+        builder: (context, state) => const WalkInOperationsScreen(),
       ),
 
       GoRoute(

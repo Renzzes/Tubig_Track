@@ -1,5 +1,21 @@
 enum ReportPeriod { daily, weekly, monthly, yearly }
 
+class WalkInReportLine {
+  final DateTime date;
+  final String typeLabel;
+  final String customerName;
+  final int quantity;
+  final double amount;
+
+  const WalkInReportLine({
+    required this.date,
+    required this.typeLabel,
+    required this.customerName,
+    required this.quantity,
+    required this.amount,
+  });
+}
+
 class SupplyDetailLine {
   final String description;
   final double amount;
@@ -62,6 +78,10 @@ class ReportSummary {
   final int periodDamagedBottles;
   final int periodMissingBottles;
 
+  /// Customer-owned bottle activity in period (informational only).
+  final int periodCustomerOwnedCollected;
+  final int periodCustomerOwnedDelivered;
+
   final int totalAudits;
   final DateTime? lastAuditDate;
   final int auditMissingBottles;
@@ -73,6 +93,30 @@ class ReportSummary {
   final double totalDepositsAdded;
   final double totalDepositsUsed;
   final double currentDepositLiability;
+
+  /// Customer bottle physical verification snapshot.
+  final int verifiedCustomers;
+  final int customersNeedingReconciliation;
+  final int notVerifiedCustomers;
+
+  /// Extended fields for full business report (v1.5.0).
+  final int totalCustomerOwnedBottles;
+  final String inventoryHealthLabel;
+  final int periodCollections;
+  final int periodPaymentsCount;
+  final int periodSupplierDeliveries;
+  final String businessTimelineSummary;
+
+  /// Walk-in operations (v1.6.0).
+  final double walkInRevenue;
+  final int walkInTransactionCount;
+  final int walkInBusinessBottleSalesCount;
+  final int walkInCustomerRefillsCount;
+  final int walkInExchangeCount;
+  final double walkInBusinessBottleRevenue;
+  final double walkInRefillRevenue;
+  final double walkInExchangeRevenue;
+  final List<WalkInReportLine> walkInDetails;
 
   const ReportSummary({
     required this.period,
@@ -109,6 +153,8 @@ class ReportSummary {
     required this.periodDonatedBottles,
     required this.periodDamagedBottles,
     required this.periodMissingBottles,
+    required this.periodCustomerOwnedCollected,
+    required this.periodCustomerOwnedDelivered,
     required this.totalAudits,
     required this.lastAuditDate,
     required this.auditMissingBottles,
@@ -118,5 +164,23 @@ class ReportSummary {
     required this.totalDepositsAdded,
     required this.totalDepositsUsed,
     required this.currentDepositLiability,
+    required this.verifiedCustomers,
+    required this.customersNeedingReconciliation,
+    required this.notVerifiedCustomers,
+    required this.totalCustomerOwnedBottles,
+    required this.inventoryHealthLabel,
+    required this.periodCollections,
+    required this.periodPaymentsCount,
+    required this.periodSupplierDeliveries,
+    required this.businessTimelineSummary,
+    required this.walkInRevenue,
+    required this.walkInTransactionCount,
+    required this.walkInBusinessBottleSalesCount,
+    required this.walkInCustomerRefillsCount,
+    required this.walkInExchangeCount,
+    required this.walkInBusinessBottleRevenue,
+    required this.walkInRefillRevenue,
+    required this.walkInExchangeRevenue,
+    required this.walkInDetails,
   });
 }

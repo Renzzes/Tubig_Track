@@ -286,6 +286,85 @@ class CopilotIntentDetector {
       return CopilotIntent.getInactiveCustomers;
     }
 
+    // ── BOTTLE VERIFICATION ──────────────────────────────────────────────
+    if (_matchesAny(q, [
+      'who needs reconciliation',
+      'which customers need reconciliation',
+      'customers need reconciliation',
+      'need reconciliation',
+    ])) {
+      return CopilotIntent.getCustomersNeedingReconciliation;
+    }
+    if (_matchesAny(q, [
+      'need reconciliation',
+      'needs reconciliation',
+      'need bottle reconciliation',
+      'not physically counted',
+      'not verified in 30',
+      'overdue reconciliation',
+      'stale physical count',
+    ])) {
+      return CopilotIntent.getCustomersNeedingReconciliation;
+    }
+    if (_matchesAny(q, [
+      'never verified',
+      'never reconciled',
+      'no physical count',
+      'not verified customers',
+      'customers never verified',
+    ])) {
+      return CopilotIntent.getNeverVerifiedCustomers;
+    }
+
+    if (_matchesAny(q, [
+      'who has missing bottles',
+      'customers with missing bottles',
+      'missing bottles at customer',
+      'customer missing bottles',
+      'which customers have missing',
+    ])) {
+      return CopilotIntent.getCustomersWithMissingBottles;
+    }
+
+    if (_matchesAny(q, [
+      'overdue balance',
+      'overdue balances',
+      'who has overdue balance',
+      'customers with overdue',
+    ])) {
+      return CopilotIntent.getCustomersWithOverdueBalances;
+    }
+
+    if (_matchesAny(q, [
+      'customer-owned bottles',
+      'customer owned bottles',
+      'how many customer-owned',
+      'how many customer owned',
+      'total customer-owned',
+      'total customer owned bottles',
+    ])) {
+      return CopilotIntent.getTotalCustomerOwnedBottles;
+    }
+
+    if (_matchesAny(q, [
+      'customer statement summary',
+      'statement summary for',
+      'generate customer statement',
+      'account summary for',
+    ])) {
+      return CopilotIntent.getCustomerStatementSummary;
+    }
+
+    if (_matchesAny(q, [
+      'customers needing follow-up',
+      'need follow-up',
+      'needs follow up',
+      'who needs follow-up',
+      'show customers needing follow-up',
+    ])) {
+      return CopilotIntent.getFollowUps;
+    }
+
     // ── CUSTOMERS WITH DEPOSITS ──────────────────────────────────────────
     if (_matchesAny(q, [
       'which customers have deposits',
@@ -312,6 +391,44 @@ class CopilotIntentDetector {
       'pinaka malaking customer',
     ])) {
       return CopilotIntent.getRevenueByCustomer;
+    }
+
+    // ── WALK-IN OPERATIONS ─────────────────────────────────────────────────
+    if (_matchesAny(q, [
+      'walk-in revenue',
+      'walk in revenue',
+      'earn from walk-in',
+      'earned from walk-ins',
+      'how much did i earn from walk',
+      'walk-in earnings',
+    ])) {
+      return CopilotIntent.getWalkInRevenue;
+    }
+    if (_matchesAny(q, [
+      'walk-in refill',
+      'walk in refill',
+      'how many walk-in refills',
+      'how many refills this month',
+      'customer refills this month',
+    ])) {
+      return CopilotIntent.getWalkInRefillsThisMonth;
+    }
+    if (_matchesAny(q, [
+      'walk-in exchange',
+      'walk in exchange',
+      'how many exchanges this month',
+      'bottle exchanges this month',
+    ])) {
+      return CopilotIntent.getWalkInExchangesThisMonth;
+    }
+    if (_matchesAny(q, [
+      'walk-in vs delivery',
+      'walk in vs delivery',
+      'compare walk-ins',
+      'compare walk-ins vs deliveries',
+      'walk-ins versus deliveries',
+    ])) {
+      return CopilotIntent.compareWalkInsVsDeliveries;
     }
 
     // ── BOTTLES & INVENTORY ──────────────────────────────────────────────
