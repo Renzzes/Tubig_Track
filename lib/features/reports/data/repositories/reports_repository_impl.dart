@@ -132,17 +132,25 @@ class ReportsRepositoryImpl implements ReportsRepository {
         await _db.supplyPurchasesDao.getLinkedBottleTransactionIds();
     final bottleTxsInPeriod =
         await _db.bottleTransactionsDao.getByDateRange(start, end);
+    final supplyPurchasesInPeriod =
+        await _db.supplyPurchasesDao.getByDateRange(start, end);
 
     var periodPurchasedNewBottles = 0;
+    var periodFilledBottleAdjustments = 0;
     var periodDonatedBottles = 0;
     var periodDamagedBottles = 0;
     var periodMissingBottles = 0;
     for (final t in bottleTxsInPeriod) {
       switch (t.transactionType) {
         case 'purchase':
-        case 'added':
           if (linkedBottleIds.contains(t.id)) break;
           periodPurchasedNewBottles += t.quantity;
+        case 'added':
+          periodFilledBottleAdjustments += t.quantity;
+        case 'adjustment':
+          if (t.quantity > 0) {
+            periodFilledBottleAdjustments += t.quantity;
+          }
         case 'donation':
           periodDonatedBottles += t.quantity;
         case 'damaged':
@@ -150,6 +158,11 @@ class ReportsRepositoryImpl implements ReportsRepository {
         case 'missing':
           periodMissingBottles += t.quantity;
       }
+    }
+
+    var periodSupplierFilledBottlesReceived = 0;
+    for (final sp in supplyPurchasesInPeriod) {
+      periodSupplierFilledBottlesReceived += sp.quantity;
     }
 
     final ownedLogsInPeriod =
@@ -183,9 +196,6 @@ class ReportsRepositoryImpl implements ReportsRepository {
     for (final t in bottleTxsInPeriod) {
       if (t.transactionType == 'return') periodCollections += t.quantity;
     }
-
-    final supplyPurchasesInPeriod =
-        await _db.supplyPurchasesDao.getByDateRange(start, end);
 
     final consistency =
         await InventoryRepositoryImpl(_db).validateConsistency();
@@ -251,6 +261,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
       missingBottles: inventory.missingBottles,
       donatedBottles: inventory.donatedBottles,
       periodPurchasedNewBottles: periodPurchasedNewBottles,
+      periodSupplierFilledBottlesReceived: periodSupplierFilledBottlesReceived,
+      periodFilledBottleAdjustments: periodFilledBottleAdjustments,
       periodDonatedBottles: periodDonatedBottles,
       periodDamagedBottles: periodDamagedBottles,
       periodMissingBottles: periodMissingBottles,

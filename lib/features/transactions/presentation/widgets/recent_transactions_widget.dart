@@ -8,12 +8,16 @@ import '../utils/transaction_activity_handler.dart';
 class RecentTransactionsWidget extends StatelessWidget {
   final List<RecentTransaction> transactions;
   final int limit;
+  final int? financialLimit;
+  final int? inventoryLimit;
   final bool grouped;
 
   const RecentTransactionsWidget({
     super.key,
     required this.transactions,
     this.limit = 10,
+    this.financialLimit,
+    this.inventoryLimit,
     this.grouped = true,
   });
 
@@ -43,11 +47,12 @@ class RecentTransactionsWidget extends StatelessWidget {
     final financial = transactions.where((tx) => !tx.isInventoryEvent).toList();
     final inventory = transactions.where((tx) => tx.isInventoryEvent).toList();
 
-    final financialLimit = (limit * 0.6).ceil().clamp(1, limit);
-    final inventoryLimit = limit - financialLimit;
+    final resolvedFinancialLimit = financialLimit ?? (limit * 0.6).ceil().clamp(1, limit);
+    final resolvedInventoryLimit =
+        inventoryLimit ?? (limit - resolvedFinancialLimit);
 
-    final financialItems = financial.take(financialLimit).toList();
-    final inventoryItems = inventory.take(inventoryLimit).toList();
+    final financialItems = financial.take(resolvedFinancialLimit).toList();
+    final inventoryItems = inventory.take(resolvedInventoryLimit).toList();
 
     if (financialItems.isEmpty && inventoryItems.isEmpty) {
       return Padding(

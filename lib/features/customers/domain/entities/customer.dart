@@ -82,6 +82,8 @@ class CustomerStats {
   final int initialBottleBalance;
   final DateTime? lastPhysicalCountDate;
   final String daysSinceLastPhysicalCountLabel;
+  final int operationalCollected;
+  final int pendingDeliveryQty;
 
   const CustomerStats({
     required this.borrowedBottles,
@@ -103,6 +105,8 @@ class CustomerStats {
     this.initialBottleBalance = 0,
     this.lastPhysicalCountDate,
     this.daysSinceLastPhysicalCountLabel = 'Never Verified',
+    this.operationalCollected = 0,
+    this.pendingDeliveryQty = 0,
   });
 
   double get totalBalance => unpaidBalance + totalAmountPaid;

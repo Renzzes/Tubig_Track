@@ -168,27 +168,12 @@ class DashboardScreen extends ConsumerWidget {
               ResponsiveStatGrid(
                 children: [
                   SummaryCard(
-                    title: "Today's Walk-In Sales",
-                    value: '${summary.todayWalkInSalesCount}',
+                    title: 'Walk-In Operations',
+                    value: CurrencyFormatter.format(summary.todayWalkInRevenue),
                     icon: Icons.storefront_outlined,
                     color: AppColors.success,
-                    subtitle: 'Operations today',
-                    onTap: () => context.push('/walk-in-operations'),
-                  ),
-                  SummaryCard(
-                    title: "Today's Walk-In Revenue",
-                    value: CurrencyFormatter.format(summary.todayWalkInRevenue),
-                    icon: Icons.payments_outlined,
-                    color: AppColors.success,
-                    subtitle: 'Paid immediately',
-                    onTap: () => context.push('/walk-in-operations'),
-                  ),
-                  SummaryCard(
-                    title: "Today's Walk-In Bottles",
-                    value: '${summary.todayWalkInBottles}',
-                    icon: Icons.water_drop_outlined,
-                    color: AppColors.primary,
-                    subtitle: 'Bottles moved',
+                    subtitle:
+                        '${summary.todayWalkInBottles} bottles • ${summary.todayWalkInSalesCount} transaction${summary.todayWalkInSalesCount == 1 ? '' : 's'} today',
                     onTap: () => context.push('/walk-in-operations'),
                   ),
                 ],
@@ -357,7 +342,8 @@ class DashboardScreen extends ConsumerWidget {
                   child: transactionsAsync.when(
                     data: (txs) => RecentTransactionsWidget(
                       transactions: txs,
-                      limit: 10,
+                      financialLimit: 2,
+                      inventoryLimit: 2,
                     ),
                     loading: () => const LoadingOverlay(),
                     error: (e, _) => Text('Error: $e'),

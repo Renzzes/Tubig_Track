@@ -87,13 +87,13 @@ class BottleTransaction {
   static String typeLabel(TransactionType t) {
     switch (t) {
       case TransactionType.ret:
-        return 'Collected Bottles';
+        return 'Bottle Collection';
       case TransactionType.damaged:
         return 'Damaged Bottles';
       case TransactionType.purchase:
         return 'Purchase New Bottles';
       case TransactionType.added:
-        return 'Add Bottles';
+        return 'Inventory Adjustment';
       case TransactionType.missing:
         return 'Missing Bottles';
       case TransactionType.donation:
@@ -105,7 +105,7 @@ class BottleTransaction {
       case TransactionType.customerAdjustment:
         return 'Bottle Correction';
       case TransactionType.borrow:
-        return 'Delivered Bottles';
+        return 'Bottle Delivery';
     }
   }
 
@@ -113,21 +113,21 @@ class BottleTransaction {
   static String timelineLabel(TransactionType t, int quantity) {
     switch (t) {
       case TransactionType.ret:
-        return 'Collected $quantity Bottles';
+        return 'Bottle Collection — $quantity Bottles';
       case TransactionType.damaged:
         return 'Marked $quantity Bottles Damaged';
       case TransactionType.purchase:
-        return 'Purchased $quantity Bottles';
+        return 'Added $quantity New Bottles to Inventory';
       case TransactionType.added:
-        return 'Added $quantity Bottles';
+        return 'Inventory Adjustment +$quantity Filled Bottles';
       case TransactionType.missing:
         return 'Marked $quantity Bottles Missing';
       case TransactionType.donation:
         return 'Donated $quantity Bottles';
       case TransactionType.adjustment:
         return quantity >= 0
-            ? 'Adjusted +$quantity Bottles'
-            : 'Adjusted $quantity Bottles';
+            ? 'Inventory Adjustment +$quantity Filled Bottles'
+            : 'Inventory Adjustment $quantity Filled Bottles';
       case TransactionType.audit:
         return 'Inventory Audit';
       case TransactionType.customerAdjustment:
@@ -135,7 +135,7 @@ class BottleTransaction {
             ? 'Corrected +$quantity Bottles'
             : 'Corrected $quantity Bottles';
       case TransactionType.borrow:
-        return 'Delivered $quantity Bottles';
+        return 'Bottle Delivery — $quantity Bottles';
     }
   }
 

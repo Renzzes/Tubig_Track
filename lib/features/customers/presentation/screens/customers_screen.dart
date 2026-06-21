@@ -6,6 +6,8 @@ import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import '../providers/customers_provider.dart';
+import '../providers/customer_sort_provider.dart';
+import '../../domain/entities/customer_sort_option.dart';
 import '../widgets/customer_list_tile.dart';
 
 class CustomersScreen extends ConsumerStatefulWidget {
@@ -26,7 +28,9 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customersAsync = ref.watch(filteredCustomersProvider);
+    final customersAsync = ref.watch(sortedCustomersProvider);
+    final sortAsync = ref.watch(customerSortOptionProvider);
+    final currentSort = sortAsync.value ?? CustomerSortOption.nameAsc;
 
     return Scaffold(
       appBar: AppBar(
@@ -42,28 +46,60 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name, phone, address...',
-                prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref
-                              .read(customerSearchQueryProvider.notifier)
-                              .update('');
-                        },
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, phone, address...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                ref
+                                    .read(customerSearchQueryProvider.notifier)
+                                    .update('');
+                              },
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      ref
+                          .read(customerSearchQueryProvider.notifier)
+                          .update(value);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                PopupMenuButton<CustomerSortOption>(
+                  tooltip: 'Sort customers',
+                  icon: const Icon(Icons.sort),
+                  initialValue: currentSort,
+                  onSelected: (option) {
+                    ref.read(customerSortOptionProvider.notifier).setSort(option);
+                  },
+                  itemBuilder: (context) => CustomerSortOption.values
+                      .map(
+                        (option) => PopupMenuItem(
+                          value: option,
+                          child: Row(
+                            children: [
+                              if (option == currentSort)
+                                const Icon(Icons.check, size: 18)
+                              else
+                                const SizedBox(width: 18),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(option.label)),
+                            ],
+                          ),
+                        ),
                       )
-                    : null,
-              ),
-              onChanged: (value) {
-                ref
-                    .read(customerSearchQueryProvider.notifier)
-                    .update(value);
-              },
+                      .toList(),
+                ),
+              ],
             ),
           ),
           Expanded(

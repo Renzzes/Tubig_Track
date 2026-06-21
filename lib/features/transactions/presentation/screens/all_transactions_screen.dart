@@ -37,9 +37,9 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
       case RecentTransactionType.expense:
         return 'Expense';
       case RecentTransactionType.bottleBorrow:
-        return 'Bottle Borrow';
+        return 'Bottle Delivery';
       case RecentTransactionType.bottleReturn:
-        return 'Bottle Return';
+        return 'Bottle Collection';
       case RecentTransactionType.bottlePurchase:
         return 'Purchase New Bottles';
       case RecentTransactionType.bottleDamaged:
@@ -59,7 +59,7 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
       case RecentTransactionType.savingsAddition:
         return 'Savings Addition';
       case RecentTransactionType.supplyPurchase:
-        return 'Supply Purchase';
+        return 'Supplier Delivery';
       case RecentTransactionType.depositAdded:
         return 'Deposit Added';
       case RecentTransactionType.depositUsed:

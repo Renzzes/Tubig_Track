@@ -63,9 +63,7 @@ class SupplyPurchasesDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<int> getTotalBottleQuantity() async {
-    final rows = await (select(supplyPurchasesTable)
-          ..where((t) => t.itemType.equals('Bottles')))
-        .get();
+    final rows = await select(supplyPurchasesTable).get();
     return rows.fold<int>(0, (sum, r) => sum + r.quantity);
   }
 }

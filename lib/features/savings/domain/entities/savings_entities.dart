@@ -1,5 +1,6 @@
 enum SavingsLedgerType {
   deliveryProfit,
+  walkInProfit,
   dispenserProfit,
   expenseDeduction,
   maintenanceDeduction,
@@ -12,6 +13,8 @@ extension SavingsLedgerTypeX on SavingsLedgerType {
     switch (this) {
       case SavingsLedgerType.deliveryProfit:
         return 'Delivery Profit';
+      case SavingsLedgerType.walkInProfit:
+        return 'Walk-In Profit';
       case SavingsLedgerType.dispenserProfit:
         return 'Dispenser Profit';
       case SavingsLedgerType.expenseDeduction:
@@ -43,6 +46,7 @@ class SavingsLedgerEntry {
 
   bool get isCredit =>
       type == SavingsLedgerType.deliveryProfit ||
+      type == SavingsLedgerType.walkInProfit ||
       type == SavingsLedgerType.dispenserProfit ||
       type == SavingsLedgerType.manualAddition;
 }
@@ -50,6 +54,7 @@ class SavingsLedgerEntry {
 class SavingsSummary {
   final double currentSavings;
   final double deliveryProfit;
+  final double walkInProfit;
   final double dispenserProfit;
   final double totalExpenses;
   final double maintenanceCosts;
@@ -59,6 +64,7 @@ class SavingsSummary {
   const SavingsSummary({
     required this.currentSavings,
     required this.deliveryProfit,
+    required this.walkInProfit,
     required this.dispenserProfit,
     required this.totalExpenses,
     required this.maintenanceCosts,

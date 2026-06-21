@@ -368,23 +368,15 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // Bottle Activity — lifecycle snapshot
+              // Bottle Activity — operational snapshot (resets when delivery completes)
               statsAsync.when(
                 data: (stats) => deliveriesAsync.when(
                   data: (deliveries) {
-                    final pending = deliveries
-                        .where(
-                          (d) =>
-                              d.deliveryStatus == DeliveryStatus.scheduled ||
-                              d.deliveryStatus == DeliveryStatus.inProgress,
-                        )
-                        .toList();
-                    final pendingQty =
-                        pending.fold<int>(0, (s, d) => s + d.quantity);
-                    final inProgress = pending.any(
+                    final hasPending = stats.pendingDeliveryQty > 0;
+                    final inProgress = deliveries.any(
                       (d) => d.deliveryStatus == DeliveryStatus.inProgress,
                     );
-                    final statusLabel = pending.isEmpty
+                    final statusLabel = !hasPending
                         ? 'None'
                         : inProgress
                             ? 'In Progress'
@@ -409,20 +401,21 @@ class CustomerProfileScreen extends ConsumerWidget {
                               label: 'Customer-Owned Held',
                               value: '${stats.customerOwnedBottlesHeld} Bottles',
                             ),
-                            if (pending.isNotEmpty) ...[
+                            if (stats.operationalCollected > 0)
+                              _AnalyticsRow(
+                                label: 'Collected',
+                                value: '${stats.operationalCollected} Bottles',
+                              ),
+                            if (hasPending) ...[
                               _AnalyticsRow(
                                 label: 'Pending Delivery',
-                                value: '$pendingQty Bottles',
+                                value: '${stats.pendingDeliveryQty} Bottles',
                               ),
                               _AnalyticsRow(
                                 label: 'Delivery Status',
                                 value: statusLabel,
                               ),
                             ],
-                            _AnalyticsRow(
-                              label: 'Collected',
-                              value: '${stats.returnedBottles} Bottles',
-                            ),
                             customerAsync.when(
                               data: (c) {
                                 if (c == null) return const SizedBox();

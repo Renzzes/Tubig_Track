@@ -148,6 +148,11 @@ class SavingsDetailScreen extends ConsumerWidget {
                 isCredit: true,
               ),
               _BreakdownTile(
+                label: 'Walk-In Profit',
+                value: summary.walkInProfit,
+                isCredit: true,
+              ),
+              _BreakdownTile(
                 label: 'Dispenser Profit',
                 value: summary.dispenserProfit,
                 isCredit: true,

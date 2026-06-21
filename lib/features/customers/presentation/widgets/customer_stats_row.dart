@@ -11,34 +11,37 @@ class CustomerStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ResponsiveStatGrid(
-      spacing: 8,
-      children: [
+    final children = <Widget>[
+      _StatBox(
+        label: 'Business-Owned Held',
+        value: '${stats.bottlesHeld}',
+        icon: Icons.inventory_2_outlined,
+        color: AppColors.primary,
+      ),
+      if (stats.pendingDeliveryQty > 0)
         _StatBox(
-          label: 'Business-Owned Held',
-          value: '${stats.bottlesHeld}',
-          icon: Icons.inventory_2_outlined,
-          color: AppColors.primary,
-        ),
-        _StatBox(
-          label: 'Delivered',
-          value: '${stats.borrowedBottles}',
+          label: 'Pending Delivery',
+          value: '${stats.pendingDeliveryQty}',
           icon: Icons.local_shipping_outlined,
           color: AppColors.warning,
         ),
-        _StatBox(
-          label: 'Collected',
-          value: '${stats.returnedBottles}',
-          icon: Icons.arrow_downward,
-          color: AppColors.success,
-        ),
-        _StatBox(
-          label: 'Unpaid Balance',
-          value: CurrencyFormatter.format(stats.unpaidBalance),
-          icon: Icons.account_balance_wallet_outlined,
-          color: stats.unpaidBalance > 0 ? AppColors.error : AppColors.success,
-        ),
-      ],
+      _StatBox(
+        label: 'Collected',
+        value: '${stats.operationalCollected}',
+        icon: Icons.arrow_downward,
+        color: AppColors.success,
+      ),
+      _StatBox(
+        label: 'Unpaid Balance',
+        value: CurrencyFormatter.format(stats.unpaidBalance),
+        icon: Icons.account_balance_wallet_outlined,
+        color: stats.unpaidBalance > 0 ? AppColors.error : AppColors.success,
+      ),
+    ];
+
+    return ResponsiveStatGrid(
+      spacing: 8,
+      children: children,
     );
   }
 }

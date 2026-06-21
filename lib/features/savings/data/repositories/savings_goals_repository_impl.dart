@@ -97,6 +97,7 @@ class SavingsGoalsRepositoryImpl implements SavingsGoalsRepository {
       final key = '${e.date.year}-${e.date.month.toString().padLeft(2, '0')}';
       final delta = switch (e.type) {
         SavingsLedgerType.deliveryProfit ||
+        SavingsLedgerType.walkInProfit ||
         SavingsLedgerType.dispenserProfit ||
         SavingsLedgerType.manualAddition =>
           e.amount,

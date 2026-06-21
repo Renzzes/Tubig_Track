@@ -182,8 +182,21 @@ class CopilotQueryService implements BusinessQueryHandler {
       profit += d.quantity * (d.pricePerBottle - costPerBottle);
     }
     profit += dispenser.fold(0.0, (s, d) => s + d.amount);
+    for (final w in await db.walkInSalesDao.getByDateRange(start, end)) {
+      final qty = _walkInBottlesSold(w);
+      profit += qty * (w.pricePerBottle - costPerBottle);
+    }
     profit -= expenses.fold(0.0, (s, e) => s + e.amount);
     return profit;
+  }
+
+  int _walkInBottlesSold(WalkInSalesTableData row) {
+    return switch (row.walkInType) {
+      'BUSINESS_BOTTLES' => row.businessOwnedQuantity,
+      'CUSTOMER_REFILL' => row.customerOwnedQuantity,
+      'EXCHANGE' => row.businessOwnedQuantity,
+      _ => row.businessOwnedQuantity,
+    };
   }
 
   Future<String> _customerNotFound(String? name) async =>
@@ -206,13 +219,23 @@ class CopilotQueryService implements BusinessQueryHandler {
       deliveryProfit += d.quantity * (d.pricePerBottle - costPerBottle);
     }
 
+    var walkInProfit = 0.0;
+    for (final w in await db.walkInSalesDao.getAll()) {
+      walkInProfit +=
+          _walkInBottlesSold(w) * (w.pricePerBottle - costPerBottle);
+    }
+
     final dispenserProfit = dispenserSales.fold(0.0, (sum, s) => sum + s.amount);
     var totalExpenses = 0.0;
     for (final e in expenses) {
       totalExpenses += e.amount;
     }
 
-    final current = deliveryProfit + dispenserProfit - totalExpenses + manualAdditions;
+    final current = deliveryProfit +
+        walkInProfit +
+        dispenserProfit -
+        totalExpenses +
+        manualAdditions;
     return 'Your current savings is ${_fmt(current)}.';
   }
 

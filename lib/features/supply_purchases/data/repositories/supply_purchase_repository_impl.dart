@@ -1,7 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:uuid/uuid.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/utils/expense_category_utils.dart';
@@ -105,23 +103,11 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
         ),
       );
 
-      String? bottleTxId;
-      if (SupplyPurchase.affectsBottleInventory(purchase.itemType)) {
-        bottleTxId = purchase.bottleTransactionId ?? const Uuid().v4();
-        await _db.bottleTransactionsDao.insertTransaction(
-          BottleTransactionsTableCompanion.insert(
-            id: bottleTxId,
-            transactionType: AppConstants.transactionPurchase,
-            quantity: purchase.quantity,
-            date: Value(purchase.purchaseDate),
-            notes: Value(
-              'Supply: ${purchase.supplierName} — $description',
-            ),
-          ),
-        );
-        await InventoryStateService(_db)
-            .applySupplierFilledDelivery(purchase.quantity);
-      } else {
+      // Supplier delivery = incoming filled water stock (v1.6.2).
+      await InventoryStateService(_db)
+          .applySupplierFilledDelivery(purchase.quantity);
+
+      if (!SupplyPurchase.affectsBottleInventory(purchase.itemType)) {
         final stockKey = SupplyPurchase.stockKeyForItemType(purchase.itemType);
         await _db.inventoryStockDao.addQuantity(stockKey, purchase.quantity);
       }
@@ -137,7 +123,6 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
           totalCost: purchase.totalCost,
           notes: Value(purchase.notes),
           expenseId: expenseId,
-          bottleTransactionId: Value(bottleTxId),
           supplierId: Value(purchase.supplierId),
         ),
       );
@@ -152,13 +137,16 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
 
       await _db.expensesDao.deleteExpense(row.expenseId);
 
+      await InventoryStateService(_db)
+          .reverseSupplierFilledDelivery(row.quantity);
+
       if (row.bottleTransactionId != null) {
         await _db.bottleTransactionsDao.deleteTransaction(
           row.bottleTransactionId!,
         );
-        await InventoryStateService(_db)
-            .reverseSupplierFilledDelivery(row.quantity);
-      } else {
+      }
+
+      if (!SupplyPurchase.affectsBottleInventory(row.itemType)) {
         final stockKey = SupplyPurchase.stockKeyForItemType(row.itemType);
         await _db.inventoryStockDao.subtractQuantity(stockKey, row.quantity);
       }

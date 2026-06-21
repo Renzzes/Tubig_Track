@@ -5,6 +5,7 @@ import '../../../deliveries/presentation/providers/deliveries_provider.dart';
 import '../../../dispenser_sales/presentation/providers/dispenser_sales_provider.dart';
 import '../../../expenses/presentation/providers/expenses_provider.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
+import '../../../walk_in_operations/presentation/providers/walk_in_provider.dart';
 import '../../data/repositories/savings_repository_impl.dart';
 import '../../domain/entities/savings_entities.dart';
 import '../../domain/repositories/savings_repository.dart';
@@ -22,6 +23,7 @@ final savingsSummaryProvider = FutureProvider<SavingsSummary>((ref) async {
   ref.watch(deliveriesStreamProvider);
   ref.watch(expensesStreamProvider);
   ref.watch(dispenserSalesStreamProvider);
+  ref.watch(walkInSalesStreamProvider);
   ref.watch(bottleTransactionsStreamProvider);
   ref.watch(savingsContributionsStreamProvider);
   return ref.watch(savingsRepositoryProvider).getSummary();
@@ -32,6 +34,7 @@ final savingsLedgerProvider =
   ref.watch(deliveriesStreamProvider);
   ref.watch(expensesStreamProvider);
   ref.watch(dispenserSalesStreamProvider);
+  ref.watch(walkInSalesStreamProvider);
   ref.watch(bottleTransactionsStreamProvider);
   ref.watch(savingsContributionsStreamProvider);
   return ref.watch(savingsRepositoryProvider).getLedgerHistory();

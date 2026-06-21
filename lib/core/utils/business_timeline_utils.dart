@@ -4,6 +4,7 @@ import '../../features/inventory/domain/entities/bottle_transaction.dart';
 import '../../features/supply_purchases/domain/entities/supply_purchase.dart';
 import '../../features/walk_in_operations/domain/entities/walk_in_sale.dart';
 import '../utils/currency_formatter.dart';
+import '../utils/supply_timeline_utils.dart';
 
 enum BusinessTimelineFilter {
   all,
@@ -54,7 +55,7 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
     entries.add(
       BusinessTimelineEntry(
         date: d.date,
-        headline: 'Delivered ${d.quantity} Bottles to $name',
+        headline: 'Bottle Delivery — ${d.quantity} Bottles to $name',
         subtitle: null,
         category: BusinessTimelineFilter.deliveries,
         entityId: d.id,
@@ -73,7 +74,6 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
 
     final customerName =
         tx.customerId != null ? customerNames[tx.customerId!] : null;
-    final baseHeadline = _transactionHeadline(tx);
 
     BusinessTimelineFilter category;
     switch (tx.transactionType) {
@@ -89,8 +89,10 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
 
     final headline = (tx.transactionType == TransactionType.ret &&
             customerName != null)
-        ? '$baseHeadline from $customerName'
-        : baseHeadline;
+        ? 'Bottle Collection — ${tx.quantity} Bottles from $customerName'
+        : (tx.transactionType == TransactionType.borrow && customerName != null)
+            ? 'Bottle Delivery — ${tx.quantity} Bottles to $customerName'
+            : _transactionHeadline(tx);
 
     entries.add(
       BusinessTimelineEntry(
@@ -104,16 +106,11 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
   }
 
   for (final purchase in supplyPurchases) {
-    final itemLabel = purchase.itemType == 'Bottles'
-        ? '${purchase.quantity} Filled Bottles'
-        : '${purchase.quantity} ${purchase.itemType}';
     entries.add(
       BusinessTimelineEntry(
         date: purchase.purchaseDate,
-        headline: purchase.itemType == 'Bottles'
-            ? 'Supplier Delivered ${purchase.quantity} Filled Bottles'
-            : 'Purchased $itemLabel',
-        subtitle: purchase.supplierName,
+        headline: SupplyTimelineUtils.supplierDeliveryHeadline(purchase),
+        subtitle: purchase.notes,
         category: BusinessTimelineFilter.suppliers,
         entityId: purchase.id,
       ),

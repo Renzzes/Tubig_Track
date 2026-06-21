@@ -497,7 +497,7 @@ class _BusinessTimelinePreview extends ConsumerWidget {
                   );
                 }
                 return Column(
-                  children: timeline.take(8).map((entry) {
+                  children: timeline.take(3).map((entry) {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 6),
                       child: ListTile(

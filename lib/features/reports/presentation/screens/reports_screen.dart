@@ -199,7 +199,15 @@ class ReportsScreen extends ConsumerWidget {
       sheet.appendRow([xl.TextCellValue('Inventory Ownership Changes')]);
       sheet.appendRow([
         xl.TextCellValue('Purchased New Bottles'),
-        xl.TextCellValue('+${report.periodPurchasedNewBottles}'),
+        xl.IntCellValue(report.periodPurchasedNewBottles),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Supplier Filled Bottles Received'),
+        xl.IntCellValue(report.periodSupplierFilledBottlesReceived),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Filled Bottle Adjustments'),
+        xl.IntCellValue(report.periodFilledBottleAdjustments),
       ]);
       sheet.appendRow([
         xl.TextCellValue('Donated Bottles'),
@@ -324,11 +332,11 @@ class ReportsScreen extends ConsumerWidget {
       final walkInSheet = excel['Walk-In Sales'];
       walkInSheet.appendRow([xl.TextCellValue('Walk-In Operations')]);
       walkInSheet.appendRow([
-        xl.TextCellValue('Business Bottle Sales'),
+        xl.TextCellValue('Borrow Bottle Sales'),
         xl.IntCellValue(report.walkInBusinessBottleSalesCount),
       ]);
       walkInSheet.appendRow([
-        xl.TextCellValue('Customer Refills'),
+        xl.TextCellValue('Refill Own Bottle'),
         xl.IntCellValue(report.walkInCustomerRefillsCount),
       ]);
       walkInSheet.appendRow([
@@ -632,6 +640,33 @@ class _ReportContent extends ConsumerWidget {
           label: 'Purchased New Bottles',
           value: '+${report.periodPurchasedNewBottles}',
         ),
+        const SizedBox(height: 16),
+        _SectionHeader(
+          title: 'Supplier Deliveries',
+          icon: Icons.local_shipping_outlined,
+          color: AppColors.primary,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Filled Bottles Received',
+          value: '+${report.periodSupplierFilledBottlesReceived}',
+        ),
+        _MetricRow(
+          label: 'Delivery Count',
+          value: '${report.periodSupplierDeliveries}',
+        ),
+        const SizedBox(height: 16),
+        _SectionHeader(
+          title: 'Inventory Adjustments',
+          icon: Icons.tune_outlined,
+          color: AppColors.primary,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Filled Bottles Corrected',
+          value: '+${report.periodFilledBottleAdjustments}',
+        ),
+        const SizedBox(height: 8),
         _MetricRow(
           label: 'Donated Bottles',
           value: '-${report.periodDonatedBottles}',
@@ -775,11 +810,11 @@ class _ReportContent extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         _MetricRow(
-          label: 'Business Bottle Sales',
+          label: 'Borrow Bottle Sales',
           value: '${report.walkInBusinessBottleSalesCount}',
         ),
         _MetricRow(
-          label: 'Customer Bottle Refills',
+          label: 'Refill Own Bottle',
           value: '${report.walkInCustomerRefillsCount}',
         ),
         _MetricRow(

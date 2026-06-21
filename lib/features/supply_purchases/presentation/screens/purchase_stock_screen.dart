@@ -30,7 +30,7 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
   final _unitCostCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   DateTime _purchaseDate = DateTime.now();
-  String _itemType = AppConstants.supplyItemTypes.first;
+  String _itemType = 'Bottles';
   String? _selectedSupplierId;
   bool _manualSupplier = false;
   bool _isLoading = false;
@@ -122,7 +122,7 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Stock purchase recorded!')),
+          const SnackBar(content: Text('Supplier delivery recorded!')),
         );
       }
     } catch (e) {
@@ -301,6 +301,12 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
                         ),
                       ),
                 const SizedBox(height: 16),
+                Text(
+                  'Quantity is counted as filled bottles received. '
+                  'Filled Bottles Available updates automatically when you save.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   // ignore: deprecated_member_use
                   value: _itemType,
@@ -382,7 +388,7 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
                 ResponsivePrimaryButton(
                   onPressed: _isLoading ? null : _save,
                   isLoading: _isLoading,
-                  child: const Text('Save Purchase'),
+                  child: const Text('Save Delivery'),
                 ),
               ],
             ],

@@ -23,6 +23,7 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(databaseProvider);
   ref.invalidate(customersStreamProvider);
   ref.invalidate(filteredCustomersProvider);
+  ref.invalidate(sortedCustomersProvider);
   ref.invalidate(deliveriesStreamProvider);
   ref.invalidate(filteredDeliveriesProvider);
   ref.invalidate(bottleTransactionsStreamProvider);

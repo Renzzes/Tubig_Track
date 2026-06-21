@@ -74,6 +74,8 @@ class ReportSummary {
 
   /// Inventory ownership changes within the report period (counts, not pesos).
   final int periodPurchasedNewBottles;
+  final int periodSupplierFilledBottlesReceived;
+  final int periodFilledBottleAdjustments;
   final int periodDonatedBottles;
   final int periodDamagedBottles;
   final int periodMissingBottles;
@@ -150,6 +152,8 @@ class ReportSummary {
     required this.missingBottles,
     required this.donatedBottles,
     required this.periodPurchasedNewBottles,
+    required this.periodSupplierFilledBottlesReceived,
+    required this.periodFilledBottleAdjustments,
     required this.periodDonatedBottles,
     required this.periodDamagedBottles,
     required this.periodMissingBottles,

@@ -11,13 +11,13 @@ class CustomersDao extends DatabaseAccessor<AppDatabase>
 
   Stream<List<CustomerTableData>> watchAll() {
     return (select(customersTable)
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+          ..orderBy([(t) => OrderingTerm.asc(t.name)]))
         .watch();
   }
 
   Future<List<CustomerTableData>> getAll() {
     return (select(customersTable)
-          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+          ..orderBy([(t) => OrderingTerm.asc(t.name)]))
         .get();
   }
 

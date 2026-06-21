@@ -1,5 +1,6 @@
 import '../../features/inventory/domain/entities/bottle_transaction.dart';
 import '../../features/supply_purchases/domain/entities/supply_purchase.dart';
+import 'supply_timeline_utils.dart';
 
 class InventoryTimelineEntry {
   final DateTime date;
@@ -56,14 +57,11 @@ List<InventoryTimelineEntry> buildInventoryTimeline({
   }
 
   for (final purchase in supplyPurchases) {
-    final itemLabel = purchase.itemType == 'Bottles'
-        ? '${purchase.quantity} Filled Bottles'
-        : '${purchase.quantity} ${purchase.itemType}';
     entries.add(
       InventoryTimelineEntry(
         date: purchase.purchaseDate,
-        headline: 'Purchased $itemLabel',
-        subtitle: purchase.supplierName,
+        headline: SupplyTimelineUtils.supplierDeliveryHeadline(purchase),
+        subtitle: purchase.notes,
       ),
     );
   }

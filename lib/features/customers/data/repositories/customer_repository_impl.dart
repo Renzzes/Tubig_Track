@@ -3,7 +3,9 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/inventory_calculator.dart';
 import '../../../../core/utils/bottle_verification_utils.dart';
+import '../../../../core/utils/customer_operational_bottles_utils.dart';
 import '../../domain/entities/customer.dart';
+import '../../../deliveries/domain/entities/delivery.dart';
 import '../../domain/repositories/customer_repository.dart';
 
 class CustomerRepositoryImpl implements CustomerRepository {
@@ -165,6 +167,40 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final customerOwnedHeld = customerRow?.customerOwnedBottlesHeld ?? 0;
     final customerEntity = customerRow != null ? _map(customerRow) : null;
 
+    final deliveryEntities = allDeliveries.map((row) {
+      return Delivery(
+        id: row.id,
+        customerId: row.customerId,
+        quantity: row.quantity,
+        pricePerBottle: row.pricePerBottle,
+        totalAmount: row.totalAmount,
+        paymentStatus: Delivery.paymentStatusFromString(row.paymentStatus),
+        amountPaid: row.amountPaid,
+        depositApplied: row.depositApplied,
+        remainingBalance: row.remainingBalance,
+        deliveryDate: row.deliveryDate,
+        deliveryTime: row.deliveryTime,
+        deliveryStatus:
+            Delivery.deliveryStatusFromString(row.deliveryStatus),
+        collectedEmptyBottles: row.collectedEmptyBottles,
+        customerOwnedBottlesFilled: row.customerOwnedBottlesFilled,
+        notes: row.notes,
+        receiptNumber: row.receiptNumber,
+      );
+    }).toList();
+
+    final returnEntries = bottleTxs
+        .where((t) => t.transactionType == 'return')
+        .map((t) => (date: t.date, quantity: t.quantity, id: t.id));
+
+    final operationalCollected =
+        CustomerOperationalBottlesUtils.operationalCollected(
+      deliveries: deliveryEntities,
+      returnEntries: returnEntries,
+    );
+    final pendingDeliveryQty =
+        CustomerOperationalBottlesUtils.pendingDeliveryQty(deliveryEntities);
+
     return CustomerStats(
       borrowedBottles: borrowed,
       returnedBottles: returned,
@@ -187,6 +223,8 @@ class CustomerRepositoryImpl implements CustomerRepository {
       daysSinceLastPhysicalCountLabel: customerEntity != null
           ? BottleVerificationUtils.daysSinceLabel(customerEntity)
           : 'Never Verified',
+      operationalCollected: operationalCollected,
+      pendingDeliveryQty: pendingDeliveryQty,
     );
   }
 }

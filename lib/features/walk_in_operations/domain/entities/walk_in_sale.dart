@@ -12,14 +12,21 @@ extension WalkInTypeX on WalkInType {
       };
 
   String get label => switch (this) {
-        WalkInType.businessBottles => 'Business Bottles',
-        WalkInType.customerRefill => 'Customer Refill',
+        WalkInType.businessBottles => 'Borrow Bottle',
+        WalkInType.customerRefill => 'Refill Own Bottle',
         WalkInType.exchange => 'Bottle Exchange',
       };
 
+  String get subtitle => switch (this) {
+        WalkInType.businessBottles =>
+          'Customer uses business-owned bottles',
+        WalkInType.customerRefill => 'Customer brings their own bottles',
+        WalkInType.exchange => 'Return empties, receive filled bottles',
+      };
+
   String get timelineLabel => switch (this) {
-        WalkInType.businessBottles => 'Walk-In Business Bottle Sale',
-        WalkInType.customerRefill => 'Walk-In Refill',
+        WalkInType.businessBottles => 'Walk-In Borrow Bottle',
+        WalkInType.customerRefill => 'Walk-In Refill Own Bottle',
         WalkInType.exchange => 'Walk-In Exchange',
       };
 
@@ -69,12 +76,17 @@ class WalkInSale {
       };
 
   String get quantityDescription => switch (walkInType) {
-        WalkInType.businessBottles =>
-          '$businessOwnedQuantity business-owned filled',
-        WalkInType.customerRefill =>
-          '$customerOwnedQuantity customer-owned refilled',
+        WalkInType.businessBottles => '$businessOwnedQuantity bottles borrowed',
+        WalkInType.customerRefill => '$customerOwnedQuantity bottles refilled',
         WalkInType.exchange =>
           '$returnedEmptyQuantity returned, $businessOwnedQuantity filled given',
+      };
+
+  /// Bottles sold for revenue, savings, and reporting.
+  int get bottlesSold => switch (walkInType) {
+        WalkInType.businessBottles => businessOwnedQuantity,
+        WalkInType.customerRefill => customerOwnedQuantity,
+        WalkInType.exchange => businessOwnedQuantity,
       };
 
   static const String walkInCustomerLabel = 'Walk-In Customer';

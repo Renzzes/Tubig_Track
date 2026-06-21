@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../walk_in_operations/domain/entities/walk_in_sale.dart';
 import '../../domain/entities/savings_entities.dart';
 import '../../domain/repositories/savings_repository.dart';
 
@@ -24,10 +25,29 @@ class SavingsRepositoryImpl implements SavingsRepository {
     );
   }
 
+  int _walkInBottleCount(WalkInSalesTableData row) {
+    return WalkInSale(
+      id: row.id,
+      customerId: row.customerId,
+      walkInType: WalkInTypeX.fromStorage(row.walkInType),
+      businessOwnedQuantity: row.businessOwnedQuantity,
+      customerOwnedQuantity: row.customerOwnedQuantity,
+      returnedEmptyQuantity: row.returnedEmptyQuantity,
+      pricePerBottle: row.pricePerBottle,
+      totalAmount: row.totalAmount,
+      paymentMethod: row.paymentMethod,
+      notes: row.notes,
+      date: row.date,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    ).bottlesSold;
+  }
+
   @override
   Future<SavingsSummary> getSummary() async {
     final costPerBottle = await getCostPerBottle();
     final deliveries = await _db.deliveriesDao.getAll();
+    final walkIns = await _db.walkInSalesDao.getAll();
     final expenses = await _db.expensesDao.getAll();
     final dispenserSales = await _db.dispenserSalesDao.getAll();
     final manualAdditions = await _db.savingsDao.getTotalContributions();
@@ -36,6 +56,12 @@ class SavingsRepositoryImpl implements SavingsRepository {
     for (final d in deliveries) {
       if (d.deliveryStatus == 'cancelled') continue;
       deliveryProfit += d.quantity * (d.pricePerBottle - costPerBottle);
+    }
+
+    var walkInProfit = 0.0;
+    for (final w in walkIns) {
+      final qty = _walkInBottleCount(w);
+      walkInProfit += qty * (w.pricePerBottle - costPerBottle);
     }
 
     final dispenserProfit =
@@ -54,6 +80,7 @@ class SavingsRepositoryImpl implements SavingsRepository {
     }
 
     final currentSavings = deliveryProfit +
+        walkInProfit +
         dispenserProfit -
         totalExpenses +
         manualAdditions;
@@ -61,6 +88,7 @@ class SavingsRepositoryImpl implements SavingsRepository {
     return SavingsSummary(
       currentSavings: currentSavings,
       deliveryProfit: deliveryProfit,
+      walkInProfit: walkInProfit,
       dispenserProfit: dispenserProfit,
       totalExpenses: totalExpenses,
       maintenanceCosts: maintenanceCosts,
@@ -85,6 +113,22 @@ class SavingsRepositoryImpl implements SavingsRepository {
           date: d.deliveryDate,
           amount: profit,
           notes: '${d.quantity} bottles @ ${d.pricePerBottle - costPerBottle} profit/btl',
+        ),
+      );
+    }
+
+    for (final w in await _db.walkInSalesDao.getAll()) {
+      final qty = _walkInBottleCount(w);
+      final profit = qty * (w.pricePerBottle - costPerBottle);
+      if (profit == 0) continue;
+      entries.add(
+        SavingsLedgerEntry(
+          id: 'walkin_${w.id}',
+          type: SavingsLedgerType.walkInProfit,
+          date: w.date,
+          amount: profit,
+          notes:
+              '${WalkInTypeX.fromStorage(w.walkInType).label}: $qty bottles @ ${w.pricePerBottle - costPerBottle} profit/btl',
         ),
       );
     }

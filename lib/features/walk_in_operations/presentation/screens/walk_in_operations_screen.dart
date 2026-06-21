@@ -39,7 +39,7 @@ class _WalkInOperationsScreenState
             return const EmptyStateWidget(
               icon: Icons.storefront_outlined,
               message: 'No walk-in operations recorded',
-              subMessage: 'Tap + to record a walk-in sale, refill, or exchange',
+              subMessage: 'Tap + to record a borrow or refill',
             );
           }
 
@@ -305,7 +305,7 @@ class _AddWalkInSheetState extends ConsumerState<_AddWalkInSheet> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'New Walk-In Operation',
+                    'New Walk-In',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
@@ -322,36 +322,23 @@ class _AddWalkInSheetState extends ConsumerState<_AddWalkInSheet> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   RadioListTile<WalkInType>(
-                    title: const Text('Business Bottles'),
-                    subtitle: const Text(
-                      'Provide business-owned filled bottles',
-                    ),
+                    title: const Text('Borrow Bottle'),
+                    subtitle: Text(WalkInType.businessBottles.subtitle),
                     value: WalkInType.businessBottles,
                     groupValue: _type,
                     onChanged: (v) => setState(() => _type = v!),
                   ),
                   RadioListTile<WalkInType>(
-                    title: const Text('Customer Refill'),
-                    subtitle: const Text(
-                      'Refill customer-owned bottles (no ownership change)',
-                    ),
+                    title: const Text('Refill Own Bottle'),
+                    subtitle: Text(WalkInType.customerRefill.subtitle),
                     value: WalkInType.customerRefill,
-                    groupValue: _type,
-                    onChanged: (v) => setState(() => _type = v!),
-                  ),
-                  RadioListTile<WalkInType>(
-                    title: const Text('Bottle Exchange'),
-                    subtitle: const Text(
-                      'Return empties, receive filled bottles',
-                    ),
-                    value: WalkInType.exchange,
                     groupValue: _type,
                     onChanged: (v) => setState(() => _type = v!),
                   ),
                   const Divider(height: 24),
                   if (_type == WalkInType.businessBottles)
                     AppTextField(
-                      label: 'Business-Owned Bottles Filled *',
+                      label: 'Bottles *',
                       controller: _businessQtyCtrl,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -364,7 +351,7 @@ class _AddWalkInSheetState extends ConsumerState<_AddWalkInSheet> {
                     ),
                   if (_type == WalkInType.customerRefill)
                     AppTextField(
-                      label: 'Customer-Owned Bottles Filled *',
+                      label: 'Bottles to Refill *',
                       controller: _customerQtyCtrl,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -375,33 +362,6 @@ class _AddWalkInSheetState extends ConsumerState<_AddWalkInSheet> {
                       },
                       onChanged: (_) => setState(() {}),
                     ),
-                  if (_type == WalkInType.exchange) ...[
-                    AppTextField(
-                      label: 'Returned Empty Bottles *',
-                      controller: _returnedQtyCtrl,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (v) {
-                        final n = int.tryParse(v ?? '');
-                        if (n == null || n <= 0) return 'Enter a valid quantity';
-                        return null;
-                      },
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 12),
-                    AppTextField(
-                      label: 'Filled Bottles Given *',
-                      controller: _businessQtyCtrl,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (v) {
-                        final n = int.tryParse(v ?? '');
-                        if (n == null || n <= 0) return 'Enter a valid quantity';
-                        return null;
-                      },
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ],
                   const SizedBox(height: 12),
                   customersAsync.when(
                     data: (customers) => DropdownButtonFormField<String?>(

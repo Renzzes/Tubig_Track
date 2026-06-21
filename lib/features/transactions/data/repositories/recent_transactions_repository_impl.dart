@@ -1,4 +1,7 @@
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/supply_timeline_utils.dart';
+import '../../../inventory/domain/entities/bottle_transaction.dart';
+import '../../../supply_purchases/domain/entities/supply_purchase.dart';
 import '../../domain/entities/recent_transaction.dart';
 import '../../domain/repositories/recent_transactions_repository.dart';
 
@@ -61,14 +64,27 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
     }
 
     for (final sp in await _db.supplyPurchasesDao.getAll()) {
+      final purchase = SupplyPurchase(
+        id: sp.id,
+        purchaseDate: sp.purchaseDate,
+        supplierName: sp.supplierName,
+        itemType: sp.itemType,
+        quantity: sp.quantity,
+        unitCost: sp.unitCost,
+        totalCost: sp.totalCost,
+        notes: sp.notes,
+        expenseId: sp.expenseId,
+        bottleTransactionId: sp.bottleTransactionId,
+        supplierId: sp.supplierId,
+      );
       items.add(
         RecentTransaction(
           id: 'supply_${sp.id}',
           sourceId: sp.id,
           type: RecentTransactionType.supplyPurchase,
           date: sp.purchaseDate,
-          title: sp.description,
-          subtitle: sp.supplierName,
+          title: SupplyTimelineUtils.supplierDeliveryHeadline(purchase),
+          subtitle: sp.notes,
           amount: sp.totalCost,
           isCredit: false,
         ),
@@ -111,8 +127,8 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
 
     for (final w in await _db.walkInSalesDao.getAll()) {
       final typeLabel = switch (w.walkInType) {
-        'BUSINESS_BOTTLES' => 'Business Bottles',
-        'CUSTOMER_REFILL' => 'Customer Refill',
+        'BUSINESS_BOTTLES' => 'Borrow Bottle',
+        'CUSTOMER_REFILL' => 'Refill Own Bottle',
         'EXCHANGE' => 'Bottle Exchange',
         _ => 'Walk-In',
       };
@@ -146,7 +162,7 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
         case 'purchase':
           type = RecentTransactionType.bottlePurchase;
         case 'added':
-          type = RecentTransactionType.bottlePurchase;
+          type = RecentTransactionType.bottleAdjustment;
         case 'missing':
           type = RecentTransactionType.bottleMissing;
         case 'donation':
@@ -158,6 +174,7 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
         default:
           type = RecentTransactionType.bottleBorrow;
       }
+      final txType = BottleTransaction.typeFromString(t.transactionType);
       final customerName =
           t.customerId != null ? customerMap[t.customerId] : null;
       items.add(
@@ -166,8 +183,10 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           sourceId: t.id,
           type: type,
           date: t.date,
-          title: customerName ?? _typeTitle(type),
-          subtitle: '${t.quantity} bottles',
+          title: customerName != null
+              ? '${BottleTransaction.timelineLabel(txType, t.quantity)} — $customerName'
+              : BottleTransaction.timelineLabel(txType, t.quantity),
+          subtitle: t.notes,
           amount: t.quantity.toDouble(),
           isCredit: type == RecentTransactionType.bottleReturn ||
               type == RecentTransactionType.bottlePurchase ||
@@ -225,29 +244,4 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
     items.sort((a, b) => b.date.compareTo(a.date));
     return items;
   }
-
-  String _typeTitle(RecentTransactionType type) {
-    switch (type) {
-      case RecentTransactionType.bottlePurchase:
-        return 'Purchase New Bottles';
-      case RecentTransactionType.bottleDamaged:
-        return 'Damaged Bottles';
-      case RecentTransactionType.bottleMissing:
-        return 'Missing Bottles';
-      case RecentTransactionType.bottleDonation:
-        return 'Donated Bottles';
-      case RecentTransactionType.bottleAdjustment:
-        return 'Inventory Adjustment';
-      case RecentTransactionType.bottleAudit:
-        return 'Inventory Audit';
-      case RecentTransactionType.bottleReturn:
-        return 'Bottle Return';
-      default:
-        return 'Bottle Borrow';
-    }
-  }
-}
-
-extension on SupplyPurchasesTableData {
-  String get description => '$quantity $itemType';
 }
