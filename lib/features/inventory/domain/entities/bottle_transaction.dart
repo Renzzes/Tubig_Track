@@ -30,8 +30,9 @@ class BottleTransaction {
     this.notes,
   });
 
-  /// Delivery-linked borrow rows cannot be edited manually.
-  bool get isDeliveryLinked => id.endsWith('_borrow');
+  /// Delivery-linked rows cannot be edited manually.
+  bool get isDeliveryLinked =>
+      id.endsWith('_borrow') || id.endsWith('_collect');
 
   static TransactionType typeFromString(String s) {
     switch (s) {
@@ -90,7 +91,7 @@ class BottleTransaction {
       case TransactionType.damaged:
         return 'Damaged Bottles';
       case TransactionType.purchase:
-        return 'Purchase Bottles';
+        return 'Purchase New Bottles';
       case TransactionType.added:
         return 'Add Bottles';
       case TransactionType.missing:

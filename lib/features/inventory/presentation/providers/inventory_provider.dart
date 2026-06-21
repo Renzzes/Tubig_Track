@@ -7,6 +7,7 @@ import '../../domain/entities/inventory_audit.dart';
 import '../../domain/entities/inventory_audit_summary.dart';
 import '../../domain/entities/inventory_summary.dart';
 import '../../domain/entities/customer_bottle_balance.dart';
+import '../../domain/entities/customer_bottle_reconciliation.dart';
 import '../../domain/repositories/inventory_repository.dart';
 import '../../../../core/utils/inventory_calculator.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
@@ -61,6 +62,7 @@ void refreshInventoryProviders(WidgetRef ref) {
   ref.invalidate(inventoryAuditSummaryProvider);
   ref.invalidate(customerBottleBalancesProvider);
   ref.invalidate(inventoryConsistencyProvider);
+  ref.invalidate(bottleReconciliationsStreamProvider);
   ref.invalidate(supplyPurchasesStreamProvider);
   ref.invalidate(lowStockItemsProvider);
 }
@@ -70,4 +72,9 @@ final inventoryConsistencyProvider =
   ref.watch(bottleTransactionsStreamProvider);
   ref.watch(customerBottleBalancesProvider);
   return ref.read(inventoryRepositoryProvider).validateConsistency();
+});
+
+final bottleReconciliationsStreamProvider =
+    StreamProvider<List<CustomerBottleReconciliation>>((ref) {
+  return ref.watch(inventoryRepositoryProvider).watchReconciliations();
 });

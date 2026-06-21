@@ -15,6 +15,7 @@ class Delivery {
   final DateTime deliveryDate;
   final String? deliveryTime;
   final DeliveryStatus deliveryStatus;
+  final int collectedEmptyBottles;
   final String? notes;
   final String? receiptNumber;
 
@@ -31,6 +32,7 @@ class Delivery {
     required this.deliveryDate,
     this.deliveryTime,
     this.deliveryStatus = DeliveryStatus.completed,
+    this.collectedEmptyBottles = 0,
     this.notes,
     this.receiptNumber,
   });
@@ -48,6 +50,7 @@ class Delivery {
     DateTime? deliveryDate,
     String? deliveryTime,
     DeliveryStatus? deliveryStatus,
+    int? collectedEmptyBottles,
     String? notes,
     String? receiptNumber,
   }) {
@@ -64,6 +67,8 @@ class Delivery {
       deliveryDate: deliveryDate ?? this.deliveryDate,
       deliveryTime: deliveryTime ?? this.deliveryTime,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
+      collectedEmptyBottles:
+          collectedEmptyBottles ?? this.collectedEmptyBottles,
       notes: notes ?? this.notes,
       receiptNumber: receiptNumber ?? this.receiptNumber,
     );

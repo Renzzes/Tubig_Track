@@ -22,6 +22,8 @@ class DeliveriesTable extends Table {
   // deliveryStatus: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
   TextColumn get deliveryStatus =>
       text().withDefault(const Constant('completed'))();
+  IntColumn get collectedEmptyBottles =>
+      integer().withDefault(const Constant(0))();
   TextColumn get notes => text().nullable()();
   TextColumn get receiptNumber => text().nullable()();
 

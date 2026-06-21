@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/inventory_health_utils.dart';
 import '../../../../core/utils/business_timeline_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../deliveries/presentation/providers/deliveries_provider.dart';
@@ -15,6 +16,7 @@ import '../../../deliveries/domain/entities/delivery.dart';
 import '../../../deposits/domain/entities/customer_deposit.dart';
 import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
+import '../../domain/entities/customer_bottle_reconciliation.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/inventory_stat_card.dart';
@@ -39,6 +41,7 @@ class InventoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(inventorySummaryProvider);
+    final consistencyAsync = ref.watch(inventoryConsistencyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -82,6 +85,41 @@ class InventoryScreen extends ConsumerWidget {
         padding: EdgeInsets.all(context.pageHorizontalPadding),
         child: ListView(
           children: [
+            consistencyAsync.when(
+              data: (report) {
+                final health = InventoryHealthUtils.compute(report);
+                final overflow = InventoryHealthUtils.isInventoryOverflow(report);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _InventoryHealthBanner(health: health),
+                    if (overflow) ...[
+                      const SizedBox(height: 8),
+                      _InventoryWarningBanner(
+                        message:
+                            'Inventory Mismatch Detected\n'
+                            'Current inventory exceeds Total Bottles Owned.\n'
+                            'Run Inventory Audit or Purchase New Bottles.',
+                        color: AppColors.error,
+                      ),
+                    ] else if (!report.isCustomerBalanceConsistent) ...[
+                      const SizedBox(height: 8),
+                      _InventoryWarningBanner(
+                        message:
+                            'Customer bottle balances do not match '
+                            'inventory totals.\n'
+                            'Difference: ${report.customerBalanceDelta.abs()} '
+                            'bottles. Run reconciliation.',
+                        color: AppColors.warning,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                  ],
+                );
+              },
+              loading: () => const SizedBox(),
+              error: (_, __) => const SizedBox(),
+            ),
             summaryAsync.when(
               data: (s) => Column(
                 children: [
@@ -92,14 +130,15 @@ class InventoryScreen extends ConsumerWidget {
                         value: '${s.totalBottlesOwned}',
                         icon: Icons.inventory_2,
                         color: AppColors.primary,
-                        subtitle: 'Lifetime bottles owned',
+                        tooltip: 'All bottles ever owned.',
                       ),
                       InventoryStatCard(
                         label: 'Filled Bottles Available',
                         value: '${s.filledBottlesAvailable}',
                         icon: Icons.check_circle_outline,
                         color: AppColors.success,
-                        subtitle: 'Ready for delivery',
+                        tooltip:
+                            'Filled bottles ready for delivery.',
                       ),
                     ],
                   ),
@@ -111,7 +150,8 @@ class InventoryScreen extends ConsumerWidget {
                         value: '${s.bottlesWithCustomers}',
                         icon: Icons.people_outline,
                         color: AppColors.warning,
-                        subtitle: 'Delivered − Collected • Tap for details',
+                        tooltip:
+                            'Bottles currently held by customers.',
                         onTap: () =>
                             context.push('/inventory/customer-balances'),
                       ),
@@ -120,7 +160,8 @@ class InventoryScreen extends ConsumerWidget {
                         value: '${s.emptyBottlesReadyForRefill}',
                         icon: Icons.inbox_outlined,
                         color: Colors.teal,
-                        subtitle: 'Collected, waiting for refill',
+                        tooltip:
+                            'Collected bottles waiting for refill.',
                       ),
                     ],
                   ),
@@ -132,13 +173,14 @@ class InventoryScreen extends ConsumerWidget {
                         value: '${s.damagedBottles}',
                         icon: Icons.broken_image_outlined,
                         color: AppColors.error,
+                        tooltip: 'Permanently damaged bottles.',
                       ),
                       InventoryStatCard(
                         label: 'Missing Bottles',
                         value: '${s.missingBottles}',
                         icon: Icons.help_outline,
                         color: AppColors.missing,
-                        subtitle: 'Unaccounted for',
+                        tooltip: 'Unaccounted bottles.',
                       ),
                     ],
                   ),
@@ -177,8 +219,8 @@ class InventoryScreen extends ConsumerWidget {
                       SizedBox(
                         width: double.infinity,
                         child: _ActionButton(
-                          label: 'Purchase Stock',
-                          icon: Icons.add_shopping_cart,
+                          label: 'Supplier Delivery',
+                          icon: Icons.local_shipping_outlined,
                           color: AppColors.primary,
                           onTap: () =>
                               context.push('/inventory/purchase-stock'),
@@ -188,7 +230,7 @@ class InventoryScreen extends ConsumerWidget {
                       SizedBox(
                         width: double.infinity,
                         child: _ActionButton(
-                          label: 'Purchase Bottles',
+                          label: 'Purchase New Bottles',
                           icon: Icons.shopping_cart_outlined,
                           color: AppColors.primary,
                           onTap: () => _openTransactionSheet(
@@ -220,13 +262,13 @@ class InventoryScreen extends ConsumerWidget {
                       ),
                     ),
                     _ActionButton(
-                      label: 'Purchase Stock',
-                      icon: Icons.add_shopping_cart,
+                      label: 'Supplier Delivery',
+                      icon: Icons.local_shipping_outlined,
                       color: AppColors.primary,
                       onTap: () => context.push('/inventory/purchase-stock'),
                     ),
                     _ActionButton(
-                      label: 'Purchase Bottles',
+                      label: 'Purchase New Bottles',
                       icon: Icons.shopping_cart_outlined,
                       color: AppColors.primary,
                       onTap: () => _openTransactionSheet(
@@ -385,6 +427,7 @@ class _BusinessTimelinePreview extends ConsumerWidget {
     final paymentsAsync = ref.watch(paymentsStreamProvider);
     final depositsAsync = ref.watch(allCustomerDepositsStreamProvider);
     final customersAsync = ref.watch(customersStreamProvider);
+    final reconciliationsAsync = ref.watch(bottleReconciliationsStreamProvider);
 
     return transactionsAsync.when(
       data: (transactions) => supplyAsync.when(
@@ -392,6 +435,11 @@ class _BusinessTimelinePreview extends ConsumerWidget {
           data: (deliveries) => paymentsAsync.when(
             data: (payments) => depositsAsync.when(
               data: (deposits) {
+                final reconciliations = reconciliationsAsync.when(
+                  data: (r) => r,
+                  loading: () => <CustomerBottleReconciliation>[],
+                  error: (_, __) => <CustomerBottleReconciliation>[],
+                );
                 final customerMap = customersAsync.when(
                   data: (c) => {for (final x in c) x.id: x.name},
                   loading: () => <String, String>{},
@@ -408,7 +456,8 @@ class _BusinessTimelinePreview extends ConsumerWidget {
                   customerNames: customerMap,
                   deliveries: deliveries
                       .where(
-                        (d) => d.deliveryStatus != DeliveryStatus.cancelled,
+                        (d) =>
+                            d.deliveryStatus == DeliveryStatus.completed,
                       )
                       .map(
                         (d) => (
@@ -439,6 +488,7 @@ class _BusinessTimelinePreview extends ConsumerWidget {
                         ),
                       )
                       .toList(),
+                  reconciliations: reconciliations,
                 );
                 if (timeline.isEmpty) {
                   return const EmptyStateWidget(
@@ -482,6 +532,89 @@ class _BusinessTimelinePreview extends ConsumerWidget {
       ),
       loading: () => const LoadingOverlay(),
       error: (e, _) => Text('Error: $e'),
+    );
+  }
+}
+
+class _InventoryHealthBanner extends StatelessWidget {
+  final InventoryHealth health;
+
+  const _InventoryHealthBanner({required this.health});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (health) {
+      InventoryHealth.healthy => AppColors.success,
+      InventoryHealth.warning => AppColors.warning,
+      InventoryHealth.critical => AppColors.error,
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            health == InventoryHealth.healthy
+                ? Icons.check_circle_outline
+                : Icons.warning_amber_rounded,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Inventory Health: ${InventoryHealthUtils.label(health)}',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryWarningBanner extends StatelessWidget {
+  final String message;
+  final Color color;
+
+  const _InventoryWarningBanner({
+    required this.message,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: color.withValues(alpha: 0.95),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

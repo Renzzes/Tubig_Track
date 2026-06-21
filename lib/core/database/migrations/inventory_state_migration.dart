@@ -1,5 +1,11 @@
+import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
+
 import '../../constants/app_constants.dart';
+import '../../services/inventory_state_effects.dart';
+import '../../services/inventory_state_service.dart';
 import '../../utils/inventory_calculator.dart';
+import '../../../features/inventory/domain/entities/bottle_transaction.dart';
 import '../app_database.dart';
 
 /// Seeds direct inventory state settings from historical transaction data.
@@ -132,3 +138,58 @@ Future<InventoryTotals> _loadTotals(
 
 Future<void> syncGlobalCustomerBottleSettings(AppDatabase db) =>
     _syncGlobalCustomerBottleSettings(db);
+
+/// v1.4.5 migration: converts delivery-linked `_collect` ret transactions
+/// (introduced in v1.4.4 as part of a combined collection+delivery workflow)
+/// into standalone ret transactions so they are independently editable and
+/// visible in the transaction history.
+Future<void> migrateV14SeparateCollections(AppDatabase db) async {
+  final allTransactions = await db.bottleTransactionsDao.getAll();
+  final collectLinked =
+      allTransactions.where((t) => t.id.endsWith('_collect')).toList();
+
+  if (collectLinked.isEmpty) return;
+
+  for (final old in collectLinked) {
+    final newId = const Uuid().v4();
+    await db.bottleTransactionsDao.insertTransaction(
+      BottleTransactionsTableCompanion.insert(
+        id: newId,
+        customerId: Value(old.customerId),
+        transactionType: old.transactionType,
+        quantity: old.quantity,
+        date: Value(old.date),
+        reason: Value(old.reason),
+        notes: Value(old.notes),
+      ),
+    );
+    await db.bottleTransactionsDao.deleteTransaction(old.id);
+  }
+}
+
+/// v1.4.4 migration: removes borrow transactions that were created for
+/// in-progress deliveries (old behavior). Under the new rules only
+/// completed deliveries create borrow rows.
+Future<void> migrateV13RemoveInProgressBorrows(AppDatabase db) async {
+  final allDeliveries = await db.deliveriesDao.getAll();
+  final inProgressDeliveries = allDeliveries
+      .where((d) => d.deliveryStatus == 'in_progress')
+      .toList();
+
+  if (inProgressDeliveries.isEmpty) return;
+
+  final effects = InventoryStateEffects(InventoryStateService(db));
+
+  for (final d in inProgressDeliveries) {
+    final borrowId = '${d.id}_borrow';
+    final existing = await db.bottleTransactionsDao.getById(borrowId);
+    if (existing != null) {
+      await effects.applyTransaction(
+        TransactionType.borrow,
+        existing.quantity,
+        reverse: true,
+      );
+      await db.bottleTransactionsDao.deleteTransaction(borrowId);
+    }
+  }
+}

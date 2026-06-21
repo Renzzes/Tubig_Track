@@ -9,6 +9,8 @@ class CustomersTable extends Table {
   TextColumn get phone => text().nullable()();
   TextColumn get address => text().nullable()();
   TextColumn get notes => text().nullable()();
+  /// Last recorded physical count pending reconciliation adjustment.
+  IntColumn get pendingPhysicalBottleCount => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

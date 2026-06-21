@@ -1,4 +1,5 @@
 import '../constants/app_constants.dart';
+import '../../features/inventory/domain/entities/customer_bottle_reconciliation.dart';
 import '../../features/inventory/domain/entities/bottle_transaction.dart';
 import '../../features/supply_purchases/domain/entities/supply_purchase.dart';
 import '../utils/currency_formatter.dart';
@@ -11,6 +12,7 @@ enum BusinessTimelineFilter {
   inventory,
   suppliers,
   audits,
+  reconciliations,
 }
 
 class BusinessTimelineEntry {
@@ -40,6 +42,7 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
       payments,
   required List<({String label, double amount, DateTime date, String? customerName})>
       deposits,
+  List<CustomerBottleReconciliation> reconciliations = const [],
 }) {
   final entries = <BusinessTimelineEntry>[];
 
@@ -48,8 +51,8 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
     entries.add(
       BusinessTimelineEntry(
         date: d.date,
-        headline: 'Delivered ${d.quantity} Bottles',
-        subtitle: name,
+        headline: 'Delivered ${d.quantity} Bottles to $name',
+        subtitle: null,
         category: BusinessTimelineFilter.deliveries,
         entityId: d.id,
       ),
@@ -61,14 +64,13 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
         supplyLinkedTxIds.contains(tx.id)) {
       continue;
     }
-    if (tx.transactionType == TransactionType.borrow &&
-        tx.isDeliveryLinked) {
+    if (tx.isDeliveryLinked) {
       continue;
     }
 
     final customerName =
         tx.customerId != null ? customerNames[tx.customerId!] : null;
-    final headline = _transactionHeadline(tx);
+    final baseHeadline = _transactionHeadline(tx);
 
     BusinessTimelineFilter category;
     switch (tx.transactionType) {
@@ -82,11 +84,16 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
         category = BusinessTimelineFilter.inventory;
     }
 
+    final headline = (tx.transactionType == TransactionType.ret &&
+            customerName != null)
+        ? '$baseHeadline from $customerName'
+        : baseHeadline;
+
     entries.add(
       BusinessTimelineEntry(
         date: tx.date,
         headline: headline,
-        subtitle: customerName,
+        subtitle: null,
         category: category,
         entityId: tx.id,
       ),
@@ -100,10 +107,28 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
     entries.add(
       BusinessTimelineEntry(
         date: purchase.purchaseDate,
-        headline: 'Purchased $itemLabel',
+        headline: purchase.itemType == 'Bottles'
+            ? 'Supplier Delivered ${purchase.quantity} Filled Bottles'
+            : 'Purchased $itemLabel',
         subtitle: purchase.supplierName,
         category: BusinessTimelineFilter.suppliers,
         entityId: purchase.id,
+      ),
+    );
+  }
+
+  for (final r in reconciliations) {
+    final name = customerNames[r.customerId] ?? 'Customer';
+    entries.add(
+      BusinessTimelineEntry(
+        date: r.createdAt,
+        headline: 'Bottle Reconciliation',
+        subtitle:
+            '$name • Expected ${r.expectedCount}, Actual ${r.actualCount}, '
+            'Variance ${r.variance >= 0 ? '+' : ''}${r.variance}'
+            '${r.reason != null ? ' • ${r.reason}' : ''}',
+        category: BusinessTimelineFilter.reconciliations,
+        entityId: r.id,
       ),
     );
   }

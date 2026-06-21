@@ -17,6 +17,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
       phone: row.phone,
       address: row.address,
       notes: row.notes,
+      pendingPhysicalBottleCount: row.pendingPhysicalBottleCount,
       createdAt: row.createdAt,
     );
   }
@@ -118,20 +119,25 @@ class CustomerRepositoryImpl implements CustomerRepository {
     );
 
     final allDeliveries = await _db.deliveriesDao.getByCustomer(customerId);
+    final completedDeliveries = allDeliveries
+        .where((d) => d.deliveryStatus == 'completed')
+        .toList();
+
     final totalAmountPaid = allDeliveries.fold<double>(
       0,
       (sum, d) => sum + d.amountPaid,
     );
-    final lifetimeRevenue = allDeliveries.fold<double>(
+    final lifetimeRevenue = completedDeliveries.fold<double>(
       0,
       (sum, d) => sum + d.totalAmount,
     );
-    final lifetimeBottles = allDeliveries.fold<int>(
+    final lifetimeBottles = completedDeliveries.fold<int>(
       0,
       (sum, d) => sum + d.quantity,
     );
-    final lastDeliveryDate =
-        allDeliveries.isNotEmpty ? allDeliveries.first.deliveryDate : null;
+    final lastDeliveryDate = completedDeliveries.isNotEmpty
+        ? completedDeliveries.first.deliveryDate
+        : null;
 
     final payments = await _db.paymentsDao.getByCustomer(customerId);
     final bottleTxs = await _db.bottleTransactionsDao.getByCustomer(customerId);
@@ -160,7 +166,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
       unpaidBalance: unpaidBalance,
       depositBalance: depositBalance,
       totalAmountPaid: totalAmountPaid,
-      totalDeliveries: allDeliveries.length,
+      totalDeliveries: completedDeliveries.length,
       lifetimeRevenue: lifetimeRevenue,
       lifetimeBottlesDelivered: lifetimeBottles,
       lastDeliveryDate: lastDeliveryDate,

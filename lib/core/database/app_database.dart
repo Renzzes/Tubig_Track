@@ -19,6 +19,7 @@ import 'tables/inventory_audits_table.dart';
 import 'tables/inventory_adjustments_table.dart';
 import 'tables/customer_deposits_table.dart';
 import 'tables/copilot_messages_table.dart';
+import 'tables/customer_bottle_reconciliations_table.dart';
 
 import 'daos/customers_dao.dart';
 import 'daos/deliveries_dao.dart';
@@ -36,6 +37,7 @@ import 'daos/inventory_audits_dao.dart';
 import 'daos/inventory_adjustments_dao.dart';
 import 'daos/customer_deposits_dao.dart';
 import 'daos/copilot_messages_dao.dart';
+import 'daos/customer_bottle_reconciliations_dao.dart';
 import 'migrations/inventory_state_migration.dart';
 
 part 'app_database.g.dart';
@@ -58,6 +60,7 @@ part 'app_database.g.dart';
     InventoryAdjustmentsTable,
     CustomerDepositsTable,
     CopilotMessagesTable,
+    CustomerBottleReconciliationsTable,
   ],
   daos: [
     CustomersDao,
@@ -76,6 +79,7 @@ part 'app_database.g.dart';
     InventoryAdjustmentsDao,
     CustomerDepositsDao,
     CopilotMessagesDao,
+    CustomerBottleReconciliationsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -83,7 +87,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration {
@@ -150,6 +154,23 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 12) {
           await migrateInventoryStateV12(this);
+        }
+        if (from < 13) {
+          await m.addColumn(
+            deliveriesTable,
+            deliveriesTable.collectedEmptyBottles,
+          );
+          await migrateV13RemoveInProgressBorrows(this);
+        }
+        if (from < 14) {
+          await migrateV14SeparateCollections(this);
+        }
+        if (from < 15) {
+          await m.createTable(customerBottleReconciliationsTable);
+          await m.addColumn(
+            customersTable,
+            customersTable.pendingPhysicalBottleCount,
+          );
         }
       },
     );

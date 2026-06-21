@@ -7,6 +7,7 @@ class InventoryStatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String? subtitle;
+  final String? tooltip;
   final VoidCallback? onTap;
 
   const InventoryStatCard({
@@ -16,6 +17,7 @@ class InventoryStatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.subtitle,
+    this.tooltip,
     this.onTap,
   });
 
@@ -45,6 +47,18 @@ class InventoryStatCard extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
+              if (tooltip != null) ...[
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: tooltip!,
+                  triggerMode: TooltipTriggerMode.tap,
+                  child: Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: color.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
               const Spacer(),
               if (subtitle != null)
                 Flexible(

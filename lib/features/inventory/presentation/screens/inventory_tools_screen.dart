@@ -105,6 +105,18 @@ class InventoryToolsScreen extends ConsumerWidget {
               color: Colors.indigo,
               onTap: () => context.push('/inventory/adjustments'),
             ),
+            _ToolButton(
+              label: 'Bottle Reconciliation History',
+              icon: Icons.balance_outlined,
+              color: AppColors.warning,
+              onTap: () => context.push('/inventory/business-timeline'),
+            ),
+            _ToolButton(
+              label: 'Inventory Settings',
+              icon: Icons.settings_outlined,
+              color: AppColors.primary,
+              onTap: () => context.push('/settings/inventory'),
+            ),
           ],
         ),
       ),

@@ -56,6 +56,17 @@ class $CustomersTableTable extends CustomersTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pendingPhysicalBottleCountMeta =
+      const VerificationMeta('pendingPhysicalBottleCount');
+  @override
+  late final GeneratedColumn<int> pendingPhysicalBottleCount =
+      GeneratedColumn<int>(
+        'pending_physical_bottle_count',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -75,6 +86,7 @@ class $CustomersTableTable extends CustomersTable
     phone,
     address,
     notes,
+    pendingPhysicalBottleCount,
     createdAt,
   ];
   @override
@@ -120,6 +132,15 @@ class $CustomersTableTable extends CustomersTable
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('pending_physical_bottle_count')) {
+      context.handle(
+        _pendingPhysicalBottleCountMeta,
+        pendingPhysicalBottleCount.isAcceptableOrUnknown(
+          data['pending_physical_bottle_count']!,
+          _pendingPhysicalBottleCountMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -155,6 +176,10 @@ class $CustomersTableTable extends CustomersTable
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      pendingPhysicalBottleCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pending_physical_bottle_count'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -175,6 +200,9 @@ class CustomersTableData extends DataClass
   final String? phone;
   final String? address;
   final String? notes;
+
+  /// Last recorded physical count pending reconciliation adjustment.
+  final int? pendingPhysicalBottleCount;
   final DateTime createdAt;
   const CustomersTableData({
     required this.id,
@@ -182,6 +210,7 @@ class CustomersTableData extends DataClass
     this.phone,
     this.address,
     this.notes,
+    this.pendingPhysicalBottleCount,
     required this.createdAt,
   });
   @override
@@ -197,6 +226,11 @@ class CustomersTableData extends DataClass
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || pendingPhysicalBottleCount != null) {
+      map['pending_physical_bottle_count'] = Variable<int>(
+        pendingPhysicalBottleCount,
+      );
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -215,6 +249,10 @@ class CustomersTableData extends DataClass
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      pendingPhysicalBottleCount:
+          pendingPhysicalBottleCount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pendingPhysicalBottleCount),
       createdAt: Value(createdAt),
     );
   }
@@ -230,6 +268,9 @@ class CustomersTableData extends DataClass
       phone: serializer.fromJson<String?>(json['phone']),
       address: serializer.fromJson<String?>(json['address']),
       notes: serializer.fromJson<String?>(json['notes']),
+      pendingPhysicalBottleCount: serializer.fromJson<int?>(
+        json['pendingPhysicalBottleCount'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -242,6 +283,9 @@ class CustomersTableData extends DataClass
       'phone': serializer.toJson<String?>(phone),
       'address': serializer.toJson<String?>(address),
       'notes': serializer.toJson<String?>(notes),
+      'pendingPhysicalBottleCount': serializer.toJson<int?>(
+        pendingPhysicalBottleCount,
+      ),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -252,6 +296,7 @@ class CustomersTableData extends DataClass
     Value<String?> phone = const Value.absent(),
     Value<String?> address = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<int?> pendingPhysicalBottleCount = const Value.absent(),
     DateTime? createdAt,
   }) => CustomersTableData(
     id: id ?? this.id,
@@ -259,6 +304,9 @@ class CustomersTableData extends DataClass
     phone: phone.present ? phone.value : this.phone,
     address: address.present ? address.value : this.address,
     notes: notes.present ? notes.value : this.notes,
+    pendingPhysicalBottleCount: pendingPhysicalBottleCount.present
+        ? pendingPhysicalBottleCount.value
+        : this.pendingPhysicalBottleCount,
     createdAt: createdAt ?? this.createdAt,
   );
   CustomersTableData copyWithCompanion(CustomersTableCompanion data) {
@@ -268,6 +316,9 @@ class CustomersTableData extends DataClass
       phone: data.phone.present ? data.phone.value : this.phone,
       address: data.address.present ? data.address.value : this.address,
       notes: data.notes.present ? data.notes.value : this.notes,
+      pendingPhysicalBottleCount: data.pendingPhysicalBottleCount.present
+          ? data.pendingPhysicalBottleCount.value
+          : this.pendingPhysicalBottleCount,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -280,13 +331,22 @@ class CustomersTableData extends DataClass
           ..write('phone: $phone, ')
           ..write('address: $address, ')
           ..write('notes: $notes, ')
+          ..write('pendingPhysicalBottleCount: $pendingPhysicalBottleCount, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, phone, address, notes, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    phone,
+    address,
+    notes,
+    pendingPhysicalBottleCount,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -296,6 +356,7 @@ class CustomersTableData extends DataClass
           other.phone == this.phone &&
           other.address == this.address &&
           other.notes == this.notes &&
+          other.pendingPhysicalBottleCount == this.pendingPhysicalBottleCount &&
           other.createdAt == this.createdAt);
 }
 
@@ -305,6 +366,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
   final Value<String?> phone;
   final Value<String?> address;
   final Value<String?> notes;
+  final Value<int?> pendingPhysicalBottleCount;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const CustomersTableCompanion({
@@ -313,6 +375,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     this.phone = const Value.absent(),
     this.address = const Value.absent(),
     this.notes = const Value.absent(),
+    this.pendingPhysicalBottleCount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -322,6 +385,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     this.phone = const Value.absent(),
     this.address = const Value.absent(),
     this.notes = const Value.absent(),
+    this.pendingPhysicalBottleCount = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -332,6 +396,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     Expression<String>? phone,
     Expression<String>? address,
     Expression<String>? notes,
+    Expression<int>? pendingPhysicalBottleCount,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -341,6 +406,8 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
       if (phone != null) 'phone': phone,
       if (address != null) 'address': address,
       if (notes != null) 'notes': notes,
+      if (pendingPhysicalBottleCount != null)
+        'pending_physical_bottle_count': pendingPhysicalBottleCount,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -352,6 +419,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     Value<String?>? phone,
     Value<String?>? address,
     Value<String?>? notes,
+    Value<int?>? pendingPhysicalBottleCount,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -361,6 +429,8 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
       phone: phone ?? this.phone,
       address: address ?? this.address,
       notes: notes ?? this.notes,
+      pendingPhysicalBottleCount:
+          pendingPhysicalBottleCount ?? this.pendingPhysicalBottleCount,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -384,6 +454,11 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (pendingPhysicalBottleCount.present) {
+      map['pending_physical_bottle_count'] = Variable<int>(
+        pendingPhysicalBottleCount.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -401,6 +476,7 @@ class CustomersTableCompanion extends UpdateCompanion<CustomersTableData> {
           ..write('phone: $phone, ')
           ..write('address: $address, ')
           ..write('notes: $notes, ')
+          ..write('pendingPhysicalBottleCount: $pendingPhysicalBottleCount, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -550,6 +626,17 @@ class $DeliveriesTableTable extends DeliveriesTable
     requiredDuringInsert: false,
     defaultValue: const Constant('completed'),
   );
+  static const VerificationMeta _collectedEmptyBottlesMeta =
+      const VerificationMeta('collectedEmptyBottles');
+  @override
+  late final GeneratedColumn<int> collectedEmptyBottles = GeneratedColumn<int>(
+    'collected_empty_bottles',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -584,6 +671,7 @@ class $DeliveriesTableTable extends DeliveriesTable
     deliveryDate,
     deliveryTime,
     deliveryStatus,
+    collectedEmptyBottles,
     notes,
     receiptNumber,
   ];
@@ -702,6 +790,15 @@ class $DeliveriesTableTable extends DeliveriesTable
         ),
       );
     }
+    if (data.containsKey('collected_empty_bottles')) {
+      context.handle(
+        _collectedEmptyBottlesMeta,
+        collectedEmptyBottles.isAcceptableOrUnknown(
+          data['collected_empty_bottles']!,
+          _collectedEmptyBottlesMeta,
+        ),
+      );
+    }
     if (data.containsKey('notes')) {
       context.handle(
         _notesMeta,
@@ -774,6 +871,10 @@ class $DeliveriesTableTable extends DeliveriesTable
         DriftSqlType.string,
         data['${effectivePrefix}delivery_status'],
       )!,
+      collectedEmptyBottles: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}collected_empty_bottles'],
+      )!,
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
@@ -805,6 +906,7 @@ class DeliveriesTableData extends DataClass
   final DateTime deliveryDate;
   final String? deliveryTime;
   final String deliveryStatus;
+  final int collectedEmptyBottles;
   final String? notes;
   final String? receiptNumber;
   const DeliveriesTableData({
@@ -820,6 +922,7 @@ class DeliveriesTableData extends DataClass
     required this.deliveryDate,
     this.deliveryTime,
     required this.deliveryStatus,
+    required this.collectedEmptyBottles,
     this.notes,
     this.receiptNumber,
   });
@@ -840,6 +943,7 @@ class DeliveriesTableData extends DataClass
       map['delivery_time'] = Variable<String>(deliveryTime);
     }
     map['delivery_status'] = Variable<String>(deliveryStatus);
+    map['collected_empty_bottles'] = Variable<int>(collectedEmptyBottles);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
@@ -865,6 +969,7 @@ class DeliveriesTableData extends DataClass
           ? const Value.absent()
           : Value(deliveryTime),
       deliveryStatus: Value(deliveryStatus),
+      collectedEmptyBottles: Value(collectedEmptyBottles),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -892,6 +997,9 @@ class DeliveriesTableData extends DataClass
       deliveryDate: serializer.fromJson<DateTime>(json['deliveryDate']),
       deliveryTime: serializer.fromJson<String?>(json['deliveryTime']),
       deliveryStatus: serializer.fromJson<String>(json['deliveryStatus']),
+      collectedEmptyBottles: serializer.fromJson<int>(
+        json['collectedEmptyBottles'],
+      ),
       notes: serializer.fromJson<String?>(json['notes']),
       receiptNumber: serializer.fromJson<String?>(json['receiptNumber']),
     );
@@ -912,6 +1020,7 @@ class DeliveriesTableData extends DataClass
       'deliveryDate': serializer.toJson<DateTime>(deliveryDate),
       'deliveryTime': serializer.toJson<String?>(deliveryTime),
       'deliveryStatus': serializer.toJson<String>(deliveryStatus),
+      'collectedEmptyBottles': serializer.toJson<int>(collectedEmptyBottles),
       'notes': serializer.toJson<String?>(notes),
       'receiptNumber': serializer.toJson<String?>(receiptNumber),
     };
@@ -930,6 +1039,7 @@ class DeliveriesTableData extends DataClass
     DateTime? deliveryDate,
     Value<String?> deliveryTime = const Value.absent(),
     String? deliveryStatus,
+    int? collectedEmptyBottles,
     Value<String?> notes = const Value.absent(),
     Value<String?> receiptNumber = const Value.absent(),
   }) => DeliveriesTableData(
@@ -945,6 +1055,7 @@ class DeliveriesTableData extends DataClass
     deliveryDate: deliveryDate ?? this.deliveryDate,
     deliveryTime: deliveryTime.present ? deliveryTime.value : this.deliveryTime,
     deliveryStatus: deliveryStatus ?? this.deliveryStatus,
+    collectedEmptyBottles: collectedEmptyBottles ?? this.collectedEmptyBottles,
     notes: notes.present ? notes.value : this.notes,
     receiptNumber: receiptNumber.present
         ? receiptNumber.value
@@ -984,6 +1095,9 @@ class DeliveriesTableData extends DataClass
       deliveryStatus: data.deliveryStatus.present
           ? data.deliveryStatus.value
           : this.deliveryStatus,
+      collectedEmptyBottles: data.collectedEmptyBottles.present
+          ? data.collectedEmptyBottles.value
+          : this.collectedEmptyBottles,
       notes: data.notes.present ? data.notes.value : this.notes,
       receiptNumber: data.receiptNumber.present
           ? data.receiptNumber.value
@@ -1006,6 +1120,7 @@ class DeliveriesTableData extends DataClass
           ..write('deliveryDate: $deliveryDate, ')
           ..write('deliveryTime: $deliveryTime, ')
           ..write('deliveryStatus: $deliveryStatus, ')
+          ..write('collectedEmptyBottles: $collectedEmptyBottles, ')
           ..write('notes: $notes, ')
           ..write('receiptNumber: $receiptNumber')
           ..write(')'))
@@ -1026,6 +1141,7 @@ class DeliveriesTableData extends DataClass
     deliveryDate,
     deliveryTime,
     deliveryStatus,
+    collectedEmptyBottles,
     notes,
     receiptNumber,
   );
@@ -1045,6 +1161,7 @@ class DeliveriesTableData extends DataClass
           other.deliveryDate == this.deliveryDate &&
           other.deliveryTime == this.deliveryTime &&
           other.deliveryStatus == this.deliveryStatus &&
+          other.collectedEmptyBottles == this.collectedEmptyBottles &&
           other.notes == this.notes &&
           other.receiptNumber == this.receiptNumber);
 }
@@ -1062,6 +1179,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
   final Value<DateTime> deliveryDate;
   final Value<String?> deliveryTime;
   final Value<String> deliveryStatus;
+  final Value<int> collectedEmptyBottles;
   final Value<String?> notes;
   final Value<String?> receiptNumber;
   final Value<int> rowid;
@@ -1078,6 +1196,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     this.deliveryDate = const Value.absent(),
     this.deliveryTime = const Value.absent(),
     this.deliveryStatus = const Value.absent(),
+    this.collectedEmptyBottles = const Value.absent(),
     this.notes = const Value.absent(),
     this.receiptNumber = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1095,6 +1214,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     this.deliveryDate = const Value.absent(),
     this.deliveryTime = const Value.absent(),
     this.deliveryStatus = const Value.absent(),
+    this.collectedEmptyBottles = const Value.absent(),
     this.notes = const Value.absent(),
     this.receiptNumber = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1116,6 +1236,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     Expression<DateTime>? deliveryDate,
     Expression<String>? deliveryTime,
     Expression<String>? deliveryStatus,
+    Expression<int>? collectedEmptyBottles,
     Expression<String>? notes,
     Expression<String>? receiptNumber,
     Expression<int>? rowid,
@@ -1133,6 +1254,8 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
       if (deliveryDate != null) 'delivery_date': deliveryDate,
       if (deliveryTime != null) 'delivery_time': deliveryTime,
       if (deliveryStatus != null) 'delivery_status': deliveryStatus,
+      if (collectedEmptyBottles != null)
+        'collected_empty_bottles': collectedEmptyBottles,
       if (notes != null) 'notes': notes,
       if (receiptNumber != null) 'receipt_number': receiptNumber,
       if (rowid != null) 'rowid': rowid,
@@ -1152,6 +1275,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     Value<DateTime>? deliveryDate,
     Value<String?>? deliveryTime,
     Value<String>? deliveryStatus,
+    Value<int>? collectedEmptyBottles,
     Value<String?>? notes,
     Value<String?>? receiptNumber,
     Value<int>? rowid,
@@ -1169,6 +1293,8 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
       deliveryDate: deliveryDate ?? this.deliveryDate,
       deliveryTime: deliveryTime ?? this.deliveryTime,
       deliveryStatus: deliveryStatus ?? this.deliveryStatus,
+      collectedEmptyBottles:
+          collectedEmptyBottles ?? this.collectedEmptyBottles,
       notes: notes ?? this.notes,
       receiptNumber: receiptNumber ?? this.receiptNumber,
       rowid: rowid ?? this.rowid,
@@ -1214,6 +1340,11 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     if (deliveryStatus.present) {
       map['delivery_status'] = Variable<String>(deliveryStatus.value);
     }
+    if (collectedEmptyBottles.present) {
+      map['collected_empty_bottles'] = Variable<int>(
+        collectedEmptyBottles.value,
+      );
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -1241,6 +1372,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
           ..write('deliveryDate: $deliveryDate, ')
           ..write('deliveryTime: $deliveryTime, ')
           ..write('deliveryStatus: $deliveryStatus, ')
+          ..write('collectedEmptyBottles: $collectedEmptyBottles, ')
           ..write('notes: $notes, ')
           ..write('receiptNumber: $receiptNumber, ')
           ..write('rowid: $rowid')
@@ -7119,6 +7251,595 @@ class CopilotMessagesTableCompanion
   }
 }
 
+class $CustomerBottleReconciliationsTableTable
+    extends CustomerBottleReconciliationsTable
+    with
+        TableInfo<
+          $CustomerBottleReconciliationsTableTable,
+          CustomerBottleReconciliationsTableData
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CustomerBottleReconciliationsTableTable(
+    this.attachedDatabase, [
+    this._alias,
+  ]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _customerIdMeta = const VerificationMeta(
+    'customerId',
+  );
+  @override
+  late final GeneratedColumn<String> customerId = GeneratedColumn<String>(
+    'customer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _expectedCountMeta = const VerificationMeta(
+    'expectedCount',
+  );
+  @override
+  late final GeneratedColumn<int> expectedCount = GeneratedColumn<int>(
+    'expected_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _actualCountMeta = const VerificationMeta(
+    'actualCount',
+  );
+  @override
+  late final GeneratedColumn<int> actualCount = GeneratedColumn<int>(
+    'actual_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _varianceMeta = const VerificationMeta(
+    'variance',
+  );
+  @override
+  late final GeneratedColumn<int> variance = GeneratedColumn<int>(
+    'variance',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _adjustmentAppliedMeta = const VerificationMeta(
+    'adjustmentApplied',
+  );
+  @override
+  late final GeneratedColumn<bool> adjustmentApplied = GeneratedColumn<bool>(
+    'adjustment_applied',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("adjustment_applied" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    customerId,
+    expectedCount,
+    actualCount,
+    variance,
+    reason,
+    notes,
+    adjustmentApplied,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'customer_bottle_reconciliations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CustomerBottleReconciliationsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('customer_id')) {
+      context.handle(
+        _customerIdMeta,
+        customerId.isAcceptableOrUnknown(data['customer_id']!, _customerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_customerIdMeta);
+    }
+    if (data.containsKey('expected_count')) {
+      context.handle(
+        _expectedCountMeta,
+        expectedCount.isAcceptableOrUnknown(
+          data['expected_count']!,
+          _expectedCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_expectedCountMeta);
+    }
+    if (data.containsKey('actual_count')) {
+      context.handle(
+        _actualCountMeta,
+        actualCount.isAcceptableOrUnknown(
+          data['actual_count']!,
+          _actualCountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_actualCountMeta);
+    }
+    if (data.containsKey('variance')) {
+      context.handle(
+        _varianceMeta,
+        variance.isAcceptableOrUnknown(data['variance']!, _varianceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_varianceMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('adjustment_applied')) {
+      context.handle(
+        _adjustmentAppliedMeta,
+        adjustmentApplied.isAcceptableOrUnknown(
+          data['adjustment_applied']!,
+          _adjustmentAppliedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CustomerBottleReconciliationsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CustomerBottleReconciliationsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      customerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}customer_id'],
+      )!,
+      expectedCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expected_count'],
+      )!,
+      actualCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}actual_count'],
+      )!,
+      variance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}variance'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      adjustmentApplied: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}adjustment_applied'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CustomerBottleReconciliationsTableTable createAlias(String alias) {
+    return $CustomerBottleReconciliationsTableTable(attachedDatabase, alias);
+  }
+}
+
+class CustomerBottleReconciliationsTableData extends DataClass
+    implements Insertable<CustomerBottleReconciliationsTableData> {
+  final String id;
+  final String customerId;
+  final int expectedCount;
+  final int actualCount;
+  final int variance;
+  final String? reason;
+  final String? notes;
+  final bool adjustmentApplied;
+  final DateTime createdAt;
+  const CustomerBottleReconciliationsTableData({
+    required this.id,
+    required this.customerId,
+    required this.expectedCount,
+    required this.actualCount,
+    required this.variance,
+    this.reason,
+    this.notes,
+    required this.adjustmentApplied,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['customer_id'] = Variable<String>(customerId);
+    map['expected_count'] = Variable<int>(expectedCount);
+    map['actual_count'] = Variable<int>(actualCount);
+    map['variance'] = Variable<int>(variance);
+    if (!nullToAbsent || reason != null) {
+      map['reason'] = Variable<String>(reason);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['adjustment_applied'] = Variable<bool>(adjustmentApplied);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CustomerBottleReconciliationsTableCompanion toCompanion(bool nullToAbsent) {
+    return CustomerBottleReconciliationsTableCompanion(
+      id: Value(id),
+      customerId: Value(customerId),
+      expectedCount: Value(expectedCount),
+      actualCount: Value(actualCount),
+      variance: Value(variance),
+      reason: reason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reason),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      adjustmentApplied: Value(adjustmentApplied),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CustomerBottleReconciliationsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CustomerBottleReconciliationsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      customerId: serializer.fromJson<String>(json['customerId']),
+      expectedCount: serializer.fromJson<int>(json['expectedCount']),
+      actualCount: serializer.fromJson<int>(json['actualCount']),
+      variance: serializer.fromJson<int>(json['variance']),
+      reason: serializer.fromJson<String?>(json['reason']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      adjustmentApplied: serializer.fromJson<bool>(json['adjustmentApplied']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'customerId': serializer.toJson<String>(customerId),
+      'expectedCount': serializer.toJson<int>(expectedCount),
+      'actualCount': serializer.toJson<int>(actualCount),
+      'variance': serializer.toJson<int>(variance),
+      'reason': serializer.toJson<String?>(reason),
+      'notes': serializer.toJson<String?>(notes),
+      'adjustmentApplied': serializer.toJson<bool>(adjustmentApplied),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CustomerBottleReconciliationsTableData copyWith({
+    String? id,
+    String? customerId,
+    int? expectedCount,
+    int? actualCount,
+    int? variance,
+    Value<String?> reason = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    bool? adjustmentApplied,
+    DateTime? createdAt,
+  }) => CustomerBottleReconciliationsTableData(
+    id: id ?? this.id,
+    customerId: customerId ?? this.customerId,
+    expectedCount: expectedCount ?? this.expectedCount,
+    actualCount: actualCount ?? this.actualCount,
+    variance: variance ?? this.variance,
+    reason: reason.present ? reason.value : this.reason,
+    notes: notes.present ? notes.value : this.notes,
+    adjustmentApplied: adjustmentApplied ?? this.adjustmentApplied,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CustomerBottleReconciliationsTableData copyWithCompanion(
+    CustomerBottleReconciliationsTableCompanion data,
+  ) {
+    return CustomerBottleReconciliationsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      customerId: data.customerId.present
+          ? data.customerId.value
+          : this.customerId,
+      expectedCount: data.expectedCount.present
+          ? data.expectedCount.value
+          : this.expectedCount,
+      actualCount: data.actualCount.present
+          ? data.actualCount.value
+          : this.actualCount,
+      variance: data.variance.present ? data.variance.value : this.variance,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      adjustmentApplied: data.adjustmentApplied.present
+          ? data.adjustmentApplied.value
+          : this.adjustmentApplied,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomerBottleReconciliationsTableData(')
+          ..write('id: $id, ')
+          ..write('customerId: $customerId, ')
+          ..write('expectedCount: $expectedCount, ')
+          ..write('actualCount: $actualCount, ')
+          ..write('variance: $variance, ')
+          ..write('reason: $reason, ')
+          ..write('notes: $notes, ')
+          ..write('adjustmentApplied: $adjustmentApplied, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    customerId,
+    expectedCount,
+    actualCount,
+    variance,
+    reason,
+    notes,
+    adjustmentApplied,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CustomerBottleReconciliationsTableData &&
+          other.id == this.id &&
+          other.customerId == this.customerId &&
+          other.expectedCount == this.expectedCount &&
+          other.actualCount == this.actualCount &&
+          other.variance == this.variance &&
+          other.reason == this.reason &&
+          other.notes == this.notes &&
+          other.adjustmentApplied == this.adjustmentApplied &&
+          other.createdAt == this.createdAt);
+}
+
+class CustomerBottleReconciliationsTableCompanion
+    extends UpdateCompanion<CustomerBottleReconciliationsTableData> {
+  final Value<String> id;
+  final Value<String> customerId;
+  final Value<int> expectedCount;
+  final Value<int> actualCount;
+  final Value<int> variance;
+  final Value<String?> reason;
+  final Value<String?> notes;
+  final Value<bool> adjustmentApplied;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CustomerBottleReconciliationsTableCompanion({
+    this.id = const Value.absent(),
+    this.customerId = const Value.absent(),
+    this.expectedCount = const Value.absent(),
+    this.actualCount = const Value.absent(),
+    this.variance = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.adjustmentApplied = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CustomerBottleReconciliationsTableCompanion.insert({
+    required String id,
+    required String customerId,
+    required int expectedCount,
+    required int actualCount,
+    required int variance,
+    this.reason = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.adjustmentApplied = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       customerId = Value(customerId),
+       expectedCount = Value(expectedCount),
+       actualCount = Value(actualCount),
+       variance = Value(variance);
+  static Insertable<CustomerBottleReconciliationsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? customerId,
+    Expression<int>? expectedCount,
+    Expression<int>? actualCount,
+    Expression<int>? variance,
+    Expression<String>? reason,
+    Expression<String>? notes,
+    Expression<bool>? adjustmentApplied,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (customerId != null) 'customer_id': customerId,
+      if (expectedCount != null) 'expected_count': expectedCount,
+      if (actualCount != null) 'actual_count': actualCount,
+      if (variance != null) 'variance': variance,
+      if (reason != null) 'reason': reason,
+      if (notes != null) 'notes': notes,
+      if (adjustmentApplied != null) 'adjustment_applied': adjustmentApplied,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CustomerBottleReconciliationsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? customerId,
+    Value<int>? expectedCount,
+    Value<int>? actualCount,
+    Value<int>? variance,
+    Value<String?>? reason,
+    Value<String?>? notes,
+    Value<bool>? adjustmentApplied,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CustomerBottleReconciliationsTableCompanion(
+      id: id ?? this.id,
+      customerId: customerId ?? this.customerId,
+      expectedCount: expectedCount ?? this.expectedCount,
+      actualCount: actualCount ?? this.actualCount,
+      variance: variance ?? this.variance,
+      reason: reason ?? this.reason,
+      notes: notes ?? this.notes,
+      adjustmentApplied: adjustmentApplied ?? this.adjustmentApplied,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (customerId.present) {
+      map['customer_id'] = Variable<String>(customerId.value);
+    }
+    if (expectedCount.present) {
+      map['expected_count'] = Variable<int>(expectedCount.value);
+    }
+    if (actualCount.present) {
+      map['actual_count'] = Variable<int>(actualCount.value);
+    }
+    if (variance.present) {
+      map['variance'] = Variable<int>(variance.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (adjustmentApplied.present) {
+      map['adjustment_applied'] = Variable<bool>(adjustmentApplied.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomerBottleReconciliationsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('customerId: $customerId, ')
+          ..write('expectedCount: $expectedCount, ')
+          ..write('actualCount: $actualCount, ')
+          ..write('variance: $variance, ')
+          ..write('reason: $reason, ')
+          ..write('notes: $notes, ')
+          ..write('adjustmentApplied: $adjustmentApplied, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7150,6 +7871,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $CustomerDepositsTableTable(this);
   late final $CopilotMessagesTableTable copilotMessagesTable =
       $CopilotMessagesTableTable(this);
+  late final $CustomerBottleReconciliationsTableTable
+  customerBottleReconciliationsTable = $CustomerBottleReconciliationsTableTable(
+    this,
+  );
   late final CustomersDao customersDao = CustomersDao(this as AppDatabase);
   late final DeliveriesDao deliveriesDao = DeliveriesDao(this as AppDatabase);
   late final BottleTransactionsDao bottleTransactionsDao =
@@ -7182,6 +7907,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CopilotMessagesDao copilotMessagesDao = CopilotMessagesDao(
     this as AppDatabase,
   );
+  late final CustomerBottleReconciliationsDao customerBottleReconciliationsDao =
+      CustomerBottleReconciliationsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7203,6 +7930,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inventoryAdjustmentsTable,
     customerDepositsTable,
     copilotMessagesTable,
+    customerBottleReconciliationsTable,
   ];
 }
 
@@ -7213,6 +7941,7 @@ typedef $$CustomersTableTableCreateCompanionBuilder =
       Value<String?> phone,
       Value<String?> address,
       Value<String?> notes,
+      Value<int?> pendingPhysicalBottleCount,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -7223,6 +7952,7 @@ typedef $$CustomersTableTableUpdateCompanionBuilder =
       Value<String?> phone,
       Value<String?> address,
       Value<String?> notes,
+      Value<int?> pendingPhysicalBottleCount,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -7258,6 +7988,11 @@ class $$CustomersTableTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pendingPhysicalBottleCount => $composableBuilder(
+    column: $table.pendingPhysicalBottleCount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7301,6 +8036,11 @@ class $$CustomersTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get pendingPhysicalBottleCount => $composableBuilder(
+    column: $table.pendingPhysicalBottleCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -7330,6 +8070,11 @@ class $$CustomersTableTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get pendingPhysicalBottleCount => $composableBuilder(
+    column: $table.pendingPhysicalBottleCount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -7377,6 +8122,7 @@ class $$CustomersTableTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> address = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<int?> pendingPhysicalBottleCount = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CustomersTableCompanion(
@@ -7385,6 +8131,7 @@ class $$CustomersTableTableTableManager
                 phone: phone,
                 address: address,
                 notes: notes,
+                pendingPhysicalBottleCount: pendingPhysicalBottleCount,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -7395,6 +8142,7 @@ class $$CustomersTableTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> address = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<int?> pendingPhysicalBottleCount = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CustomersTableCompanion.insert(
@@ -7403,6 +8151,7 @@ class $$CustomersTableTableTableManager
                 phone: phone,
                 address: address,
                 notes: notes,
+                pendingPhysicalBottleCount: pendingPhysicalBottleCount,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -7445,6 +8194,7 @@ typedef $$DeliveriesTableTableCreateCompanionBuilder =
       Value<DateTime> deliveryDate,
       Value<String?> deliveryTime,
       Value<String> deliveryStatus,
+      Value<int> collectedEmptyBottles,
       Value<String?> notes,
       Value<String?> receiptNumber,
       Value<int> rowid,
@@ -7463,6 +8213,7 @@ typedef $$DeliveriesTableTableUpdateCompanionBuilder =
       Value<DateTime> deliveryDate,
       Value<String?> deliveryTime,
       Value<String> deliveryStatus,
+      Value<int> collectedEmptyBottles,
       Value<String?> notes,
       Value<String?> receiptNumber,
       Value<int> rowid,
@@ -7534,6 +8285,11 @@ class $$DeliveriesTableTableFilterComposer
 
   ColumnFilters<String> get deliveryStatus => $composableBuilder(
     column: $table.deliveryStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get collectedEmptyBottles => $composableBuilder(
+    column: $table.collectedEmptyBottles,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7617,6 +8373,11 @@ class $$DeliveriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get collectedEmptyBottles => $composableBuilder(
+    column: $table.collectedEmptyBottles,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
@@ -7693,6 +8454,11 @@ class $$DeliveriesTableTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get collectedEmptyBottles => $composableBuilder(
+    column: $table.collectedEmptyBottles,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -7751,6 +8517,7 @@ class $$DeliveriesTableTableTableManager
                 Value<DateTime> deliveryDate = const Value.absent(),
                 Value<String?> deliveryTime = const Value.absent(),
                 Value<String> deliveryStatus = const Value.absent(),
+                Value<int> collectedEmptyBottles = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> receiptNumber = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7767,6 +8534,7 @@ class $$DeliveriesTableTableTableManager
                 deliveryDate: deliveryDate,
                 deliveryTime: deliveryTime,
                 deliveryStatus: deliveryStatus,
+                collectedEmptyBottles: collectedEmptyBottles,
                 notes: notes,
                 receiptNumber: receiptNumber,
                 rowid: rowid,
@@ -7785,6 +8553,7 @@ class $$DeliveriesTableTableTableManager
                 Value<DateTime> deliveryDate = const Value.absent(),
                 Value<String?> deliveryTime = const Value.absent(),
                 Value<String> deliveryStatus = const Value.absent(),
+                Value<int> collectedEmptyBottles = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> receiptNumber = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -7801,6 +8570,7 @@ class $$DeliveriesTableTableTableManager
                 deliveryDate: deliveryDate,
                 deliveryTime: deliveryTime,
                 deliveryStatus: deliveryStatus,
+                collectedEmptyBottles: collectedEmptyBottles,
                 notes: notes,
                 receiptNumber: receiptNumber,
                 rowid: rowid,
@@ -11122,6 +11892,309 @@ typedef $$CopilotMessagesTableTableProcessedTableManager =
       CopilotMessagesTableData,
       PrefetchHooks Function()
     >;
+typedef $$CustomerBottleReconciliationsTableTableCreateCompanionBuilder =
+    CustomerBottleReconciliationsTableCompanion Function({
+      required String id,
+      required String customerId,
+      required int expectedCount,
+      required int actualCount,
+      required int variance,
+      Value<String?> reason,
+      Value<String?> notes,
+      Value<bool> adjustmentApplied,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$CustomerBottleReconciliationsTableTableUpdateCompanionBuilder =
+    CustomerBottleReconciliationsTableCompanion Function({
+      Value<String> id,
+      Value<String> customerId,
+      Value<int> expectedCount,
+      Value<int> actualCount,
+      Value<int> variance,
+      Value<String?> reason,
+      Value<String?> notes,
+      Value<bool> adjustmentApplied,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$CustomerBottleReconciliationsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CustomerBottleReconciliationsTableTable> {
+  $$CustomerBottleReconciliationsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expectedCount => $composableBuilder(
+    column: $table.expectedCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get actualCount => $composableBuilder(
+    column: $table.actualCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get variance => $composableBuilder(
+    column: $table.variance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get adjustmentApplied => $composableBuilder(
+    column: $table.adjustmentApplied,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CustomerBottleReconciliationsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CustomerBottleReconciliationsTableTable> {
+  $$CustomerBottleReconciliationsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expectedCount => $composableBuilder(
+    column: $table.expectedCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get actualCount => $composableBuilder(
+    column: $table.actualCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get variance => $composableBuilder(
+    column: $table.variance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get adjustmentApplied => $composableBuilder(
+    column: $table.adjustmentApplied,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CustomerBottleReconciliationsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CustomerBottleReconciliationsTableTable> {
+  $$CustomerBottleReconciliationsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expectedCount => $composableBuilder(
+    column: $table.expectedCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get actualCount => $composableBuilder(
+    column: $table.actualCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get variance =>
+      $composableBuilder(column: $table.variance, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get adjustmentApplied => $composableBuilder(
+    column: $table.adjustmentApplied,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CustomerBottleReconciliationsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CustomerBottleReconciliationsTableTable,
+          CustomerBottleReconciliationsTableData,
+          $$CustomerBottleReconciliationsTableTableFilterComposer,
+          $$CustomerBottleReconciliationsTableTableOrderingComposer,
+          $$CustomerBottleReconciliationsTableTableAnnotationComposer,
+          $$CustomerBottleReconciliationsTableTableCreateCompanionBuilder,
+          $$CustomerBottleReconciliationsTableTableUpdateCompanionBuilder,
+          (
+            CustomerBottleReconciliationsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $CustomerBottleReconciliationsTableTable,
+              CustomerBottleReconciliationsTableData
+            >,
+          ),
+          CustomerBottleReconciliationsTableData,
+          PrefetchHooks Function()
+        > {
+  $$CustomerBottleReconciliationsTableTableTableManager(
+    _$AppDatabase db,
+    $CustomerBottleReconciliationsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CustomerBottleReconciliationsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CustomerBottleReconciliationsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CustomerBottleReconciliationsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> customerId = const Value.absent(),
+                Value<int> expectedCount = const Value.absent(),
+                Value<int> actualCount = const Value.absent(),
+                Value<int> variance = const Value.absent(),
+                Value<String?> reason = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> adjustmentApplied = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomerBottleReconciliationsTableCompanion(
+                id: id,
+                customerId: customerId,
+                expectedCount: expectedCount,
+                actualCount: actualCount,
+                variance: variance,
+                reason: reason,
+                notes: notes,
+                adjustmentApplied: adjustmentApplied,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String customerId,
+                required int expectedCount,
+                required int actualCount,
+                required int variance,
+                Value<String?> reason = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<bool> adjustmentApplied = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomerBottleReconciliationsTableCompanion.insert(
+                id: id,
+                customerId: customerId,
+                expectedCount: expectedCount,
+                actualCount: actualCount,
+                variance: variance,
+                reason: reason,
+                notes: notes,
+                adjustmentApplied: adjustmentApplied,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CustomerBottleReconciliationsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CustomerBottleReconciliationsTableTable,
+      CustomerBottleReconciliationsTableData,
+      $$CustomerBottleReconciliationsTableTableFilterComposer,
+      $$CustomerBottleReconciliationsTableTableOrderingComposer,
+      $$CustomerBottleReconciliationsTableTableAnnotationComposer,
+      $$CustomerBottleReconciliationsTableTableCreateCompanionBuilder,
+      $$CustomerBottleReconciliationsTableTableUpdateCompanionBuilder,
+      (
+        CustomerBottleReconciliationsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $CustomerBottleReconciliationsTableTable,
+          CustomerBottleReconciliationsTableData
+        >,
+      ),
+      CustomerBottleReconciliationsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11167,4 +12240,10 @@ class $AppDatabaseManager {
       $$CustomerDepositsTableTableTableManager(_db, _db.customerDepositsTable);
   $$CopilotMessagesTableTableTableManager get copilotMessagesTable =>
       $$CopilotMessagesTableTableTableManager(_db, _db.copilotMessagesTable);
+  $$CustomerBottleReconciliationsTableTableTableManager
+  get customerBottleReconciliationsTable =>
+      $$CustomerBottleReconciliationsTableTableTableManager(
+        _db,
+        _db.customerBottleReconciliationsTable,
+      );
 }

@@ -1,3 +1,4 @@
+import '../entities/customer_bottle_reconciliation.dart';
 import '../entities/customer_bottle_balance.dart';
 import '../entities/bottle_transaction.dart';
 import '../entities/inventory_adjustment.dart';
@@ -39,4 +40,24 @@ abstract class InventoryRepository {
     String? adjustmentReason,
     String? notes,
   });
+
+  Future<void> recordCustomerBottleReconciliation({
+    required String customerId,
+    required int expectedCount,
+    required int actualCount,
+    String? reason,
+    String? notes,
+    required bool applyAdjustment,
+  });
+
+  Future<void> setPendingPhysicalBottleCount({
+    required String customerId,
+    int? actualCount,
+  });
+
+  Stream<List<CustomerBottleReconciliation>> watchReconciliations();
+
+  Future<List<CustomerBottleReconciliation>> getReconciliationsByCustomer(
+    String customerId,
+  );
 }

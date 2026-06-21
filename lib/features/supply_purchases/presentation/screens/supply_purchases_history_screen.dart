@@ -58,7 +58,7 @@ class _SupplyPurchasesHistoryScreenState
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => context.push('/inventory/purchase-stock'),
-            tooltip: 'Purchase Stock',
+            tooltip: 'Supplier Delivery',
           ),
         ],
       ),

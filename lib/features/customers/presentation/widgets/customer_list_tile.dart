@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/customer_status_utils.dart';
+import '../../../../core/utils/bottle_variance_utils.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customers_provider.dart';
 
@@ -25,6 +26,13 @@ class CustomerListTile extends ConsumerWidget {
 
     final badgeData = statsAsync.whenOrNull(
       data: (stats) {
+        final variance = customer.bottleVariance(stats.bottlesHeld);
+        if (variance != null && variance != 0) {
+          return (
+            label: BottleVarianceUtils.listLabel(variance),
+            color: BottleVarianceUtils.colorFor(variance),
+          );
+        }
         final info = CustomerStatusUtils.infoFor(stats);
         if (info.status == CustomerStatus.newCustomer) return null;
         return (

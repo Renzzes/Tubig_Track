@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/bottle_balance_utils.dart';
+import '../../../../core/utils/bottle_variance_utils.dart';
 import '../../../../core/utils/customer_status_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
@@ -274,6 +275,104 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
+              // Bottle Activity — lifecycle snapshot
+              statsAsync.when(
+                data: (stats) => deliveriesAsync.when(
+                  data: (deliveries) {
+                    final pending = deliveries
+                        .where(
+                          (d) =>
+                              d.deliveryStatus == DeliveryStatus.scheduled ||
+                              d.deliveryStatus == DeliveryStatus.inProgress,
+                        )
+                        .toList();
+                    final pendingQty =
+                        pending.fold<int>(0, (s, d) => s + d.quantity);
+                    final inProgress = pending.any(
+                      (d) => d.deliveryStatus == DeliveryStatus.inProgress,
+                    );
+                    final statusLabel = pending.isEmpty
+                        ? 'None'
+                        : inProgress
+                            ? 'In Progress'
+                            : 'Scheduled';
+
+                    return Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bottle Activity',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            _AnalyticsRow(
+                              label: 'Current Held',
+                              value: '${stats.bottlesHeld} Bottles',
+                            ),
+                            if (pending.isNotEmpty) ...[
+                              _AnalyticsRow(
+                                label: 'Pending Delivery',
+                                value: '$pendingQty Bottles',
+                              ),
+                              _AnalyticsRow(
+                                label: 'Delivery Status',
+                                value: statusLabel,
+                              ),
+                            ],
+                            _AnalyticsRow(
+                              label: 'Collected',
+                              value: '${stats.returnedBottles} Bottles',
+                            ),
+                            customerAsync.when(
+                              data: (c) {
+                                if (c == null) return const SizedBox();
+                                final variance = c.bottleVariance(stats.bottlesHeld);
+                                if (variance == null || variance == 0) {
+                                  return const SizedBox();
+                                }
+                                final color =
+                                    BottleVarianceUtils.colorFor(variance);
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: color.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: color.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      BottleVarianceUtils.listLabel(variance),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: color,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              loading: () => const SizedBox(),
+                              error: (_, __) => const SizedBox(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                  loading: () => const SizedBox(),
+                  error: (_, __) => const SizedBox(),
+                ),
+                loading: () => const SizedBox(),
+                error: (_, __) => const SizedBox(),
+              ),
+              const SizedBox(height: 16),
+
               // Bottle Management — primary bottle tracking hub
               statsAsync.when(
                 data: (stats) => Card(
@@ -373,6 +472,22 @@ class CustomerProfileScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showReconcileDialog(
+                              context,
+                              ref,
+                              stats.bottlesHeld,
+                            ),
+                            icon: const Icon(Icons.balance_outlined),
+                            label: const Text('Reconcile Bottles'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 48),
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         _AnalyticsRow(
                           label: 'Outstanding Bottles',
@@ -395,7 +510,7 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // Bottle Ledger — full movement history
+              // Bottle Ledger — timeline style
               _SectionHeader(
                 title: 'Bottle Ledger',
                 count: customerTransactions.isNotEmpty
@@ -412,117 +527,60 @@ class CustomerProfileScreen extends ConsumerWidget {
                   icon: Icons.inventory_2_outlined,
                 )
               else
-                Column(
-                  children: buildCustomerBottleLedger(customerTransactions)
+                _BottleLedgerTimeline(
+                  entries: buildCustomerBottleLedger(customerTransactions)
                       .take(5)
-                      .map((entry) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              DateFormatter.format(entry.transaction.date),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              ledgerHeadline(entry),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Balance: ${entry.balanceAfter}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                      .toList(),
                 ),
               const SizedBox(height: 16),
 
-              // Action buttons — delivery and payment
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < 360) {
-                    return Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => context.push(
-                              '/deliveries/add',
-                              extra: {'customerId': customerId},
-                            ),
-                            icon: const Icon(Icons.add_shopping_cart),
-                            label: const Text('New Delivery'),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                context.push('/customers/$customerId/payment'),
-                            icon: const Icon(Icons.payments_outlined),
-                            label: const Text('Receive Payment'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  return Column(
+              // Primary actions — delivery, collect, payment
+              Column(
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => context.push(
-                                '/deliveries/add',
-                                extra: {'customerId': customerId},
-                              ),
-                              icon: const Icon(Icons.add_shopping_cart),
-                              label: const Text('New Delivery'),
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(0, 48),
-                              ),
-                            ),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => context.push(
+                            '/deliveries/add',
+                            extra: {'customerId': customerId},
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  context.push('/customers/$customerId/payment'),
-                              icon: const Icon(Icons.payments_outlined),
-                              label: const Text('Receive Payment'),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 48),
-                              ),
-                            ),
+                          icon: const Icon(Icons.local_shipping_outlined),
+                          label: const Text('New Delivery'),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(0, 48),
                           ),
-                        ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push(
+                            '/customers/$customerId/collect-bottles',
+                          ),
+                          icon: const Icon(Icons.arrow_downward),
+                          label: const Text('Collect Bottles'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 48),
+                          ),
+                        ),
                       ),
                     ],
-                  );
-                },
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          context.push('/customers/$customerId/payment'),
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('Receive Payment'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -810,6 +868,223 @@ class CustomerProfileScreen extends ConsumerWidget {
     );
   }
 
+  void _showReconcileDialog(
+    BuildContext context,
+    WidgetRef ref,
+    int expectedBottles,
+  ) {
+    final ctrl = TextEditingController(text: expectedBottles.toString());
+    final reasonCtrl = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          final actual = int.tryParse(ctrl.text) ?? expectedBottles;
+          final variance = actual - expectedBottles;
+          final varianceColor = BottleVarianceUtils.colorFor(variance);
+          final hasMissing = variance < 0;
+          final hasExcess = variance > 0;
+
+          return AlertDialog(
+            title: const Text('Bottle Reconciliation'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ReconcileRow(
+                    label: 'Expected Bottles',
+                    value: '$expectedBottles',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: ctrl,
+                    keyboardType: TextInputType.number,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Actual Count',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: reasonCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Reason (optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (variance != 0) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: varianceColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: varianceColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _ReconcileRow(
+                            label: 'Variance',
+                            value: variance > 0 ? '+$variance' : '$variance',
+                            valueColor: varianceColor,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            hasMissing
+                                ? '⚠ Missing Bottles: ${variance.abs()}'
+                                : 'Excess Bottles: ${variance.abs()}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: varianceColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else
+                    const Text(
+                      'Bottles match. No adjustment needed.',
+                      style: TextStyle(color: AppColors.success),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              if (variance == 0)
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      await ref
+                          .read(inventoryRepositoryProvider)
+                          .recordCustomerBottleReconciliation(
+                            customerId: customerId,
+                            expectedCount: expectedBottles,
+                            actualCount: actual,
+                            reason: reasonCtrl.text.trim().isEmpty
+                                ? null
+                                : reasonCtrl.text.trim(),
+                            applyAdjustment: false,
+                          );
+                    } catch (_) {}
+                  },
+                  child: const Text('Log'),
+                ),
+              if (variance != 0) ...[
+                OutlinedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    try {
+                      await ref
+                          .read(inventoryRepositoryProvider)
+                          .recordCustomerBottleReconciliation(
+                            customerId: customerId,
+                            expectedCount: expectedBottles,
+                            actualCount: actual,
+                            reason: reasonCtrl.text.trim().isEmpty
+                                ? null
+                                : reasonCtrl.text.trim(),
+                            applyAdjustment: false,
+                          );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Physical count recorded.'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Save Count'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    if (!context.mounted) return;
+                    final confirmMsg = hasExcess
+                        ? 'This customer has ${variance.abs()} excess bottles.\n\nApply correction?'
+                        : 'This customer has ${variance.abs()} missing bottles.\n\nApply correction?';
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        title: Text(
+                          hasExcess ? 'Excess Bottles' : 'Missing Bottles',
+                        ),
+                        content: Text(confirmMsg),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(c, false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(c, true),
+                            child: const Text('Confirm'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true && context.mounted) {
+                      try {
+                        await ref
+                            .read(inventoryRepositoryProvider)
+                            .recordCustomerBottleReconciliation(
+                              customerId: customerId,
+                              expectedCount: expectedBottles,
+                              actualCount: actual,
+                              reason: reasonCtrl.text.trim().isEmpty
+                                  ? (hasMissing
+                                      ? 'Customer Lost Bottles'
+                                      : 'Excess Bottles')
+                                  : reasonCtrl.text.trim(),
+                              applyAdjustment: true,
+                            );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                hasMissing
+                                    ? 'Adjusted: ${variance.abs()} missing bottles recorded.'
+                                    : 'Adjusted: ${variance.abs()} excess bottles recorded.',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                  child: const Text('Apply Correction'),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   Widget _statusBadge(CustomerStats stats) {
     final info = CustomerStatusUtils.infoFor(stats);
     final color = Color(info.colorValue);
@@ -959,6 +1234,142 @@ class _AnalyticsRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Timeline-style bottle ledger shown on the customer profile.
+class _BottleLedgerTimeline extends StatelessWidget {
+  final List<CustomerBottleLedgerEntry> entries;
+
+  const _BottleLedgerTimeline({required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(entries.length, (i) {
+        final entry = entries[i];
+        final isLast = i == entries.length - 1;
+        final isIncrease = entry.quantityDelta > 0;
+        final dotColor = isIncrease ? AppColors.success : AppColors.warning;
+        final deltaStr = isIncrease
+            ? '+${entry.quantityDelta}'
+            : '${entry.quantityDelta}';
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Column(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      margin: const EdgeInsets.only(top: 4),
+                      decoration: BoxDecoration(
+                        color: dotColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    if (!isLast)
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: Colors.grey[200],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormatter.format(entry.transaction.date),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              ledgerHeadline(entry),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            deltaStr,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: dotColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Balance: ${entry.balanceAfter}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _ReconcileRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _ReconcileRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -27,6 +27,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       deliveryDate: row.deliveryDate,
       deliveryTime: row.deliveryTime,
       deliveryStatus: Delivery.deliveryStatusFromString(row.deliveryStatus),
+      collectedEmptyBottles: row.collectedEmptyBottles,
       notes: row.notes,
       receiptNumber: row.receiptNumber,
     );
@@ -46,6 +47,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       deliveryDate: Value(delivery.deliveryDate),
       deliveryTime: Value(delivery.deliveryTime),
       deliveryStatus: Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
+      collectedEmptyBottles: Value(delivery.collectedEmptyBottles),
       notes: Value(delivery.notes),
       receiptNumber: Value(delivery.receiptNumber),
     );
@@ -78,24 +80,25 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     }
   }
 
+  /// Syncs the filled-bottle delivery (borrow) transaction for a delivery.
+  ///
+  /// A borrow transaction is created ONLY when status == completed.
+  /// This increases the customer's bottle balance and decreases filled stock.
   Future<void> _syncBorrowTransaction(Delivery delivery) async {
     final borrowId = '${delivery.id}_borrow';
     final effects = InventoryStateEffects(InventoryStateService(_db));
     final existing = await _db.bottleTransactionsDao.getById(borrowId);
-    final wasActive = existing != null;
-    final oldQty = existing?.quantity ?? 0;
 
-    if (wasActive) {
+    if (existing != null) {
       await effects.applyTransaction(
         TransactionType.borrow,
-        oldQty,
+        existing.quantity,
         reverse: true,
       );
+      await _db.bottleTransactionsDao.deleteTransaction(borrowId);
     }
-    await _db.bottleTransactionsDao.deleteTransaction(borrowId);
 
-    if (delivery.deliveryStatus == DeliveryStatus.completed ||
-        delivery.deliveryStatus == DeliveryStatus.inProgress) {
+    if (delivery.deliveryStatus == DeliveryStatus.completed) {
       await _db.bottleTransactionsDao.insertTransaction(
         BottleTransactionsTableCompanion.insert(
           id: borrowId,
@@ -244,6 +247,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           deliveryTime: Value(delivery.deliveryTime),
           deliveryStatus:
               Value(Delivery.deliveryStatusToString(delivery.deliveryStatus)),
+          collectedEmptyBottles: Value(delivery.collectedEmptyBottles),
           notes: Value(delivery.notes),
           receiptNumber: Value(receiptNumber),
         ),
@@ -271,19 +275,33 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   @override
   Future<void> deleteDelivery(String id) async {
     await _db.transaction(() async {
-      final borrowId = '${id}_borrow';
-      final existing = await _db.bottleTransactionsDao.getById(borrowId);
-      if (existing != null) {
-        final effects = InventoryStateEffects(InventoryStateService(_db));
+      final effects = InventoryStateEffects(InventoryStateService(_db));
+
+      final collectId = '${id}_collect';
+      final existingCollect =
+          await _db.bottleTransactionsDao.getById(collectId);
+      if (existingCollect != null) {
         await effects.applyTransaction(
-          TransactionType.borrow,
-          existing.quantity,
+          TransactionType.ret,
+          existingCollect.quantity,
           reverse: true,
         );
+        await _db.bottleTransactionsDao.deleteTransaction(collectId);
       }
+
+      final borrowId = '${id}_borrow';
+      final existingBorrow = await _db.bottleTransactionsDao.getById(borrowId);
+      if (existingBorrow != null) {
+        await effects.applyTransaction(
+          TransactionType.borrow,
+          existingBorrow.quantity,
+          reverse: true,
+        );
+        await _db.bottleTransactionsDao.deleteTransaction(borrowId);
+      }
+
       await _db.customerDepositsDao.deleteByDelivery(id);
       await _db.paymentsDao.deleteByDelivery(id);
-      await _db.bottleTransactionsDao.deleteTransaction(borrowId);
       await _db.deliveriesDao.deleteDelivery(id);
     });
   }
@@ -323,6 +341,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
             deliveryDate: Value(row.deliveryDate),
             deliveryTime: Value(row.deliveryTime),
             deliveryStatus: Value(deliveryStatus),
+            collectedEmptyBottles: Value(row.collectedEmptyBottles),
             notes: Value(row.notes),
             receiptNumber: Value(row.receiptNumber),
           ),

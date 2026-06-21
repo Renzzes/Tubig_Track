@@ -191,7 +191,7 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(readOnly ? 'Purchase Details' : 'Purchase Stock'),
+        title: Text(readOnly ? 'Delivery Details' : 'Supplier Delivery'),
         actions: [
           if (readOnly && _existing != null)
             IconButton(

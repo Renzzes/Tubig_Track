@@ -264,10 +264,53 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
       );
       return;
     }
+
+    final qty = int.parse(_quantityCtrl.text.trim());
+    if (_deliveryStatus == DeliveryStatus.completed) {
+      final stats = await ref
+          .read(customerRepositoryProvider)
+          .getCustomerStats(_selectedCustomer!.id);
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirm Delivery'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ConfirmRow(label: 'Customer', value: _selectedCustomer!.name),
+              _ConfirmRow(label: 'Delivered', value: '$qty Bottles'),
+              _ConfirmRow(
+                label: 'Current Held',
+                value: '${stats.bottlesHeld} Bottles',
+              ),
+              _ConfirmRow(
+                label: 'New Held',
+                value: '${stats.bottlesHeld + qty} Bottles',
+              ),
+              const SizedBox(height: 12),
+              const Text('Confirm Delivery?'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      final qty = int.parse(_quantityCtrl.text.trim());
       final price = double.parse(_priceCtrl.text.trim());
       final total = qty * price;
       final depositApplied = DepositCalculator.depositToApply(
@@ -870,6 +913,29 @@ class _PickerButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ConfirmRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _ConfirmRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }

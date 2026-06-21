@@ -4,6 +4,7 @@ class Customer {
   final String? phone;
   final String? address;
   final String? notes;
+  final int? pendingPhysicalBottleCount;
   final DateTime createdAt;
 
   const Customer({
@@ -12,6 +13,7 @@ class Customer {
     this.phone,
     this.address,
     this.notes,
+    this.pendingPhysicalBottleCount,
     required this.createdAt,
   });
 
@@ -21,6 +23,8 @@ class Customer {
     String? phone,
     String? address,
     String? notes,
+    int? pendingPhysicalBottleCount,
+    bool clearPendingPhysical = false,
     DateTime? createdAt,
   }) {
     return Customer(
@@ -29,8 +33,17 @@ class Customer {
       phone: phone ?? this.phone,
       address: address ?? this.address,
       notes: notes ?? this.notes,
+      pendingPhysicalBottleCount: clearPendingPhysical
+          ? null
+          : (pendingPhysicalBottleCount ?? this.pendingPhysicalBottleCount),
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  /// Variance when a physical count was recorded but not yet adjusted.
+  int? bottleVariance(int bottlesHeld) {
+    if (pendingPhysicalBottleCount == null) return null;
+    return pendingPhysicalBottleCount! - bottlesHeld;
   }
 }
 

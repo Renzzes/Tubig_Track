@@ -10,6 +10,7 @@ import '../../domain/entities/bottle_transaction.dart';
 import '../../domain/entities/inventory_adjustment.dart';
 import '../../domain/entities/inventory_audit.dart';
 import '../../domain/entities/inventory_audit_summary.dart';
+import '../../domain/entities/customer_bottle_reconciliation.dart';
 import '../../domain/entities/inventory_summary.dart';
 import '../../domain/entities/customer_bottle_balance.dart';
 import '../../domain/repositories/inventory_repository.dart';
@@ -267,11 +268,38 @@ class InventoryRepositoryImpl implements InventoryRepository {
     );
   }
 
+  /// Checks whether adding [delta] to the tracked bottle sum would exceed
+  /// totalBottlesOwned. Only relevant for types that increase the sum
+  /// (added, positive adjustment). Other types merely move bottles between
+  /// categories without changing the total.
+  Future<void> _checkBottleOverflow(TransactionType type, int quantity) async {
+    final increases = type == TransactionType.added ||
+        (type == TransactionType.adjustment && quantity > 0);
+    if (!increases) return;
+
+    final summary = await getSummary();
+    final currentSum = summary.filledBottlesAvailable +
+        summary.emptyBottlesReadyForRefill +
+        summary.bottlesWithCustomers +
+        summary.damagedBottles +
+        summary.missingBottles;
+    if (currentSum + quantity > summary.totalBottlesOwned) {
+      throw StateError(
+        'Bottle inventory exceeds owned bottle count. '
+        'Purchase new bottles or correct inventory first.',
+      );
+    }
+  }
+
   @override
   Future<void> recordTransaction(BottleTransaction transaction) async {
     if (transaction.isDeliveryLinked) {
       throw StateError('Delivery-linked transactions are managed by deliveries.');
     }
+    await _checkBottleOverflow(
+      transaction.transactionType,
+      transaction.quantity,
+    );
     await _db.transaction(() async {
       await _effects.applyTransaction(
         transaction.transactionType,
@@ -322,7 +350,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
   @override
   Future<void> deleteTransaction(String id) async {
-    if (id.endsWith('_borrow')) {
+    if (id.endsWith('_borrow') || id.endsWith('_collect')) {
       throw StateError('Delivery-linked transactions cannot be deleted here.');
     }
     final existing = await _db.bottleTransactionsDao.getById(id);
@@ -545,5 +573,106 @@ class InventoryRepositoryImpl implements InventoryRepository {
         ),
       );
     });
+  }
+
+  CustomerBottleReconciliation _mapReconciliation(
+    CustomerBottleReconciliationsTableData row,
+  ) {
+    return CustomerBottleReconciliation(
+      id: row.id,
+      customerId: row.customerId,
+      expectedCount: row.expectedCount,
+      actualCount: row.actualCount,
+      variance: row.variance,
+      reason: row.reason,
+      notes: row.notes,
+      adjustmentApplied: row.adjustmentApplied,
+      createdAt: row.createdAt,
+    );
+  }
+
+  @override
+  Stream<List<CustomerBottleReconciliation>> watchReconciliations() {
+    return _db.customerBottleReconciliationsDao.watchAll().map(
+          (rows) => rows.map(_mapReconciliation).toList(),
+        );
+  }
+
+  @override
+  Future<List<CustomerBottleReconciliation>> getReconciliationsByCustomer(
+    String customerId,
+  ) async {
+    final rows =
+        await _db.customerBottleReconciliationsDao.getByCustomer(customerId);
+    return rows.map(_mapReconciliation).toList();
+  }
+
+  @override
+  Future<void> setPendingPhysicalBottleCount({
+    required String customerId,
+    int? actualCount,
+  }) async {
+    await _db.customersDao.updateCustomer(
+      CustomersTableCompanion(
+        id: Value(customerId),
+        pendingPhysicalBottleCount: Value(actualCount),
+      ),
+    );
+  }
+
+  @override
+  Future<void> recordCustomerBottleReconciliation({
+    required String customerId,
+    required int expectedCount,
+    required int actualCount,
+    String? reason,
+    String? notes,
+    required bool applyAdjustment,
+  }) async {
+    final variance = actualCount - expectedCount;
+    final now = DateTime.now();
+    final reconciliationId = const Uuid().v4();
+
+    await _db.customerBottleReconciliationsDao.insertReconciliation(
+      CustomerBottleReconciliationsTableCompanion.insert(
+        id: reconciliationId,
+        customerId: customerId,
+        expectedCount: expectedCount,
+        actualCount: actualCount,
+        variance: variance,
+        reason: Value(reason),
+        notes: Value(notes),
+        adjustmentApplied: Value(applyAdjustment && variance != 0),
+        createdAt: Value(now),
+      ),
+    );
+
+    if (applyAdjustment && variance != 0) {
+      await adjustCustomerBottleBalance(
+        customerId: customerId,
+        quantityDelta: variance,
+        reason: reason?.trim().isNotEmpty == true
+            ? reason!.trim()
+            : (variance < 0
+                ? 'Missing Bottles – Reconciliation'
+                : 'Excess Bottles – Reconciliation'),
+        notes: notes,
+        date: now,
+      );
+      await setPendingPhysicalBottleCount(
+        customerId: customerId,
+        actualCount: null,
+      );
+    } else if (!applyAdjustment) {
+      await setPendingPhysicalBottleCount(
+        customerId: customerId,
+        actualCount: actualCount,
+      );
+    } else {
+      await setPendingPhysicalBottleCount(
+        customerId: customerId,
+        actualCount: null,
+      );
+    }
   }
 }

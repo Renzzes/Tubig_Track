@@ -13,6 +13,7 @@ import '../../../deliveries/domain/entities/delivery.dart';
 import '../../../deliveries/presentation/providers/deliveries_provider.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
+import '../../domain/entities/customer_bottle_reconciliation.dart';
 import '../providers/inventory_provider.dart';
 
 class BusinessTimelineScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
     final paymentsAsync = ref.watch(paymentsStreamProvider);
     final depositsAsync = ref.watch(allCustomerDepositsStreamProvider);
     final customersAsync = ref.watch(customersStreamProvider);
+    final reconciliationsAsync = ref.watch(bottleReconciliationsStreamProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Business Timeline')),
@@ -64,6 +66,11 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
                   data: (deliveries) => paymentsAsync.when(
                     data: (payments) => depositsAsync.when(
                       data: (deposits) {
+                        final reconciliations = reconciliationsAsync.when(
+                          data: (r) => r,
+                          loading: () => <CustomerBottleReconciliation>[],
+                          error: (_, __) => <CustomerBottleReconciliation>[],
+                        );
                         final customerMap = customersAsync.when(
                           data: (c) => {for (final x in c) x.id: x.name},
                           loading: () => <String, String>{},
@@ -81,8 +88,8 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
                           deliveries: deliveries
                               .where(
                                 (d) =>
-                                    d.deliveryStatus !=
-                                    DeliveryStatus.cancelled,
+                                    d.deliveryStatus ==
+                                    DeliveryStatus.completed,
                               )
                               .map(
                                 (d) => (
@@ -112,6 +119,7 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
                                 ),
                               )
                               .toList(),
+                          reconciliations: reconciliations,
                         );
                         final filtered =
                             filterBusinessTimeline(all, _filter);
@@ -212,6 +220,7 @@ class _BusinessTimelineScreenState extends ConsumerState<BusinessTimelineScreen>
         BusinessTimelineFilter.inventory => 'Inventory',
         BusinessTimelineFilter.suppliers => 'Suppliers',
         BusinessTimelineFilter.audits => 'Audits',
+        BusinessTimelineFilter.reconciliations => 'Reconciliations',
       };
 
   String _depositLabel(CustomerDeposit d) {
