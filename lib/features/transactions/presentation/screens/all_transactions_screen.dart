@@ -58,6 +58,12 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
         return 'Savings Addition';
       case RecentTransactionType.supplyPurchase:
         return 'Supply Purchase';
+      case RecentTransactionType.depositAdded:
+        return 'Deposit Added';
+      case RecentTransactionType.depositUsed:
+        return 'Deposit Used';
+      case RecentTransactionType.depositAdjustment:
+        return 'Deposit Adjustment';
     }
   }
 

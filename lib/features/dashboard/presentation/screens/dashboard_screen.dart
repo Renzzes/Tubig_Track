@@ -219,6 +219,15 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 12),
 
               SummaryCard(
+                title: 'Customer Deposits',
+                value: CurrencyFormatter.format(summary.customerDepositsHeld),
+                icon: Icons.savings_outlined,
+                color: AppColors.primary,
+                subtitle: 'Current deposits held (Pundo)',
+              ),
+              const SizedBox(height: 12),
+
+              SummaryCard(
                 title: 'Overdue Payments',
                 value: '${summary.overdueCustomerCount}',
                 icon: Icons.warning_amber_rounded,

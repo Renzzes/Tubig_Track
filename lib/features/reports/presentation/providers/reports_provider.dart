@@ -5,6 +5,7 @@ import '../../../dispenser_sales/presentation/providers/dispenser_sales_provider
 import '../../../expenses/presentation/providers/expenses_provider.dart';
 import '../../../savings/presentation/providers/savings_provider.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
+import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../data/repositories/reports_repository_impl.dart';
 import '../../domain/entities/report_summary.dart';
 import '../../domain/repositories/reports_repository.dart';
@@ -31,6 +32,7 @@ final reportSummaryProvider = FutureProvider<ReportSummary>((ref) async {
   ref.watch(dispenserSalesStreamProvider);
   ref.watch(savingsSummaryProvider);
   ref.watch(supplyPurchasesStreamProvider);
+  ref.watch(allCustomerDepositsStreamProvider);
   final period = ref.read(selectedPeriodProvider);
   return ref.watch(reportsRepositoryProvider).getReport(period);
 });

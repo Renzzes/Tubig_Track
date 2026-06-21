@@ -14,6 +14,7 @@ import '../../features/savings/presentation/providers/savings_provider.dart';
 import '../../features/savings/presentation/providers/savings_goals_provider.dart';
 import '../../features/supply_purchases/presentation/providers/supply_purchase_provider.dart';
 import '../../features/suppliers/presentation/providers/suppliers_provider.dart';
+import '../../features/deposits/presentation/providers/deposits_provider.dart';
 
 /// Invalidates all data providers after a database restore or reset.
 void invalidateAllDataProviders(WidgetRef ref) {
@@ -44,4 +45,6 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(activeSavingsGoalProvider);
   ref.invalidate(savingsInsightsProvider);
   ref.invalidate(lowStockItemsProvider);
+  ref.invalidate(depositSummaryProvider);
+  ref.invalidate(allCustomerDepositsStreamProvider);
 }

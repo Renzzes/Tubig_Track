@@ -53,6 +53,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
         )
         .toList();
 
+    final customerDepositsHeld =
+        await _db.customerDepositsDao.getTotalDepositsHeld();
+
     return DashboardSummary(
       todaySales: todaySales,
       todayExpenses: todayExpenses,
@@ -65,6 +68,7 @@ class DashboardRepositoryImpl implements DashboardRepository {
       overdueCustomerCount: overdueSummary.customerCount,
       overdueTotalAmount: overdueSummary.totalAmount,
       lastInventoryAuditDate: auditSummary.lastAuditDate,
+      customerDepositsHeld: customerDepositsHeld,
       upcomingDeliveries: upcomingDeliveries,
     );
   }

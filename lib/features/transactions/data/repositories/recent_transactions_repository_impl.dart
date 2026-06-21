@@ -166,6 +166,34 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
       );
     }
 
+    for (final d in await _db.customerDepositsDao.getAll()) {
+      RecentTransactionType type;
+      switch (d.transactionType) {
+        case 'deposit_used':
+          type = RecentTransactionType.depositUsed;
+        case 'deposit_adjustment':
+          type = RecentTransactionType.depositAdjustment;
+        default:
+          type = RecentTransactionType.depositAdded;
+      }
+      items.add(
+        RecentTransaction(
+          id: 'deposit_${d.id}',
+          sourceId: d.id,
+          type: type,
+          date: d.createdAt,
+          title: customerMap[d.customerId] ?? 'Unknown',
+          subtitle: d.notes,
+          amount: d.amount,
+          isCredit: type == RecentTransactionType.depositAdded ||
+              type == RecentTransactionType.depositAdjustment,
+          customerId: d.customerId,
+          customerName: customerMap[d.customerId],
+          deliveryId: d.deliveryId,
+        ),
+      );
+    }
+
     items.sort((a, b) => b.date.compareTo(a.date));
     return items;
   }

@@ -10,6 +10,7 @@ class Delivery {
   final double totalAmount;
   final PaymentStatus paymentStatus;
   final double amountPaid;
+  final double depositApplied;
   final double remainingBalance;
   final DateTime deliveryDate;
   final String? deliveryTime;
@@ -25,6 +26,7 @@ class Delivery {
     required this.totalAmount,
     required this.paymentStatus,
     required this.amountPaid,
+    this.depositApplied = 0,
     required this.remainingBalance,
     required this.deliveryDate,
     this.deliveryTime,
@@ -41,6 +43,7 @@ class Delivery {
     double? totalAmount,
     PaymentStatus? paymentStatus,
     double? amountPaid,
+    double? depositApplied,
     double? remainingBalance,
     DateTime? deliveryDate,
     String? deliveryTime,
@@ -56,6 +59,7 @@ class Delivery {
       totalAmount: totalAmount ?? this.totalAmount,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       amountPaid: amountPaid ?? this.amountPaid,
+      depositApplied: depositApplied ?? this.depositApplied,
       remainingBalance: remainingBalance ?? this.remainingBalance,
       deliveryDate: deliveryDate ?? this.deliveryDate,
       deliveryTime: deliveryTime ?? this.deliveryTime,

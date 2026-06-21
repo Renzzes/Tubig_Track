@@ -13,6 +13,9 @@ enum RecentTransactionType {
   dispenserSale,
   savingsAddition,
   supplyPurchase,
+  depositAdded,
+  depositUsed,
+  depositAdjustment,
 }
 
 class RecentTransaction {
@@ -74,6 +77,12 @@ class RecentTransaction {
         return 'Savings Addition';
       case RecentTransactionType.supplyPurchase:
         return 'Supply Purchase';
+      case RecentTransactionType.depositAdded:
+        return 'Deposit Added';
+      case RecentTransactionType.depositUsed:
+        return 'Deposit Used';
+      case RecentTransactionType.depositAdjustment:
+        return 'Deposit Adjustment';
     }
   }
 

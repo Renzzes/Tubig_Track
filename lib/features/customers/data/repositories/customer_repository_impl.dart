@@ -115,12 +115,16 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final lastDeliveryDate =
         allDeliveries.isNotEmpty ? allDeliveries.first.deliveryDate : null;
 
+    final depositBalance =
+        await _db.customerDepositsDao.getBalanceForCustomer(customerId);
+
     return CustomerStats(
       borrowedBottles: borrowed,
       returnedBottles: returned,
       damagedBottles: damaged,
       outstandingBottles: borrowed - returned - damaged,
       unpaidBalance: unpaidBalance,
+      depositBalance: depositBalance,
       totalAmountPaid: totalAmountPaid,
       totalDeliveries: allDeliveries.length,
       lifetimeRevenue: lifetimeRevenue,

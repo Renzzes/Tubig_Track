@@ -19,6 +19,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       totalAmount: row.totalAmount,
       paymentStatus: Delivery.paymentStatusFromString(row.paymentStatus),
       amountPaid: row.amountPaid,
+      depositApplied: row.depositApplied,
       remainingBalance: row.remainingBalance,
       deliveryDate: row.deliveryDate,
       deliveryTime: row.deliveryTime,
@@ -37,6 +38,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       totalAmount: Value(delivery.totalAmount),
       paymentStatus: Value(Delivery.paymentStatusToString(delivery.paymentStatus)),
       amountPaid: Value(delivery.amountPaid),
+      depositApplied: Value(delivery.depositApplied),
       remainingBalance: Value(delivery.remainingBalance),
       deliveryDate: Value(delivery.deliveryDate),
       deliveryTime: Value(delivery.deliveryTime),
@@ -87,6 +89,41 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           quantity: delivery.quantity,
           date: Value(delivery.deliveryDate),
           notes: Value('Delivery #${delivery.id.substring(0, 8)}'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _syncDepositTransactions(
+    Delivery delivery, {
+    required double cashReceived,
+  }) async {
+    await _db.customerDepositsDao.deleteByDelivery(delivery.id);
+
+    if (delivery.depositApplied > 0.001) {
+      await _db.customerDepositsDao.insertDeposit(
+        CustomerDepositsTableCompanion.insert(
+          id: '${delivery.id}_used',
+          customerId: delivery.customerId,
+          amount: delivery.depositApplied,
+          transactionType: 'deposit_used',
+          deliveryId: Value(delivery.id),
+          notes: const Value('Applied to delivery'),
+        ),
+      );
+    }
+
+    final amountDue = delivery.totalAmount - delivery.depositApplied;
+    final excess = cashReceived - amountDue;
+    if (excess > 0.001) {
+      await _db.customerDepositsDao.insertDeposit(
+        CustomerDepositsTableCompanion.insert(
+          id: '${delivery.id}_added',
+          customerId: delivery.customerId,
+          amount: excess,
+          transactionType: 'deposit_added',
+          deliveryId: Value(delivery.id),
+          notes: const Value('Excess payment from delivery'),
         ),
       );
     }
@@ -168,7 +205,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   }
 
   @override
-  Future<void> createDelivery(Delivery delivery) async {
+  Future<void> createDelivery(Delivery delivery, {double? cashReceived}) async {
     await _db.transaction(() async {
       final receiptNumber = delivery.receiptNumber ??
           await _db.nextReceiptNumber(date: delivery.deliveryDate);
@@ -182,6 +219,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           paymentStatus:
               Value(Delivery.paymentStatusToString(delivery.paymentStatus)),
           amountPaid: Value(delivery.amountPaid),
+          depositApplied: Value(delivery.depositApplied),
           remainingBalance: Value(delivery.remainingBalance),
           deliveryDate: Value(delivery.deliveryDate),
           deliveryTime: Value(delivery.deliveryTime),
@@ -192,20 +230,29 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         ),
       );
       await _syncBorrowTransaction(delivery);
+      await _syncDepositTransactions(
+        delivery,
+        cashReceived: cashReceived ?? delivery.amountPaid,
+      );
     });
   }
 
   @override
-  Future<void> updateDelivery(Delivery delivery) async {
+  Future<void> updateDelivery(Delivery delivery, {double? cashReceived}) async {
     await _db.transaction(() async {
       await _db.deliveriesDao.updateDelivery(_companion(delivery));
       await _syncBorrowTransaction(delivery);
+      await _syncDepositTransactions(
+        delivery,
+        cashReceived: cashReceived ?? delivery.amountPaid,
+      );
     });
   }
 
   @override
   Future<void> deleteDelivery(String id) async {
     await _db.transaction(() async {
+      await _db.customerDepositsDao.deleteByDelivery(id);
       await _db.paymentsDao.deleteByDelivery(id);
       await _db.bottleTransactionsDao.deleteTransaction('${id}_borrow');
       await _db.deliveriesDao.deleteDelivery(id);
@@ -219,10 +266,12 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       final newStatus = PaymentStatusUtils.computeStatus(
         totalAmount: row.totalAmount,
         amountPaid: row.amountPaid,
+        depositApplied: row.depositApplied,
       );
       final newBalance = PaymentStatusUtils.computeRemainingBalance(
         totalAmount: row.totalAmount,
         amountPaid: row.amountPaid,
+        depositApplied: row.depositApplied,
       );
       var deliveryStatus = row.deliveryStatus;
       if (newStatus == 'paid' && deliveryStatus != 'cancelled') {
@@ -240,6 +289,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
             totalAmount: Value(row.totalAmount),
             paymentStatus: Value(newStatus),
             amountPaid: Value(row.amountPaid),
+            depositApplied: Value(row.depositApplied),
             remainingBalance: Value(newBalance),
             deliveryDate: Value(row.deliveryDate),
             deliveryTime: Value(row.deliveryTime),

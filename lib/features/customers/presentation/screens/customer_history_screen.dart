@@ -10,9 +10,11 @@ import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../../payments/domain/entities/payment.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
+import '../../../deposits/domain/entities/customer_deposit.dart';
+import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
 
-enum CustomerHistoryType { deliveries, payments, bottleTransactions }
+enum CustomerHistoryType { deliveries, payments, bottleTransactions, deposits }
 
 class CustomerHistoryScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -50,6 +52,8 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
         return 'Payment History';
       case CustomerHistoryType.bottleTransactions:
         return 'Bottle Transaction History';
+      case CustomerHistoryType.deposits:
+        return 'Deposit History';
     }
   }
 
@@ -84,6 +88,7 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
               CustomerHistoryType.deliveries => _buildDeliveries(),
               CustomerHistoryType.payments => _buildPayments(),
               CustomerHistoryType.bottleTransactions => _buildBottleTx(),
+              CustomerHistoryType.deposits => _buildDeposits(),
             },
           ),
         ],
@@ -168,6 +173,41 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
           ),
         );
       },
+      loading: () => const LoadingOverlay(),
+      error: (e, _) => Center(child: Text('Error: $e')),
+    );
+  }
+
+  Widget _buildDeposits() {
+    final async = ref.watch(customerDepositsStreamProvider(widget.customerId));
+    return async.when(
+      data: (items) => _buildPagedList<CustomerDeposit>(
+        items.where((d) {
+          if (!isInDateRange(d.createdAt, _startDate, _endDate)) return false;
+          final q = _searchCtrl.text.trim().toLowerCase();
+          if (q.isEmpty) return true;
+          return CustomerDeposit.typeLabel(d.transactionType)
+                  .toLowerCase()
+                  .contains(q) ||
+              d.amount.toString().contains(q) ||
+              (d.notes?.toLowerCase().contains(q) ?? false);
+        }).toList(),
+        (d) => ListTile(
+          title: Text(CustomerDeposit.typeLabel(d.transactionType)),
+          subtitle: Text(
+            '${DateFormatter.formatDateTime(d.createdAt)}${d.notes != null ? ' • ${d.notes}' : ''}',
+          ),
+          trailing: Text(
+            CurrencyFormatter.format(d.amount),
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: d.transactionType == DepositTransactionType.depositUsed
+                  ? Colors.orange
+                  : Colors.green,
+            ),
+          ),
+        ),
+      ),
       loading: () => const LoadingOverlay(),
       error: (e, _) => Center(child: Text('Error: $e')),
     );

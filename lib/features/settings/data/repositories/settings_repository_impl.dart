@@ -149,11 +149,22 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
     buffer.writeln('=== DELIVERIES ===');
     buffer.writeln(
-      'ID,CustomerID,Quantity,PricePerBottle,Total,PaymentStatus,AmountPaid,Balance,Date,Time,DeliveryStatus,Notes,ReceiptNumber',
+      'ID,CustomerID,Quantity,PricePerBottle,Total,PaymentStatus,AmountPaid,DepositApplied,Balance,Date,Time,DeliveryStatus,Notes,ReceiptNumber',
     );
     for (final d in await _db.deliveriesDao.getAll()) {
       buffer.writeln(
-        '"${d.id}","${d.customerId}",${d.quantity},${d.pricePerBottle},${d.totalAmount},"${d.paymentStatus}",${d.amountPaid},${d.remainingBalance},"${d.deliveryDate.toIso8601String()}","${d.deliveryTime ?? ''}","${d.deliveryStatus}","${d.notes ?? ''}","${d.receiptNumber ?? ''}"',
+        '"${d.id}","${d.customerId}",${d.quantity},${d.pricePerBottle},${d.totalAmount},"${d.paymentStatus}",${d.amountPaid},${d.depositApplied},${d.remainingBalance},"${d.deliveryDate.toIso8601String()}","${d.deliveryTime ?? ''}","${d.deliveryStatus}","${d.notes ?? ''}","${d.receiptNumber ?? ''}"',
+      );
+    }
+    buffer.writeln();
+
+    buffer.writeln('=== CUSTOMER DEPOSITS ===');
+    buffer.writeln(
+      'ID,CustomerID,Amount,TransactionType,CreatedAt,Notes,DeliveryID',
+    );
+    for (final d in await _db.customerDepositsDao.getAll()) {
+      buffer.writeln(
+        '"${d.id}","${d.customerId}",${d.amount},"${d.transactionType}","${d.createdAt.toIso8601String()}","${d.notes ?? ''}","${d.deliveryId ?? ''}"',
       );
     }
     buffer.writeln();

@@ -10,6 +10,7 @@ import '../../data/repositories/recent_transactions_repository_impl.dart';
 import '../../domain/entities/recent_transaction.dart';
 import '../../domain/repositories/recent_transactions_repository.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
+import '../../../deposits/presentation/providers/deposits_provider.dart';
 
 final recentTransactionsRepositoryProvider =
     Provider<RecentTransactionsRepository>((ref) {
@@ -26,6 +27,7 @@ final recentTransactionsProvider =
   ref.watch(paymentsStreamProvider);
   ref.watch(savingsContributionsStreamProvider);
   ref.watch(supplyPurchasesStreamProvider);
+  ref.watch(allCustomerDepositsStreamProvider);
   return ref.read(recentTransactionsRepositoryProvider).getRecent(limit: 50);
 });
 
@@ -38,5 +40,6 @@ final allTransactionsProvider =
   ref.watch(paymentsStreamProvider);
   ref.watch(savingsContributionsStreamProvider);
   ref.watch(supplyPurchasesStreamProvider);
+  ref.watch(allCustomerDepositsStreamProvider);
   return ref.read(recentTransactionsRepositoryProvider).getAll();
 });

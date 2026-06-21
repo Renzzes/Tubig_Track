@@ -6,6 +6,7 @@ import '../../../expenses/presentation/providers/expenses_provider.dart';
 import '../../../dispenser_sales/presentation/providers/dispenser_sales_provider.dart';
 import '../../../overdue/presentation/providers/overdue_provider.dart';
 import '../../../transactions/presentation/providers/recent_transactions_provider.dart';
+import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../data/repositories/dashboard_repository_impl.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/repositories/dashboard_repository.dart';
@@ -26,6 +27,7 @@ final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) async {
   ref.watch(dispenserSalesStreamProvider);
   ref.watch(overdueSummaryProvider);
   ref.watch(recentTransactionsProvider);
+  ref.watch(allCustomerDepositsStreamProvider);
 
   return ref.read(dashboardRepositoryProvider).getSummary();
 });

@@ -5,17 +5,24 @@ class PaymentStatusUtils {
   static String computeStatus({
     required double totalAmount,
     required double amountPaid,
+    double depositApplied = 0,
   }) {
-    final remaining = (totalAmount - amountPaid).clamp(0.0, double.infinity);
+    final remaining = computeRemainingBalance(
+      totalAmount: totalAmount,
+      amountPaid: amountPaid,
+      depositApplied: depositApplied,
+    );
     if (remaining <= 0) return 'paid';
-    if (amountPaid <= 0) return 'unpaid';
+    if (amountPaid <= 0 && depositApplied <= 0) return 'unpaid';
     return 'partial';
   }
 
   static double computeRemainingBalance({
     required double totalAmount,
     required double amountPaid,
+    double depositApplied = 0,
   }) {
-    return (totalAmount - amountPaid).clamp(0.0, double.infinity);
+    return (totalAmount - amountPaid - depositApplied)
+        .clamp(0.0, double.infinity);
   }
 }

@@ -17,6 +17,7 @@ import 'tables/suppliers_table.dart';
 import 'tables/savings_goals_table.dart';
 import 'tables/inventory_audits_table.dart';
 import 'tables/inventory_adjustments_table.dart';
+import 'tables/customer_deposits_table.dart';
 
 import 'daos/customers_dao.dart';
 import 'daos/deliveries_dao.dart';
@@ -32,6 +33,7 @@ import 'daos/suppliers_dao.dart';
 import 'daos/savings_goals_dao.dart';
 import 'daos/inventory_audits_dao.dart';
 import 'daos/inventory_adjustments_dao.dart';
+import 'daos/customer_deposits_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -51,6 +53,7 @@ part 'app_database.g.dart';
     SavingsGoalsTable,
     InventoryAuditsTable,
     InventoryAdjustmentsTable,
+    CustomerDepositsTable,
   ],
   daos: [
     CustomersDao,
@@ -67,6 +70,7 @@ part 'app_database.g.dart';
     SavingsGoalsDao,
     InventoryAuditsDao,
     InventoryAdjustmentsDao,
+    CustomerDepositsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -74,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -128,6 +132,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 8) {
           await m.createTable(inventoryAuditsTable);
           await m.createTable(inventoryAdjustmentsTable);
+        }
+        if (from < 9) {
+          await m.createTable(customerDepositsTable);
+          await m.addColumn(deliveriesTable, deliveriesTable.depositApplied);
         }
       },
     );
@@ -223,6 +231,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(savingsGoalsTable).go();
       await delete(inventoryAuditsTable).go();
       await delete(inventoryAdjustmentsTable).go();
+      await delete(customerDepositsTable).go();
       await _seedInventoryStock();
     });
   }

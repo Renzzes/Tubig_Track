@@ -13,6 +13,7 @@ class DeliveriesTable extends Table {
   TextColumn get paymentStatus =>
       text().withDefault(const Constant('unpaid'))();
   RealColumn get amountPaid => real().withDefault(const Constant(0.0))();
+  RealColumn get depositApplied => real().withDefault(const Constant(0.0))();
   RealColumn get remainingBalance => real().withDefault(const Constant(0.0))();
   DateTimeColumn get deliveryDate =>
       dateTime().withDefault(currentDateAndTime)();

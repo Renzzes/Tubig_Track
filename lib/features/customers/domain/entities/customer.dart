@@ -40,6 +40,7 @@ class CustomerStats {
   final int damagedBottles;
   final int outstandingBottles;
   final double unpaidBalance;
+  final double depositBalance;
   final double totalAmountPaid;
   final int totalDeliveries;
   final double lifetimeRevenue;
@@ -52,6 +53,7 @@ class CustomerStats {
     required this.damagedBottles,
     required this.outstandingBottles,
     required this.unpaidBalance,
+    required this.depositBalance,
     required this.totalAmountPaid,
     required this.totalDeliveries,
     required this.lifetimeRevenue,

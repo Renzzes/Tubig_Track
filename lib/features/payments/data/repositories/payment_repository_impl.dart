@@ -90,10 +90,12 @@ class PaymentRepositoryImpl implements PaymentRepository {
     final newBalance = PaymentStatusUtils.computeRemainingBalance(
       totalAmount: delivery.totalAmount,
       amountPaid: newPaid,
+      depositApplied: delivery.depositApplied,
     );
     final newStatus = PaymentStatusUtils.computeStatus(
       totalAmount: delivery.totalAmount,
       amountPaid: newPaid,
+      depositApplied: delivery.depositApplied,
     );
 
     var deliveryStatus = delivery.deliveryStatus;
@@ -110,11 +112,13 @@ class PaymentRepositoryImpl implements PaymentRepository {
         totalAmount: Value(delivery.totalAmount),
         paymentStatus: Value(newStatus),
         amountPaid: Value(newPaid),
+        depositApplied: Value(delivery.depositApplied),
         remainingBalance: Value(newBalance),
         deliveryDate: Value(delivery.deliveryDate),
         deliveryTime: Value(delivery.deliveryTime),
         deliveryStatus: Value(deliveryStatus),
         notes: Value(delivery.notes),
+        receiptNumber: Value(delivery.receiptNumber),
       ),
     );
   }

@@ -60,6 +60,13 @@ class ReportSummary {
   final int auditMissingBottles;
   final int totalAdjustmentQuantity;
 
+  // Customer deposits snapshot
+  final double totalDepositsHeld;
+  final int activeCustomersWithDeposits;
+  final double totalDepositsAdded;
+  final double totalDepositsUsed;
+  final double currentDepositLiability;
+
   const ReportSummary({
     required this.period,
     required this.startDate,
@@ -95,5 +102,10 @@ class ReportSummary {
     required this.lastAuditDate,
     required this.auditMissingBottles,
     required this.totalAdjustmentQuantity,
+    required this.totalDepositsHeld,
+    required this.activeCustomersWithDeposits,
+    required this.totalDepositsAdded,
+    required this.totalDepositsUsed,
+    required this.currentDepositLiability,
   });
 }

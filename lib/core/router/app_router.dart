@@ -197,6 +197,20 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/customers/:id/history/deposits',
+
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CustomerHistoryScreen(
+            customerId: id,
+            type: CustomerHistoryType.deposits,
+          );
+        },
+
+      ),
+
+      GoRoute(
+
         path: '/customers/:id',
 
         builder: (context, state) {

@@ -120,6 +120,11 @@ class ReportsRepositoryImpl implements ReportsRepository {
 
     final inventory = await InventoryRepositoryImpl(_db).getSummary();
     final auditSummary = await InventoryRepositoryImpl(_db).getAuditSummary();
+    final depositHeld = await _db.customerDepositsDao.getTotalDepositsHeld();
+    final depositCustomers =
+        await _db.customerDepositsDao.getCustomersWithDepositsCount();
+    final depositAdded = await _db.customerDepositsDao.getTotalAdded();
+    final depositUsed = await _db.customerDepositsDao.getTotalUsed();
 
     return ReportSummary(
       period: period,
@@ -156,6 +161,11 @@ class ReportsRepositoryImpl implements ReportsRepository {
       lastAuditDate: auditSummary.lastAuditDate,
       auditMissingBottles: auditSummary.missingBottlesFound,
       totalAdjustmentQuantity: auditSummary.adjustmentQuantity,
+      totalDepositsHeld: depositHeld,
+      activeCustomersWithDeposits: depositCustomers,
+      totalDepositsAdded: depositAdded,
+      totalDepositsUsed: depositUsed,
+      currentDepositLiability: depositHeld,
     );
   }
 }

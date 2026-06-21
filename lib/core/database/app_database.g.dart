@@ -491,6 +491,18 @@ class $DeliveriesTableTable extends DeliveriesTable
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _depositAppliedMeta = const VerificationMeta(
+    'depositApplied',
+  );
+  @override
+  late final GeneratedColumn<double> depositApplied = GeneratedColumn<double>(
+    'deposit_applied',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
   static const VerificationMeta _remainingBalanceMeta = const VerificationMeta(
     'remainingBalance',
   );
@@ -567,6 +579,7 @@ class $DeliveriesTableTable extends DeliveriesTable
     totalAmount,
     paymentStatus,
     amountPaid,
+    depositApplied,
     remainingBalance,
     deliveryDate,
     deliveryTime,
@@ -642,6 +655,15 @@ class $DeliveriesTableTable extends DeliveriesTable
       context.handle(
         _amountPaidMeta,
         amountPaid.isAcceptableOrUnknown(data['amount_paid']!, _amountPaidMeta),
+      );
+    }
+    if (data.containsKey('deposit_applied')) {
+      context.handle(
+        _depositAppliedMeta,
+        depositApplied.isAcceptableOrUnknown(
+          data['deposit_applied']!,
+          _depositAppliedMeta,
+        ),
       );
     }
     if (data.containsKey('remaining_balance')) {
@@ -732,6 +754,10 @@ class $DeliveriesTableTable extends DeliveriesTable
         DriftSqlType.double,
         data['${effectivePrefix}amount_paid'],
       )!,
+      depositApplied: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}deposit_applied'],
+      )!,
       remainingBalance: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}remaining_balance'],
@@ -774,6 +800,7 @@ class DeliveriesTableData extends DataClass
   final double totalAmount;
   final String paymentStatus;
   final double amountPaid;
+  final double depositApplied;
   final double remainingBalance;
   final DateTime deliveryDate;
   final String? deliveryTime;
@@ -788,6 +815,7 @@ class DeliveriesTableData extends DataClass
     required this.totalAmount,
     required this.paymentStatus,
     required this.amountPaid,
+    required this.depositApplied,
     required this.remainingBalance,
     required this.deliveryDate,
     this.deliveryTime,
@@ -805,6 +833,7 @@ class DeliveriesTableData extends DataClass
     map['total_amount'] = Variable<double>(totalAmount);
     map['payment_status'] = Variable<String>(paymentStatus);
     map['amount_paid'] = Variable<double>(amountPaid);
+    map['deposit_applied'] = Variable<double>(depositApplied);
     map['remaining_balance'] = Variable<double>(remainingBalance);
     map['delivery_date'] = Variable<DateTime>(deliveryDate);
     if (!nullToAbsent || deliveryTime != null) {
@@ -829,6 +858,7 @@ class DeliveriesTableData extends DataClass
       totalAmount: Value(totalAmount),
       paymentStatus: Value(paymentStatus),
       amountPaid: Value(amountPaid),
+      depositApplied: Value(depositApplied),
       remainingBalance: Value(remainingBalance),
       deliveryDate: Value(deliveryDate),
       deliveryTime: deliveryTime == null && nullToAbsent
@@ -857,6 +887,7 @@ class DeliveriesTableData extends DataClass
       totalAmount: serializer.fromJson<double>(json['totalAmount']),
       paymentStatus: serializer.fromJson<String>(json['paymentStatus']),
       amountPaid: serializer.fromJson<double>(json['amountPaid']),
+      depositApplied: serializer.fromJson<double>(json['depositApplied']),
       remainingBalance: serializer.fromJson<double>(json['remainingBalance']),
       deliveryDate: serializer.fromJson<DateTime>(json['deliveryDate']),
       deliveryTime: serializer.fromJson<String?>(json['deliveryTime']),
@@ -876,6 +907,7 @@ class DeliveriesTableData extends DataClass
       'totalAmount': serializer.toJson<double>(totalAmount),
       'paymentStatus': serializer.toJson<String>(paymentStatus),
       'amountPaid': serializer.toJson<double>(amountPaid),
+      'depositApplied': serializer.toJson<double>(depositApplied),
       'remainingBalance': serializer.toJson<double>(remainingBalance),
       'deliveryDate': serializer.toJson<DateTime>(deliveryDate),
       'deliveryTime': serializer.toJson<String?>(deliveryTime),
@@ -893,6 +925,7 @@ class DeliveriesTableData extends DataClass
     double? totalAmount,
     String? paymentStatus,
     double? amountPaid,
+    double? depositApplied,
     double? remainingBalance,
     DateTime? deliveryDate,
     Value<String?> deliveryTime = const Value.absent(),
@@ -907,6 +940,7 @@ class DeliveriesTableData extends DataClass
     totalAmount: totalAmount ?? this.totalAmount,
     paymentStatus: paymentStatus ?? this.paymentStatus,
     amountPaid: amountPaid ?? this.amountPaid,
+    depositApplied: depositApplied ?? this.depositApplied,
     remainingBalance: remainingBalance ?? this.remainingBalance,
     deliveryDate: deliveryDate ?? this.deliveryDate,
     deliveryTime: deliveryTime.present ? deliveryTime.value : this.deliveryTime,
@@ -935,6 +969,9 @@ class DeliveriesTableData extends DataClass
       amountPaid: data.amountPaid.present
           ? data.amountPaid.value
           : this.amountPaid,
+      depositApplied: data.depositApplied.present
+          ? data.depositApplied.value
+          : this.depositApplied,
       remainingBalance: data.remainingBalance.present
           ? data.remainingBalance.value
           : this.remainingBalance,
@@ -964,6 +1001,7 @@ class DeliveriesTableData extends DataClass
           ..write('totalAmount: $totalAmount, ')
           ..write('paymentStatus: $paymentStatus, ')
           ..write('amountPaid: $amountPaid, ')
+          ..write('depositApplied: $depositApplied, ')
           ..write('remainingBalance: $remainingBalance, ')
           ..write('deliveryDate: $deliveryDate, ')
           ..write('deliveryTime: $deliveryTime, ')
@@ -983,6 +1021,7 @@ class DeliveriesTableData extends DataClass
     totalAmount,
     paymentStatus,
     amountPaid,
+    depositApplied,
     remainingBalance,
     deliveryDate,
     deliveryTime,
@@ -1001,6 +1040,7 @@ class DeliveriesTableData extends DataClass
           other.totalAmount == this.totalAmount &&
           other.paymentStatus == this.paymentStatus &&
           other.amountPaid == this.amountPaid &&
+          other.depositApplied == this.depositApplied &&
           other.remainingBalance == this.remainingBalance &&
           other.deliveryDate == this.deliveryDate &&
           other.deliveryTime == this.deliveryTime &&
@@ -1017,6 +1057,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
   final Value<double> totalAmount;
   final Value<String> paymentStatus;
   final Value<double> amountPaid;
+  final Value<double> depositApplied;
   final Value<double> remainingBalance;
   final Value<DateTime> deliveryDate;
   final Value<String?> deliveryTime;
@@ -1032,6 +1073,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     this.totalAmount = const Value.absent(),
     this.paymentStatus = const Value.absent(),
     this.amountPaid = const Value.absent(),
+    this.depositApplied = const Value.absent(),
     this.remainingBalance = const Value.absent(),
     this.deliveryDate = const Value.absent(),
     this.deliveryTime = const Value.absent(),
@@ -1048,6 +1090,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     required double totalAmount,
     this.paymentStatus = const Value.absent(),
     this.amountPaid = const Value.absent(),
+    this.depositApplied = const Value.absent(),
     this.remainingBalance = const Value.absent(),
     this.deliveryDate = const Value.absent(),
     this.deliveryTime = const Value.absent(),
@@ -1068,6 +1111,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     Expression<double>? totalAmount,
     Expression<String>? paymentStatus,
     Expression<double>? amountPaid,
+    Expression<double>? depositApplied,
     Expression<double>? remainingBalance,
     Expression<DateTime>? deliveryDate,
     Expression<String>? deliveryTime,
@@ -1084,6 +1128,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
       if (totalAmount != null) 'total_amount': totalAmount,
       if (paymentStatus != null) 'payment_status': paymentStatus,
       if (amountPaid != null) 'amount_paid': amountPaid,
+      if (depositApplied != null) 'deposit_applied': depositApplied,
       if (remainingBalance != null) 'remaining_balance': remainingBalance,
       if (deliveryDate != null) 'delivery_date': deliveryDate,
       if (deliveryTime != null) 'delivery_time': deliveryTime,
@@ -1102,6 +1147,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     Value<double>? totalAmount,
     Value<String>? paymentStatus,
     Value<double>? amountPaid,
+    Value<double>? depositApplied,
     Value<double>? remainingBalance,
     Value<DateTime>? deliveryDate,
     Value<String?>? deliveryTime,
@@ -1118,6 +1164,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
       totalAmount: totalAmount ?? this.totalAmount,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       amountPaid: amountPaid ?? this.amountPaid,
+      depositApplied: depositApplied ?? this.depositApplied,
       remainingBalance: remainingBalance ?? this.remainingBalance,
       deliveryDate: deliveryDate ?? this.deliveryDate,
       deliveryTime: deliveryTime ?? this.deliveryTime,
@@ -1151,6 +1198,9 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
     }
     if (amountPaid.present) {
       map['amount_paid'] = Variable<double>(amountPaid.value);
+    }
+    if (depositApplied.present) {
+      map['deposit_applied'] = Variable<double>(depositApplied.value);
     }
     if (remainingBalance.present) {
       map['remaining_balance'] = Variable<double>(remainingBalance.value);
@@ -1186,6 +1236,7 @@ class DeliveriesTableCompanion extends UpdateCompanion<DeliveriesTableData> {
           ..write('totalAmount: $totalAmount, ')
           ..write('paymentStatus: $paymentStatus, ')
           ..write('amountPaid: $amountPaid, ')
+          ..write('depositApplied: $depositApplied, ')
           ..write('remainingBalance: $remainingBalance, ')
           ..write('deliveryDate: $deliveryDate, ')
           ..write('deliveryTime: $deliveryTime, ')
@@ -6237,6 +6288,482 @@ class InventoryAdjustmentsTableCompanion
   }
 }
 
+class $CustomerDepositsTableTable extends CustomerDepositsTable
+    with TableInfo<$CustomerDepositsTableTable, CustomerDepositsTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CustomerDepositsTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _customerIdMeta = const VerificationMeta(
+    'customerId',
+  );
+  @override
+  late final GeneratedColumn<String> customerId = GeneratedColumn<String>(
+    'customer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _transactionTypeMeta = const VerificationMeta(
+    'transactionType',
+  );
+  @override
+  late final GeneratedColumn<String> transactionType = GeneratedColumn<String>(
+    'transaction_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deliveryIdMeta = const VerificationMeta(
+    'deliveryId',
+  );
+  @override
+  late final GeneratedColumn<String> deliveryId = GeneratedColumn<String>(
+    'delivery_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    customerId,
+    amount,
+    transactionType,
+    createdAt,
+    notes,
+    deliveryId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'customer_deposits';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CustomerDepositsTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('customer_id')) {
+      context.handle(
+        _customerIdMeta,
+        customerId.isAcceptableOrUnknown(data['customer_id']!, _customerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_customerIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('transaction_type')) {
+      context.handle(
+        _transactionTypeMeta,
+        transactionType.isAcceptableOrUnknown(
+          data['transaction_type']!,
+          _transactionTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transactionTypeMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('delivery_id')) {
+      context.handle(
+        _deliveryIdMeta,
+        deliveryId.isAcceptableOrUnknown(data['delivery_id']!, _deliveryIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CustomerDepositsTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CustomerDepositsTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      customerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}customer_id'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      transactionType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transaction_type'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      deliveryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}delivery_id'],
+      ),
+    );
+  }
+
+  @override
+  $CustomerDepositsTableTable createAlias(String alias) {
+    return $CustomerDepositsTableTable(attachedDatabase, alias);
+  }
+}
+
+class CustomerDepositsTableData extends DataClass
+    implements Insertable<CustomerDepositsTableData> {
+  final String id;
+  final String customerId;
+  final double amount;
+  final String transactionType;
+  final DateTime createdAt;
+  final String? notes;
+  final String? deliveryId;
+  const CustomerDepositsTableData({
+    required this.id,
+    required this.customerId,
+    required this.amount,
+    required this.transactionType,
+    required this.createdAt,
+    this.notes,
+    this.deliveryId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['customer_id'] = Variable<String>(customerId);
+    map['amount'] = Variable<double>(amount);
+    map['transaction_type'] = Variable<String>(transactionType);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || deliveryId != null) {
+      map['delivery_id'] = Variable<String>(deliveryId);
+    }
+    return map;
+  }
+
+  CustomerDepositsTableCompanion toCompanion(bool nullToAbsent) {
+    return CustomerDepositsTableCompanion(
+      id: Value(id),
+      customerId: Value(customerId),
+      amount: Value(amount),
+      transactionType: Value(transactionType),
+      createdAt: Value(createdAt),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      deliveryId: deliveryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deliveryId),
+    );
+  }
+
+  factory CustomerDepositsTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CustomerDepositsTableData(
+      id: serializer.fromJson<String>(json['id']),
+      customerId: serializer.fromJson<String>(json['customerId']),
+      amount: serializer.fromJson<double>(json['amount']),
+      transactionType: serializer.fromJson<String>(json['transactionType']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      deliveryId: serializer.fromJson<String?>(json['deliveryId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'customerId': serializer.toJson<String>(customerId),
+      'amount': serializer.toJson<double>(amount),
+      'transactionType': serializer.toJson<String>(transactionType),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'notes': serializer.toJson<String?>(notes),
+      'deliveryId': serializer.toJson<String?>(deliveryId),
+    };
+  }
+
+  CustomerDepositsTableData copyWith({
+    String? id,
+    String? customerId,
+    double? amount,
+    String? transactionType,
+    DateTime? createdAt,
+    Value<String?> notes = const Value.absent(),
+    Value<String?> deliveryId = const Value.absent(),
+  }) => CustomerDepositsTableData(
+    id: id ?? this.id,
+    customerId: customerId ?? this.customerId,
+    amount: amount ?? this.amount,
+    transactionType: transactionType ?? this.transactionType,
+    createdAt: createdAt ?? this.createdAt,
+    notes: notes.present ? notes.value : this.notes,
+    deliveryId: deliveryId.present ? deliveryId.value : this.deliveryId,
+  );
+  CustomerDepositsTableData copyWithCompanion(
+    CustomerDepositsTableCompanion data,
+  ) {
+    return CustomerDepositsTableData(
+      id: data.id.present ? data.id.value : this.id,
+      customerId: data.customerId.present
+          ? data.customerId.value
+          : this.customerId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      transactionType: data.transactionType.present
+          ? data.transactionType.value
+          : this.transactionType,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      deliveryId: data.deliveryId.present
+          ? data.deliveryId.value
+          : this.deliveryId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomerDepositsTableData(')
+          ..write('id: $id, ')
+          ..write('customerId: $customerId, ')
+          ..write('amount: $amount, ')
+          ..write('transactionType: $transactionType, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('notes: $notes, ')
+          ..write('deliveryId: $deliveryId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    customerId,
+    amount,
+    transactionType,
+    createdAt,
+    notes,
+    deliveryId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CustomerDepositsTableData &&
+          other.id == this.id &&
+          other.customerId == this.customerId &&
+          other.amount == this.amount &&
+          other.transactionType == this.transactionType &&
+          other.createdAt == this.createdAt &&
+          other.notes == this.notes &&
+          other.deliveryId == this.deliveryId);
+}
+
+class CustomerDepositsTableCompanion
+    extends UpdateCompanion<CustomerDepositsTableData> {
+  final Value<String> id;
+  final Value<String> customerId;
+  final Value<double> amount;
+  final Value<String> transactionType;
+  final Value<DateTime> createdAt;
+  final Value<String?> notes;
+  final Value<String?> deliveryId;
+  final Value<int> rowid;
+  const CustomerDepositsTableCompanion({
+    this.id = const Value.absent(),
+    this.customerId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.transactionType = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.deliveryId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CustomerDepositsTableCompanion.insert({
+    required String id,
+    required String customerId,
+    required double amount,
+    required String transactionType,
+    this.createdAt = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.deliveryId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       customerId = Value(customerId),
+       amount = Value(amount),
+       transactionType = Value(transactionType);
+  static Insertable<CustomerDepositsTableData> custom({
+    Expression<String>? id,
+    Expression<String>? customerId,
+    Expression<double>? amount,
+    Expression<String>? transactionType,
+    Expression<DateTime>? createdAt,
+    Expression<String>? notes,
+    Expression<String>? deliveryId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (customerId != null) 'customer_id': customerId,
+      if (amount != null) 'amount': amount,
+      if (transactionType != null) 'transaction_type': transactionType,
+      if (createdAt != null) 'created_at': createdAt,
+      if (notes != null) 'notes': notes,
+      if (deliveryId != null) 'delivery_id': deliveryId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CustomerDepositsTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? customerId,
+    Value<double>? amount,
+    Value<String>? transactionType,
+    Value<DateTime>? createdAt,
+    Value<String?>? notes,
+    Value<String?>? deliveryId,
+    Value<int>? rowid,
+  }) {
+    return CustomerDepositsTableCompanion(
+      id: id ?? this.id,
+      customerId: customerId ?? this.customerId,
+      amount: amount ?? this.amount,
+      transactionType: transactionType ?? this.transactionType,
+      createdAt: createdAt ?? this.createdAt,
+      notes: notes ?? this.notes,
+      deliveryId: deliveryId ?? this.deliveryId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (customerId.present) {
+      map['customer_id'] = Variable<String>(customerId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (transactionType.present) {
+      map['transaction_type'] = Variable<String>(transactionType.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (deliveryId.present) {
+      map['delivery_id'] = Variable<String>(deliveryId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CustomerDepositsTableCompanion(')
+          ..write('id: $id, ')
+          ..write('customerId: $customerId, ')
+          ..write('amount: $amount, ')
+          ..write('transactionType: $transactionType, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('notes: $notes, ')
+          ..write('deliveryId: $deliveryId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6264,6 +6791,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $InventoryAuditsTableTable(this);
   late final $InventoryAdjustmentsTableTable inventoryAdjustmentsTable =
       $InventoryAdjustmentsTableTable(this);
+  late final $CustomerDepositsTableTable customerDepositsTable =
+      $CustomerDepositsTableTable(this);
   late final CustomersDao customersDao = CustomersDao(this as AppDatabase);
   late final DeliveriesDao deliveriesDao = DeliveriesDao(this as AppDatabase);
   late final BottleTransactionsDao bottleTransactionsDao =
@@ -6290,6 +6819,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final InventoryAdjustmentsDao inventoryAdjustmentsDao =
       InventoryAdjustmentsDao(this as AppDatabase);
+  late final CustomerDepositsDao customerDepositsDao = CustomerDepositsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6309,6 +6841,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     savingsGoalsTable,
     inventoryAuditsTable,
     inventoryAdjustmentsTable,
+    customerDepositsTable,
   ];
 }
 
@@ -6546,6 +7079,7 @@ typedef $$DeliveriesTableTableCreateCompanionBuilder =
       required double totalAmount,
       Value<String> paymentStatus,
       Value<double> amountPaid,
+      Value<double> depositApplied,
       Value<double> remainingBalance,
       Value<DateTime> deliveryDate,
       Value<String?> deliveryTime,
@@ -6563,6 +7097,7 @@ typedef $$DeliveriesTableTableUpdateCompanionBuilder =
       Value<double> totalAmount,
       Value<String> paymentStatus,
       Value<double> amountPaid,
+      Value<double> depositApplied,
       Value<double> remainingBalance,
       Value<DateTime> deliveryDate,
       Value<String?> deliveryTime,
@@ -6613,6 +7148,11 @@ class $$DeliveriesTableTableFilterComposer
 
   ColumnFilters<double> get amountPaid => $composableBuilder(
     column: $table.amountPaid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get depositApplied => $composableBuilder(
+    column: $table.depositApplied,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6691,6 +7231,11 @@ class $$DeliveriesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get depositApplied => $composableBuilder(
+    column: $table.depositApplied,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get remainingBalance => $composableBuilder(
     column: $table.remainingBalance,
     builder: (column) => ColumnOrderings(column),
@@ -6759,6 +7304,11 @@ class $$DeliveriesTableTableAnnotationComposer
 
   GeneratedColumn<double> get amountPaid => $composableBuilder(
     column: $table.amountPaid,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get depositApplied => $composableBuilder(
+    column: $table.depositApplied,
     builder: (column) => column,
   );
 
@@ -6835,6 +7385,7 @@ class $$DeliveriesTableTableTableManager
                 Value<double> totalAmount = const Value.absent(),
                 Value<String> paymentStatus = const Value.absent(),
                 Value<double> amountPaid = const Value.absent(),
+                Value<double> depositApplied = const Value.absent(),
                 Value<double> remainingBalance = const Value.absent(),
                 Value<DateTime> deliveryDate = const Value.absent(),
                 Value<String?> deliveryTime = const Value.absent(),
@@ -6850,6 +7401,7 @@ class $$DeliveriesTableTableTableManager
                 totalAmount: totalAmount,
                 paymentStatus: paymentStatus,
                 amountPaid: amountPaid,
+                depositApplied: depositApplied,
                 remainingBalance: remainingBalance,
                 deliveryDate: deliveryDate,
                 deliveryTime: deliveryTime,
@@ -6867,6 +7419,7 @@ class $$DeliveriesTableTableTableManager
                 required double totalAmount,
                 Value<String> paymentStatus = const Value.absent(),
                 Value<double> amountPaid = const Value.absent(),
+                Value<double> depositApplied = const Value.absent(),
                 Value<double> remainingBalance = const Value.absent(),
                 Value<DateTime> deliveryDate = const Value.absent(),
                 Value<String?> deliveryTime = const Value.absent(),
@@ -6882,6 +7435,7 @@ class $$DeliveriesTableTableTableManager
                 totalAmount: totalAmount,
                 paymentStatus: paymentStatus,
                 amountPaid: amountPaid,
+                depositApplied: depositApplied,
                 remainingBalance: remainingBalance,
                 deliveryDate: deliveryDate,
                 deliveryTime: deliveryTime,
@@ -9734,6 +10288,269 @@ typedef $$InventoryAdjustmentsTableTableProcessedTableManager =
       InventoryAdjustmentsTableData,
       PrefetchHooks Function()
     >;
+typedef $$CustomerDepositsTableTableCreateCompanionBuilder =
+    CustomerDepositsTableCompanion Function({
+      required String id,
+      required String customerId,
+      required double amount,
+      required String transactionType,
+      Value<DateTime> createdAt,
+      Value<String?> notes,
+      Value<String?> deliveryId,
+      Value<int> rowid,
+    });
+typedef $$CustomerDepositsTableTableUpdateCompanionBuilder =
+    CustomerDepositsTableCompanion Function({
+      Value<String> id,
+      Value<String> customerId,
+      Value<double> amount,
+      Value<String> transactionType,
+      Value<DateTime> createdAt,
+      Value<String?> notes,
+      Value<String?> deliveryId,
+      Value<int> rowid,
+    });
+
+class $$CustomerDepositsTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CustomerDepositsTableTable> {
+  $$CustomerDepositsTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transactionType => $composableBuilder(
+    column: $table.transactionType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deliveryId => $composableBuilder(
+    column: $table.deliveryId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CustomerDepositsTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CustomerDepositsTableTable> {
+  $$CustomerDepositsTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get transactionType => $composableBuilder(
+    column: $table.transactionType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deliveryId => $composableBuilder(
+    column: $table.deliveryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CustomerDepositsTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CustomerDepositsTableTable> {
+  $$CustomerDepositsTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get transactionType => $composableBuilder(
+    column: $table.transactionType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get deliveryId => $composableBuilder(
+    column: $table.deliveryId,
+    builder: (column) => column,
+  );
+}
+
+class $$CustomerDepositsTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CustomerDepositsTableTable,
+          CustomerDepositsTableData,
+          $$CustomerDepositsTableTableFilterComposer,
+          $$CustomerDepositsTableTableOrderingComposer,
+          $$CustomerDepositsTableTableAnnotationComposer,
+          $$CustomerDepositsTableTableCreateCompanionBuilder,
+          $$CustomerDepositsTableTableUpdateCompanionBuilder,
+          (
+            CustomerDepositsTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $CustomerDepositsTableTable,
+              CustomerDepositsTableData
+            >,
+          ),
+          CustomerDepositsTableData,
+          PrefetchHooks Function()
+        > {
+  $$CustomerDepositsTableTableTableManager(
+    _$AppDatabase db,
+    $CustomerDepositsTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CustomerDepositsTableTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CustomerDepositsTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CustomerDepositsTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> customerId = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<String> transactionType = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String?> deliveryId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomerDepositsTableCompanion(
+                id: id,
+                customerId: customerId,
+                amount: amount,
+                transactionType: transactionType,
+                createdAt: createdAt,
+                notes: notes,
+                deliveryId: deliveryId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String customerId,
+                required double amount,
+                required String transactionType,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String?> deliveryId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CustomerDepositsTableCompanion.insert(
+                id: id,
+                customerId: customerId,
+                amount: amount,
+                transactionType: transactionType,
+                createdAt: createdAt,
+                notes: notes,
+                deliveryId: deliveryId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CustomerDepositsTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CustomerDepositsTableTable,
+      CustomerDepositsTableData,
+      $$CustomerDepositsTableTableFilterComposer,
+      $$CustomerDepositsTableTableOrderingComposer,
+      $$CustomerDepositsTableTableAnnotationComposer,
+      $$CustomerDepositsTableTableCreateCompanionBuilder,
+      $$CustomerDepositsTableTableUpdateCompanionBuilder,
+      (
+        CustomerDepositsTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $CustomerDepositsTableTable,
+          CustomerDepositsTableData
+        >,
+      ),
+      CustomerDepositsTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9775,4 +10592,6 @@ class $AppDatabaseManager {
         _db,
         _db.inventoryAdjustmentsTable,
       );
+  $$CustomerDepositsTableTableTableManager get customerDepositsTable =>
+      $$CustomerDepositsTableTableTableManager(_db, _db.customerDepositsTable);
 }

@@ -156,6 +156,31 @@ class ReportsScreen extends ConsumerWidget {
                 '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
               ),
               pw.SizedBox(height: 10),
+              pw.Text(
+                'Customer Deposits',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              _pdfRow(
+                'Total Deposits Held',
+                CurrencyFormatter.format(report.totalDepositsHeld),
+              ),
+              _pdfRow(
+                'Active Customers With Deposits',
+                '${report.activeCustomersWithDeposits}',
+              ),
+              _pdfRow(
+                'Total Deposits Added',
+                CurrencyFormatter.format(report.totalDepositsAdded),
+              ),
+              _pdfRow(
+                'Total Deposits Used',
+                CurrencyFormatter.format(report.totalDepositsUsed),
+              ),
+              _pdfRow(
+                'Current Deposit Liability',
+                CurrencyFormatter.format(report.currentDepositLiability),
+              ),
+              pw.SizedBox(height: 10),
               _pdfRow('Total Deliveries', '${report.totalDeliveries}'),
               _pdfRow('Bottles Delivered', '${report.totalBottlesDelivered}'),
               _pdfRow('Payments Received',
@@ -331,6 +356,27 @@ class ReportsScreen extends ConsumerWidget {
       sheet.appendRow([
         xl.TextCellValue('Adjustment Quantity'),
         xl.IntCellValue(report.totalAdjustmentQuantity),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Customer Deposits')]);
+      sheet.appendRow([
+        xl.TextCellValue('Total Deposits Held'),
+        xl.DoubleCellValue(report.totalDepositsHeld),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Active Customers With Deposits'),
+        xl.IntCellValue(report.activeCustomersWithDeposits),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Total Deposits Added'),
+        xl.DoubleCellValue(report.totalDepositsAdded),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Total Deposits Used'),
+        xl.DoubleCellValue(report.totalDepositsUsed),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Current Deposit Liability'),
+        xl.DoubleCellValue(report.currentDepositLiability),
       ]);
       sheet.appendRow([
         xl.TextCellValue('Total Deliveries'),
@@ -657,6 +703,34 @@ class _ReportContent extends ConsumerWidget {
           label: 'Adjustment Quantity',
           value:
               '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
+        ),
+        const SizedBox(height: 16),
+
+        _SectionHeader(
+          title: 'Customer Deposits',
+          icon: Icons.savings_outlined,
+          color: AppColors.primary,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Total Deposits Held',
+          value: CurrencyFormatter.format(report.totalDepositsHeld),
+        ),
+        _MetricRow(
+          label: 'Active Customers With Deposits',
+          value: '${report.activeCustomersWithDeposits}',
+        ),
+        _MetricRow(
+          label: 'Total Deposits Added',
+          value: CurrencyFormatter.format(report.totalDepositsAdded),
+        ),
+        _MetricRow(
+          label: 'Total Deposits Used',
+          value: CurrencyFormatter.format(report.totalDepositsUsed),
+        ),
+        _MetricRow(
+          label: 'Current Deposit Liability',
+          value: CurrencyFormatter.format(report.currentDepositLiability),
         ),
         const SizedBox(height: 32),
 

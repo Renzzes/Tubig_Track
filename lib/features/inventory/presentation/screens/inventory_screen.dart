@@ -121,6 +121,16 @@ class InventoryScreen extends ConsumerWidget {
         title: const Text('Inventory'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: () {
+              refreshInventoryProviders(ref);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Inventory refreshed')),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => _showSetInventoryDialog(context, ref),
             tooltip: 'Set Initial Inventory',

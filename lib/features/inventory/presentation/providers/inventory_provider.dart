@@ -8,6 +8,7 @@ import '../../domain/entities/inventory_audit_summary.dart';
 import '../../domain/entities/inventory_summary.dart';
 import '../../domain/repositories/inventory_repository.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
+import '../../../savings/presentation/providers/savings_goals_provider.dart';
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   final db = ref.watch(databaseProvider);
@@ -41,3 +42,13 @@ final inventoryAuditSummaryProvider = FutureProvider<InventoryAuditSummary>((ref
   ref.watch(inventoryAdjustmentsStreamProvider);
   return ref.read(inventoryRepositoryProvider).getAuditSummary();
 });
+
+void refreshInventoryProviders(WidgetRef ref) {
+  ref.invalidate(bottleTransactionsStreamProvider);
+  ref.invalidate(inventorySummaryProvider);
+  ref.invalidate(inventoryAuditsStreamProvider);
+  ref.invalidate(inventoryAdjustmentsStreamProvider);
+  ref.invalidate(inventoryAuditSummaryProvider);
+  ref.invalidate(supplyPurchasesStreamProvider);
+  ref.invalidate(lowStockItemsProvider);
+}

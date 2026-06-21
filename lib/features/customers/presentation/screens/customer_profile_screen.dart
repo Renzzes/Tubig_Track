@@ -12,6 +12,8 @@ import '../../../deliveries/presentation/providers/deliveries_provider.dart';
 import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
+import '../../../deposits/domain/entities/customer_deposit.dart';
+import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../providers/customers_provider.dart';
 import '../widgets/customer_stats_row.dart';
 
@@ -29,6 +31,8 @@ class CustomerProfileScreen extends ConsumerWidget {
         ref.watch(customerDeliveriesStreamProvider(customerId));
     final paymentsAsync =
         ref.watch(customerPaymentsStreamProvider(customerId));
+    final depositsAsync =
+        ref.watch(customerDepositsStreamProvider(customerId));
     final allTransactionsAsync = ref.watch(bottleTransactionsStreamProvider);
 
     return Scaffold(
@@ -164,6 +168,49 @@ class CustomerProfileScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         CustomerStatsRow(stats: stats),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.savings_outlined,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Deposit Balance (Pundo)',
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                    Text(
+                                      CurrencyFormatter.format(
+                                        stats.depositBalance,
+                                      ),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         const Divider(),
                         const SizedBox(height: 12),
@@ -487,6 +534,61 @@ class CustomerProfileScreen extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                             ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+                loading: () => const LoadingOverlay(),
+                error: (e, _) => Text('Error: $e'),
+              ),
+              const SizedBox(height: 24),
+
+              // ── DEPOSIT HISTORY ───────────────────────────────────────────
+              _SectionHeader(
+                title: 'Deposit History',
+                count: depositsAsync.whenOrNull(data: (d) => d.length),
+                onViewAll: () => context.push(
+                  '/customers/$customerId/history/deposits',
+                ),
+              ),
+              const SizedBox(height: 8),
+              depositsAsync.when(
+                data: (deposits) {
+                  if (deposits.isEmpty) {
+                    return const EmptyStateWidget(
+                      message: 'No deposit transactions yet',
+                      icon: Icons.savings_outlined,
+                    );
+                  }
+                  final preview = deposits.take(5).toList();
+                  return Column(
+                    children: preview.map((d) {
+                      final color =
+                          d.transactionType == DepositTransactionType.depositUsed
+                              ? AppColors.warning
+                              : AppColors.success;
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: color.withValues(alpha: 0.12),
+                            child: Icon(Icons.savings_outlined, color: color),
+                          ),
+                          title: Text(
+                            CustomerDeposit.typeLabel(d.transactionType),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            DateFormatter.formatDateTime(d.createdAt),
+                          ),
+                          trailing: Text(
+                            CurrencyFormatter.format(d.amount),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: color,
+                            ),
                           ),
                         ),
                       );

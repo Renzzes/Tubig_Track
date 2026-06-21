@@ -35,6 +35,14 @@ class TransactionActivityHandler {
       case RecentTransactionType.bottleAdjustment:
       case RecentTransactionType.bottleAudit:
         context.push('/inventory');
+      case RecentTransactionType.depositAdded:
+      case RecentTransactionType.depositUsed:
+      case RecentTransactionType.depositAdjustment:
+        if (tx.deliveryId != null) {
+          context.push('/deliveries/${tx.deliveryId}/edit');
+        } else if (tx.customerId != null) {
+          context.push('/customers/${tx.customerId}/history/deposits');
+        }
     }
   }
 
