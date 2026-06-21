@@ -18,6 +18,22 @@ Future<void> migrateInventoryStateV11(AppDatabase db) async {
   );
   if (filledExists != null && emptyExists != null) return;
 
+  if (!await hasOperationalInventoryHistory(db)) {
+    if (filledExists == null) {
+      await db.settingsDao.setValue(
+        AppConstants.settingFilledBottlesAvailable,
+        '0',
+      );
+    }
+    if (emptyExists == null) {
+      await db.settingsDao.setValue(
+        AppConstants.settingEmptyBottlesReadyForRefill,
+        '0',
+      );
+    }
+    return;
+  }
+
   final initialStr = await db.settingsDao.getValue(
     AppConstants.settingTotalBottleInventory,
   );
@@ -138,6 +154,39 @@ Future<InventoryTotals> _loadTotals(
 
 Future<void> syncGlobalCustomerBottleSettings(AppDatabase db) =>
     _syncGlobalCustomerBottleSettings(db);
+
+/// True when bottle/delivery/supplier history exists (used to avoid rebuilding
+/// counters from defaults on an empty database).
+Future<bool> hasOperationalInventoryHistory(AppDatabase db) async {
+  if ((await db.bottleTransactionsDao.getAll()).isNotEmpty) return true;
+  if ((await db.deliveriesDao.getAll()).isNotEmpty) return true;
+  final purchases = await db.supplyPurchasesDao.getAll();
+  return purchases.any((p) => p.itemType == 'Bottles' && p.quantity > 0);
+}
+
+/// Zeros persisted bottle stock counters after a full factory reset.
+Future<void> resetInventoryStateSettings(AppDatabase db) async {
+  await db.settingsDao.setValue(
+    AppConstants.settingFilledBottlesAvailable,
+    '0',
+  );
+  await db.settingsDao.setValue(
+    AppConstants.settingEmptyBottlesReadyForRefill,
+    '0',
+  );
+  await db.settingsDao.setValue(
+    AppConstants.settingInitialCustomerBottleBalance,
+    '0',
+  );
+  await db.settingsDao.setValue(
+    AppConstants.settingCustomerBottleAdjustments,
+    '0',
+  );
+  await db.settingsDao.setValue(
+    AppConstants.settingTotalBottleInventory,
+    '0',
+  );
+}
 
 /// v1.4.5 migration: converts delivery-linked `_collect` ret transactions
 /// (introduced in v1.4.4 as part of a combined collection+delivery workflow)

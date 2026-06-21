@@ -266,7 +266,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Deletes all operational business data inside a transaction.
-  /// Preserves the settings table (business configuration).
+  /// Resets persisted bottle stock counters; preserves non-inventory settings.
   Future<void> factoryReset() async {
     await transaction(() async {
       await delete(customersTable).go();
@@ -283,7 +283,10 @@ class AppDatabase extends _$AppDatabase {
       await delete(inventoryAuditsTable).go();
       await delete(inventoryAdjustmentsTable).go();
       await delete(customerDepositsTable).go();
+      await delete(customerBottleReconciliationsTable).go();
+      await delete(copilotMessagesTable).go();
       await _seedInventoryStock();
+      await resetInventoryStateSettings(this);
     });
   }
 
