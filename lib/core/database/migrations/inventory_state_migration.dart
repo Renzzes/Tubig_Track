@@ -242,3 +242,10 @@ Future<void> migrateV13RemoveInProgressBorrows(AppDatabase db) async {
     }
   }
 }
+
+/// v1.4.7: Inventory purchase transactions are ownership-only events.
+/// Savings, profit, and expense totals are recalculated on read without
+/// treating bottle purchases as monetary deductions. No user data is deleted.
+Future<void> migrateV16SeparateInventoryFinancial(AppDatabase db) async {
+  await db.settingsDao.setValue('financial_calculation_version', '2');
+}

@@ -55,6 +55,13 @@ class ReportSummary {
   final int damagedBottles;
   final int missingBottles;
   final int donatedBottles;
+
+  /// Inventory ownership changes within the report period (counts, not pesos).
+  final int periodPurchasedNewBottles;
+  final int periodDonatedBottles;
+  final int periodDamagedBottles;
+  final int periodMissingBottles;
+
   final int totalAudits;
   final DateTime? lastAuditDate;
   final int auditMissingBottles;
@@ -98,6 +105,10 @@ class ReportSummary {
     required this.damagedBottles,
     required this.missingBottles,
     required this.donatedBottles,
+    required this.periodPurchasedNewBottles,
+    required this.periodDonatedBottles,
+    required this.periodDamagedBottles,
+    required this.periodMissingBottles,
     required this.totalAudits,
     required this.lastAuditDate,
     required this.auditMissingBottles,

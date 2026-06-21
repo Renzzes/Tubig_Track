@@ -47,6 +47,29 @@ class RecentTransaction {
     this.expenseCategory,
   });
 
+  /// Inventory-only events that change bottle ownership, not cash balances.
+  bool get isInventoryEvent {
+    switch (type) {
+      case RecentTransactionType.bottlePurchase:
+      case RecentTransactionType.bottleDamaged:
+      case RecentTransactionType.bottleMissing:
+      case RecentTransactionType.bottleDonation:
+      case RecentTransactionType.bottleAdjustment:
+      case RecentTransactionType.bottleAudit:
+      case RecentTransactionType.bottleBorrow:
+      case RecentTransactionType.bottleReturn:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  String get quantityLabel {
+    final qty = amount.toInt();
+    final prefix = isCredit ? '+' : '-';
+    return '$prefix$qty bottles';
+  }
+
   String get typeLabel {
     switch (type) {
       case RecentTransactionType.delivery:
@@ -60,7 +83,7 @@ class RecentTransaction {
       case RecentTransactionType.bottleReturn:
         return 'Bottle Return';
       case RecentTransactionType.bottlePurchase:
-        return 'Inventory Purchase';
+        return 'Purchase New Bottles';
       case RecentTransactionType.bottleDamaged:
         return 'Damaged Bottles';
       case RecentTransactionType.bottleMissing:

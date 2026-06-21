@@ -152,8 +152,6 @@ class CopilotQueryService implements BusinessQueryHandler {
     final deliveries = await db.deliveriesDao.getByDateRange(start, end);
     final expenses = await db.expensesDao.getByDateRange(start, end);
     final dispenser = await db.dispenserSalesDao.getByDateRange(start, end);
-    final linkedIds = await db.supplyPurchasesDao.getLinkedBottleTransactionIds();
-    final bottleTxs = await db.bottleTransactionsDao.getByDateRange(start, end);
 
     var profit = 0.0;
     for (final d in deliveries) {
@@ -162,11 +160,6 @@ class CopilotQueryService implements BusinessQueryHandler {
     }
     profit += dispenser.fold(0.0, (s, d) => s + d.amount);
     profit -= expenses.fold(0.0, (s, e) => s + e.amount);
-    for (final t in bottleTxs) {
-      if (t.transactionType == 'purchase' && !linkedIds.contains(t.id)) {
-        profit -= t.quantity * costPerBottle;
-      }
-    }
     return profit;
   }
 
@@ -181,7 +174,6 @@ class CopilotQueryService implements BusinessQueryHandler {
 
     final deliveries = await db.deliveriesDao.getAll();
     final expenses = await db.expensesDao.getAll();
-    final bottleTxs = await db.bottleTransactionsDao.getAll();
     final dispenserSales = await db.dispenserSalesDao.getAll();
     final manualAdditions = await db.savingsDao.getTotalContributions();
 
@@ -197,15 +189,7 @@ class CopilotQueryService implements BusinessQueryHandler {
       totalExpenses += e.amount;
     }
 
-    final linkedIds = await db.supplyPurchasesDao.getLinkedBottleTransactionIds();
-    var bottlePurchases = 0.0;
-    for (final t in bottleTxs) {
-      if (t.transactionType == 'purchase' && !linkedIds.contains(t.id)) {
-        bottlePurchases += t.quantity * costPerBottle;
-      }
-    }
-
-    final current = deliveryProfit + dispenserProfit - totalExpenses - bottlePurchases + manualAdditions;
+    final current = deliveryProfit + dispenserProfit - totalExpenses + manualAdditions;
     return 'Your current savings is ${_fmt(current)}.';
   }
 

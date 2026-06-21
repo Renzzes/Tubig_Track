@@ -87,7 +87,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration {
@@ -171,6 +171,9 @@ class AppDatabase extends _$AppDatabase {
             customersTable,
             customersTable.pendingPhysicalBottleCount,
           );
+        }
+        if (from < 16) {
+          await migrateV16SeparateInventoryFinancial(this);
         }
       },
     );

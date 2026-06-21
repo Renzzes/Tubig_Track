@@ -203,7 +203,7 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
   String _typeTitle(RecentTransactionType type) {
     switch (type) {
       case RecentTransactionType.bottlePurchase:
-        return 'Inventory Purchase';
+        return 'Purchase New Bottles';
       case RecentTransactionType.bottleDamaged:
         return 'Damaged Bottles';
       case RecentTransactionType.bottleMissing:

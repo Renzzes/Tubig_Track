@@ -120,6 +120,30 @@ class ReportsRepositoryImpl implements ReportsRepository {
 
     final inventory = await InventoryRepositoryImpl(_db).getSummary();
     final auditSummary = await InventoryRepositoryImpl(_db).getAuditSummary();
+    final linkedBottleIds =
+        await _db.supplyPurchasesDao.getLinkedBottleTransactionIds();
+    final bottleTxsInPeriod =
+        await _db.bottleTransactionsDao.getByDateRange(start, end);
+
+    var periodPurchasedNewBottles = 0;
+    var periodDonatedBottles = 0;
+    var periodDamagedBottles = 0;
+    var periodMissingBottles = 0;
+    for (final t in bottleTxsInPeriod) {
+      switch (t.transactionType) {
+        case 'purchase':
+        case 'added':
+          if (linkedBottleIds.contains(t.id)) break;
+          periodPurchasedNewBottles += t.quantity;
+        case 'donation':
+          periodDonatedBottles += t.quantity;
+        case 'damaged':
+          periodDamagedBottles += t.quantity;
+        case 'missing':
+          periodMissingBottles += t.quantity;
+      }
+    }
+
     final depositHeld = await _db.customerDepositsDao.getTotalDepositsHeld();
     final depositCustomers =
         await _db.customerDepositsDao.getCustomersWithDepositsCount();
@@ -157,6 +181,10 @@ class ReportsRepositoryImpl implements ReportsRepository {
       damagedBottles: inventory.damagedBottles,
       missingBottles: inventory.missingBottles,
       donatedBottles: inventory.donatedBottles,
+      periodPurchasedNewBottles: periodPurchasedNewBottles,
+      periodDonatedBottles: periodDonatedBottles,
+      periodDamagedBottles: periodDamagedBottles,
+      periodMissingBottles: periodMissingBottles,
       totalAudits: auditSummary.totalAudits,
       lastAuditDate: auditSummary.lastAuditDate,
       auditMissingBottles: auditSummary.missingBottlesFound,

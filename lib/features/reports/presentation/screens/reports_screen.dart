@@ -135,7 +135,28 @@ class ReportsScreen extends ConsumerWidget {
               pw.SizedBox(height: 10),
               pw.Divider(),
               _pdfRow('Net Profit', CurrencyFormatter.format(report.netProfit), bold: true),
-              pw.SizedBox(height: 20),
+              pw.SizedBox(height: 10),
+              pw.Text(
+                'Inventory Ownership Changes',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
+              _pdfRow(
+                'Purchased New Bottles',
+                '+${report.periodPurchasedNewBottles}',
+              ),
+              _pdfRow(
+                'Donated Bottles',
+                '-${report.periodDonatedBottles}',
+              ),
+              _pdfRow(
+                'Damaged Bottles',
+                '-${report.periodDamagedBottles}',
+              ),
+              _pdfRow(
+                'Missing Bottles',
+                '-${report.periodMissingBottles}',
+              ),
+              pw.SizedBox(height: 10),
               pw.Text('Inventory', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               _pdfRow('Total Bottles Owned', '${report.totalBottlesOwned}'),
               _pdfRow('Filled Bottles Available', '${report.availableBottles}'),
@@ -311,6 +332,23 @@ class ReportsScreen extends ConsumerWidget {
       sheet.appendRow([
         xl.TextCellValue('Net Profit'),
         xl.DoubleCellValue(report.netProfit),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Inventory Ownership Changes')]);
+      sheet.appendRow([
+        xl.TextCellValue('Purchased New Bottles'),
+        xl.TextCellValue('+${report.periodPurchasedNewBottles}'),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Donated Bottles'),
+        xl.TextCellValue('-${report.periodDonatedBottles}'),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Damaged Bottles'),
+        xl.TextCellValue('-${report.periodDamagedBottles}'),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Missing Bottles'),
+        xl.TextCellValue('-${report.periodMissingBottles}'),
       ]);
       sheet.appendRow([xl.TextCellValue('Inventory')]);
       sheet.appendRow([
@@ -651,6 +689,30 @@ class _ReportContent extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+
+        _SectionHeader(
+          title: 'Inventory Ownership Changes',
+          icon: Icons.add_circle_outline,
+          color: AppColors.primary,
+        ),
+        const SizedBox(height: 8),
+        _MetricRow(
+          label: 'Purchased New Bottles',
+          value: '+${report.periodPurchasedNewBottles}',
+        ),
+        _MetricRow(
+          label: 'Donated Bottles',
+          value: '-${report.periodDonatedBottles}',
+        ),
+        _MetricRow(
+          label: 'Damaged Bottles',
+          value: '-${report.periodDamagedBottles}',
+        ),
+        _MetricRow(
+          label: 'Missing Bottles',
+          value: '-${report.periodMissingBottles}',
         ),
         const SizedBox(height: 16),
 

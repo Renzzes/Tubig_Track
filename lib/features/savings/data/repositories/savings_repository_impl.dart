@@ -29,7 +29,6 @@ class SavingsRepositoryImpl implements SavingsRepository {
     final costPerBottle = await getCostPerBottle();
     final deliveries = await _db.deliveriesDao.getAll();
     final expenses = await _db.expensesDao.getAll();
-    final bottleTxs = await _db.bottleTransactionsDao.getAll();
     final dispenserSales = await _db.dispenserSalesDao.getAll();
     final manualAdditions = await _db.savingsDao.getTotalContributions();
 
@@ -54,20 +53,9 @@ class SavingsRepositoryImpl implements SavingsRepository {
       }
     }
 
-    var bottlePurchases = 0.0;
-    final linkedBottleIds =
-        await _db.supplyPurchasesDao.getLinkedBottleTransactionIds();
-    for (final t in bottleTxs) {
-      if (t.transactionType == 'purchase') {
-        if (linkedBottleIds.contains(t.id)) continue;
-        bottlePurchases += t.quantity * costPerBottle;
-      }
-    }
-
     final currentSavings = deliveryProfit +
         dispenserProfit -
-        totalExpenses -
-        bottlePurchases +
+        totalExpenses +
         manualAdditions;
 
     return SavingsSummary(
@@ -76,7 +64,6 @@ class SavingsRepositoryImpl implements SavingsRepository {
       dispenserProfit: dispenserProfit,
       totalExpenses: totalExpenses,
       maintenanceCosts: maintenanceCosts,
-      bottlePurchases: bottlePurchases,
       otherOperationalCosts: otherOperational,
       manualAdditions: manualAdditions,
     );
@@ -125,22 +112,6 @@ class SavingsRepositoryImpl implements SavingsRepository {
           date: e.date,
           amount: e.amount,
           notes: e.notes ?? e.category,
-        ),
-      );
-    }
-
-    final linkedBottleIds =
-        await _db.supplyPurchasesDao.getLinkedBottleTransactionIds();
-    for (final t in await _db.bottleTransactionsDao.getAll()) {
-      if (t.transactionType != 'purchase') continue;
-      if (linkedBottleIds.contains(t.id)) continue;
-      entries.add(
-        SavingsLedgerEntry(
-          id: 'bottle_${t.id}',
-          type: SavingsLedgerType.bottlePurchase,
-          date: t.date,
-          amount: t.quantity * costPerBottle,
-          notes: t.notes ?? '${t.quantity} bottles purchased',
         ),
       );
     }

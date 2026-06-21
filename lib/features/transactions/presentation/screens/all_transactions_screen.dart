@@ -41,7 +41,7 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
       case RecentTransactionType.bottleReturn:
         return 'Bottle Return';
       case RecentTransactionType.bottlePurchase:
-        return 'Inventory Purchase';
+        return 'Purchase New Bottles';
       case RecentTransactionType.bottleDamaged:
         return 'Damaged Bottles';
       case RecentTransactionType.bottleMissing:

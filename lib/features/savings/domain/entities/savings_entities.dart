@@ -3,7 +3,6 @@ enum SavingsLedgerType {
   dispenserProfit,
   expenseDeduction,
   maintenanceDeduction,
-  bottlePurchase,
   manualAddition,
   otherOperational,
 }
@@ -19,8 +18,6 @@ extension SavingsLedgerTypeX on SavingsLedgerType {
         return 'Expense Deduction';
       case SavingsLedgerType.maintenanceDeduction:
         return 'Maintenance Cost';
-      case SavingsLedgerType.bottlePurchase:
-        return 'Bottle Purchase';
       case SavingsLedgerType.manualAddition:
         return 'Manual Savings Addition';
       case SavingsLedgerType.otherOperational:
@@ -56,7 +53,6 @@ class SavingsSummary {
   final double dispenserProfit;
   final double totalExpenses;
   final double maintenanceCosts;
-  final double bottlePurchases;
   final double otherOperationalCosts;
   final double manualAdditions;
 
@@ -66,7 +62,6 @@ class SavingsSummary {
     required this.dispenserProfit,
     required this.totalExpenses,
     required this.maintenanceCosts,
-    required this.bottlePurchases,
     required this.otherOperationalCosts,
     required this.manualAdditions,
   });

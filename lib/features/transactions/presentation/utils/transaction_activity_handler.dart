@@ -70,6 +70,9 @@ class TransactionDetailBody extends StatelessWidget {
     final amountPrefix = transaction.isCredit ? '+' : '-';
     final amountColor =
         transaction.isCredit ? Colors.green[700] : Colors.red[700];
+    final amountText = transaction.isInventoryEvent
+        ? transaction.quantityLabel
+        : '$amountPrefix${CurrencyFormatter.format(transaction.amount)}';
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -77,8 +80,8 @@ class TransactionDetailBody extends StatelessWidget {
         _DetailRow('Type', transaction.typeLabel),
         _DetailRow('Date', DateFormatter.formatDateTime(transaction.date)),
         _DetailRow(
-          'Amount',
-          '$amountPrefix${CurrencyFormatter.format(transaction.amount)}',
+          transaction.isInventoryEvent ? 'Quantity' : 'Amount',
+          amountText,
           valueColor: amountColor,
         ),
         if (transaction.customerName != null)

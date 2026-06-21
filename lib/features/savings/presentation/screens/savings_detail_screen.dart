@@ -175,11 +175,6 @@ class SavingsDetailScreen extends ConsumerWidget {
                 isCredit: false,
                 indent: true,
               ),
-              _BreakdownTile(
-                label: 'Bottle Purchases',
-                value: summary.bottlePurchases,
-                isCredit: false,
-              ),
             ],
           ),
         ),
