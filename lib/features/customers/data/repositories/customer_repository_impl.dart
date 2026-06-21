@@ -92,10 +92,15 @@ class CustomerRepositoryImpl implements CustomerRepository {
       'damaged',
       customerId,
     );
+    final adjustments = await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'customer_adjustment',
+      customerId,
+    );
 
     final bottlesHeld = InventoryCalculator.customerBottlesHeld(
       delivered: borrowed,
       collected: returned,
+      manualAdjustments: adjustments,
     );
 
     final unpaidDeliveries =

@@ -174,47 +174,6 @@ class CustomerProfileScreen extends ConsumerWidget {
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.warning.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.inventory_2_outlined,
-                                color: AppColors.warning,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Current Bottles Held',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                    Text(
-                                      '${stats.bottlesHeld} Bottles',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.warning,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
@@ -262,22 +221,38 @@ class CustomerProfileScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         _AnalyticsRow(
-                          label: 'Lifetime Revenue',
-                          value: CurrencyFormatter.format(stats.lifetimeRevenue),
+                          label: 'Current Bottles Held',
+                          value: '${stats.bottlesHeld} Bottles',
                         ),
                         _AnalyticsRow(
-                          label: 'Bottles Delivered',
-                          value: '${stats.lifetimeBottlesDelivered}',
+                          label: 'Total Delivered',
+                          value: '${stats.borrowedBottles}',
                         ),
                         _AnalyticsRow(
-                          label: 'Total Deliveries',
-                          value: '${stats.totalDeliveries}',
+                          label: 'Total Collected',
+                          value: '${stats.returnedBottles}',
                         ),
                         _AnalyticsRow(
-                          label: 'Last Delivery',
+                          label: 'Outstanding Bottles',
+                          value: '${stats.bottlesHeld}',
+                        ),
+                        _AnalyticsRow(
+                          label: 'Deposit Balance',
+                          value: CurrencyFormatter.format(stats.depositBalance),
+                        ),
+                        _AnalyticsRow(
+                          label: 'Outstanding Balance',
+                          value: CurrencyFormatter.format(stats.unpaidBalance),
+                        ),
+                        _AnalyticsRow(
+                          label: 'Last Delivery Date',
                           value: stats.lastDeliveryDate != null
                               ? DateFormatter.format(stats.lastDeliveryDate!)
                               : 'None',
+                        ),
+                        _AnalyticsRow(
+                          label: 'Lifetime Revenue',
+                          value: CurrencyFormatter.format(stats.lifetimeRevenue),
                         ),
                       ],
                     ),
@@ -298,7 +273,154 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // Action buttons — stack on very narrow screens
+              // Bottle Management — primary bottle tracking hub
+              statsAsync.when(
+                data: (stats) => Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bottle Management',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.inventory_2_outlined,
+                                color: AppColors.warning,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Current Bottles Held',
+                                      style:
+                                          Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                    Text(
+                                      '${stats.bottlesHeld} Bottles',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.warning,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.push(
+                              '/customers/$customerId/collect-bottles',
+                            ),
+                            icon: const Icon(Icons.arrow_downward),
+                            label: const Text('Collect Bottles'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 48),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _AnalyticsRow(
+                          label: 'Outstanding Bottles',
+                          value: '${stats.bottlesHeld}',
+                        ),
+                        _AnalyticsRow(
+                          label: 'Total Bottles Delivered',
+                          value: '${stats.borrowedBottles}',
+                        ),
+                        _AnalyticsRow(
+                          label: 'Total Bottles Collected',
+                          value: '${stats.returnedBottles}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                loading: () => const SizedBox(),
+                error: (_, __) => const SizedBox(),
+              ),
+              const SizedBox(height: 16),
+
+              // Bottle Ledger — full movement history
+              _SectionHeader(
+                title: 'Bottle Ledger',
+                count: customerTransactions.isNotEmpty
+                    ? buildCustomerBottleLedger(customerTransactions).length
+                    : null,
+                onViewAll: () => context.push(
+                  '/customers/$customerId/history/bottles',
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (customerTransactions.isEmpty)
+                const EmptyStateWidget(
+                  message: 'No bottle movements yet',
+                  icon: Icons.inventory_2_outlined,
+                )
+              else
+                Column(
+                  children: buildCustomerBottleLedger(customerTransactions)
+                      .take(5)
+                      .map((entry) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              DateFormatter.format(entry.transaction.date),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              ledgerHeadline(entry),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Balance: ${entry.balanceAfter}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 16),
+
+              // Action buttons — delivery and payment
               LayoutBuilder(
                 builder: (context, constraints) {
                   if (constraints.maxWidth < 360) {
@@ -314,20 +436,6 @@ class CustomerProfileScreen extends ConsumerWidget {
                             icon: const Icon(Icons.add_shopping_cart),
                             label: const Text('New Delivery'),
                             style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => context.push(
-                              '/customers/$customerId/collect-bottles',
-                            ),
-                            icon: const Icon(Icons.inventory_2_outlined),
-                            label: const Text('Collect Bottles'),
-                            style: OutlinedButton.styleFrom(
                               minimumSize: const Size(double.infinity, 48),
                             ),
                           ),
@@ -368,30 +476,16 @@ class CustomerProfileScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: () => context.push(
-                                '/customers/$customerId/collect-bottles',
-                              ),
-                              icon: const Icon(Icons.inventory_2_outlined),
-                              label: const Text('Collect Bottles'),
+                              onPressed: () =>
+                                  context.push('/customers/$customerId/payment'),
+                              icon: const Icon(Icons.payments_outlined),
+                              label: const Text('Receive Payment'),
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size(0, 48),
                               ),
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              context.push('/customers/$customerId/payment'),
-                          icon: const Icon(Icons.payments_outlined),
-                          label: const Text('Receive Payment'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 48),
-                          ),
-                        ),
                       ),
                     ],
                   );
@@ -672,63 +766,6 @@ class CustomerProfileScreen extends ConsumerWidget {
                 loading: () => const LoadingOverlay(),
                 error: (e, _) => Text('Error: $e'),
               ),
-              const SizedBox(height: 24),
-
-              // ── BOTTLE HISTORY ───────────────────────────────────────────
-              _SectionHeader(
-                title: 'Bottle History',
-                count: customerTransactions.isNotEmpty
-                    ? buildCustomerBottleLedger(customerTransactions).length
-                    : null,
-                onViewAll: () => context.push(
-                  '/customers/$customerId/history/bottles',
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (customerTransactions.isEmpty)
-                const EmptyStateWidget(
-                  message: 'No bottle movements yet',
-                  icon: Icons.inventory_2_outlined,
-                )
-              else
-                Column(
-                  children: buildCustomerBottleLedger(customerTransactions)
-                      .take(5)
-                      .map((entry) {
-                    final color = entry.isIncrease
-                        ? AppColors.warning
-                        : AppColors.success;
-                    final icon = entry.isIncrease
-                        ? Icons.local_shipping_outlined
-                        : Icons.arrow_downward;
-                    final sign = entry.isIncrease ? '+' : '';
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: color.withValues(alpha: 0.12),
-                          child: Icon(icon, color: color, size: 18),
-                        ),
-                        title: Text(
-                          entry.actionLabel,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          '${DateFormatter.format(entry.transaction.date)} • Balance: ${entry.balanceAfter}',
-                        ),
-                        trailing: Text(
-                          '$sign${entry.transaction.quantity.abs()}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: color,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
               const SizedBox(height: 32),
             ],
           ),

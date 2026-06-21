@@ -5,119 +5,70 @@ import 'package:tubig_track/features/inventory/domain/entities/bottle_transactio
 
 void main() {
   group('InventoryCalculator', () {
-    test('spec scenario: owned stays 157 through deliver/collect cycles', () {
-      const owned = 157;
-
-      // Week 1: deliver 10
-      var totals = const InventoryTotals(
-        initialInventory: owned,
-        purchasedBottles: 0,
-        donatedBottles: 0,
-        borrowedBottles: 10,
-        returnedBottles: 0,
-        damagedBottles: 0,
-        missingBottles: 0,
-      );
-      expect(InventoryCalculator.totalBottlesOwned(totals), 157);
-      expect(InventoryCalculator.bottlesWithCustomers(totals), 10);
-      expect(InventoryCalculator.availableStock(totals), 147);
-
-      // Week 2: collect 5
-      totals = InventoryTotals(
-        initialInventory: owned,
-        purchasedBottles: 0,
-        donatedBottles: 0,
-        borrowedBottles: 10,
-        returnedBottles: 5,
-        damagedBottles: 0,
-        missingBottles: 0,
-      );
-      expect(InventoryCalculator.totalBottlesOwned(totals), 157);
-      expect(InventoryCalculator.bottlesWithCustomers(totals), 5);
-      expect(InventoryCalculator.availableStock(totals), 152);
-
-      // Week 3: deliver 7 more (17 delivered, 5 collected)
-      totals = InventoryTotals(
-        initialInventory: owned,
-        purchasedBottles: 0,
-        donatedBottles: 0,
-        borrowedBottles: 17,
-        returnedBottles: 5,
-        damagedBottles: 0,
-        missingBottles: 0,
-      );
-      expect(InventoryCalculator.totalBottlesOwned(totals), 157);
-      expect(InventoryCalculator.bottlesWithCustomers(totals), 12);
-      expect(InventoryCalculator.availableStock(totals), 145);
-    });
-
-    test('donated bottles do not reduce total owned', () {
+    test('total owned = initial + purchased - damaged - missing - donated', () {
       const totals = InventoryTotals(
         initialInventory: 157,
-        purchasedBottles: 0,
-        donatedBottles: 10,
+        purchasedBottles: 10,
+        donatedBottles: 5,
         borrowedBottles: 0,
-        returnedBottles: 0,
-        damagedBottles: 0,
-        missingBottles: 0,
-      );
-
-      expect(InventoryCalculator.totalBottlesOwned(totals), 157);
-      expect(InventoryCalculator.availableStock(totals), 147);
-      expect(InventoryCalculator.isBalanced(totals), isTrue);
-    });
-
-    test('owned includes purchased and added bottles', () {
-      const totals = InventoryTotals(
-        initialInventory: 100,
-        purchasedBottles: 30,
-        addedBottles: 5,
-        donatedBottles: 0,
-        borrowedBottles: 0,
-        returnedBottles: 0,
-        damagedBottles: 0,
-        missingBottles: 0,
-      );
-
-      expect(InventoryCalculator.totalBottlesOwned(totals), 135);
-    });
-
-    test('missing and damaged reduce available but not owned', () {
-      const totals = InventoryTotals(
-        initialInventory: 100,
-        purchasedBottles: 0,
-        donatedBottles: 0,
-        borrowedBottles: 10,
         returnedBottles: 0,
         damagedBottles: 2,
-        missingBottles: 1,
-      );
-
-      expect(InventoryCalculator.totalBottlesOwned(totals), 100);
-      expect(InventoryCalculator.bottlesWithCustomers(totals), 10);
-      expect(InventoryCalculator.availableStock(totals), 87);
-    });
-
-    test('adjustment reconciles physical count without changing owned', () {
-      const totals = InventoryTotals(
-        initialInventory: 157,
-        purchasedBottles: 0,
-        donatedBottles: 0,
-        borrowedBottles: 0,
-        returnedBottles: 0,
-        damagedBottles: 0,
-        missingBottles: 0,
-        adjustmentNet: 10,
+        missingBottles: 3,
       );
 
       expect(InventoryCalculator.totalBottlesOwned(totals), 157);
-      expect(InventoryCalculator.availableStock(totals), 167);
-      expect(InventoryCalculator.isBalanced(totals), isTrue);
+    });
+
+    test('bottles with customers includes manual adjustments', () {
+      const totals = InventoryTotals(
+        initialInventory: 100,
+        purchasedBottles: 0,
+        donatedBottles: 0,
+        borrowedBottles: 50,
+        returnedBottles: 20,
+        damagedBottles: 0,
+        missingBottles: 0,
+        customerAdjustmentNet: 3,
+      );
+
+      expect(InventoryCalculator.bottlesWithCustomers(totals), 33);
+    });
+
+    test('empty bottles ready for refill = collected - refilled', () {
+      const totals = InventoryTotals(
+        initialInventory: 100,
+        purchasedBottles: 0,
+        donatedBottles: 0,
+        borrowedBottles: 0,
+        returnedBottles: 25,
+        damagedBottles: 0,
+        missingBottles: 0,
+        refilledBottles: 0,
+      );
+
+      expect(InventoryCalculator.emptyBottlesReadyForRefill(totals), 25);
+    });
+
+    test('customer balance consistency check', () {
+      expect(
+        InventoryCalculator.customerBalancesMatchGlobal(
+          globalWithCustomers: 27,
+          sumCustomerHeld: 27,
+        ),
+        isTrue,
+      );
+      expect(
+        InventoryCalculator.customerBalancesMatchGlobal(
+          globalWithCustomers: 27,
+          sumCustomerHeld: 25,
+        ),
+        isFalse,
+      );
     });
   });
 
   group('Customer bottle ledger', () {
-    test('computes running balance newest first', () {
+    test('computes running balance newest first with corrections', () {
       final txs = [
         BottleTransaction(
           id: '1',
@@ -130,45 +81,30 @@ void main() {
           id: '2',
           customerId: 'c1',
           transactionType: TransactionType.ret,
-          quantity: 5,
-          date: DateTime(2024, 6, 8),
+          quantity: 3,
+          date: DateTime(2024, 6, 7),
         ),
         BottleTransaction(
           id: '3',
           customerId: 'c1',
           transactionType: TransactionType.borrow,
-          quantity: 7,
+          quantity: 5,
           date: DateTime(2024, 6, 15),
         ),
         BottleTransaction(
           id: '4',
           customerId: 'c1',
           transactionType: TransactionType.ret,
-          quantity: 4,
+          quantity: 5,
           date: DateTime(2024, 6, 20),
         ),
       ];
 
       final ledger = buildCustomerBottleLedger(txs);
       expect(ledger.length, 4);
-      expect(ledger.first.balanceAfter, 8);
-      expect(ledger.first.actionLabel, 'Collected');
-      expect(computeCustomerBottlesHeld(txs), 8);
-    });
-
-    test('never allows negative customer balance', () {
-      final txs = [
-        BottleTransaction(
-          id: '1',
-          customerId: 'c1',
-          transactionType: TransactionType.ret,
-          quantity: 5,
-          date: DateTime(2024, 6, 1),
-        ),
-      ];
-
-      expect(computeCustomerBottlesHeld(txs), 0);
-      expect(buildCustomerBottleLedger(txs).first.balanceAfter, 0);
+      expect(ledger.first.balanceAfter, 7);
+      expect(ledgerHeadline(ledger.first), 'Collected 5 Bottles');
+      expect(computeCustomerBottlesHeld(txs), 7);
     });
   });
 }

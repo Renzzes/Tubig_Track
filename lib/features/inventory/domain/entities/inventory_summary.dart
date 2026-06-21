@@ -1,18 +1,17 @@
-import '../../../../core/utils/inventory_calculator.dart';
-
 class InventorySummary {
   final int initialInventory;
   final int totalBottlesOwned;
   final int bottlesWithCustomers;
-  final int availableBottles;
+  final int filledBottlesAvailable;
+  final int emptyBottlesReadyForRefill;
   final int borrowedBottles;
   final int returnedBottles;
   final int damagedBottles;
   final int missingBottles;
   final int purchasedBottles;
-  final int addedBottles;
   final int donatedBottles;
-  final int adjustmentNet;
+  final int customerAdjustmentNet;
+  final int refilledBottles;
   final int gallonsStock;
   final int capsStock;
   final int waterStocks;
@@ -22,15 +21,16 @@ class InventorySummary {
     required this.initialInventory,
     required this.totalBottlesOwned,
     required this.bottlesWithCustomers,
-    required this.availableBottles,
+    required this.filledBottlesAvailable,
+    required this.emptyBottlesReadyForRefill,
     required this.borrowedBottles,
     required this.returnedBottles,
     required this.damagedBottles,
     required this.missingBottles,
     required this.purchasedBottles,
-    this.addedBottles = 0,
     required this.donatedBottles,
-    required this.adjustmentNet,
+    this.customerAdjustmentNet = 0,
+    this.refilledBottles = 0,
     this.gallonsStock = 0,
     this.capsStock = 0,
     this.waterStocks = 0,
@@ -43,21 +43,12 @@ class InventorySummary {
   /// Backward-compatible alias.
   int get borrowedOutstanding => bottlesWithCustomers;
 
-  /// UI label alias.
-  int get availableStock => availableBottles;
+  /// Backward-compatible alias.
+  int get collectedEmptyBottles => emptyBottlesReadyForRefill;
 
-  bool get isBalanced {
-    final totals = InventoryTotals(
-      initialInventory: initialInventory,
-      purchasedBottles: purchasedBottles,
-      addedBottles: addedBottles,
-      donatedBottles: donatedBottles,
-      borrowedBottles: borrowedBottles,
-      returnedBottles: returnedBottles,
-      damagedBottles: damagedBottles,
-      missingBottles: missingBottles,
-      adjustmentNet: adjustmentNet,
-    );
-    return InventoryCalculator.isBalanced(totals);
-  }
+  /// Backward-compatible alias for filled bottles ready for delivery.
+  int get availableBottles => filledBottlesAvailable;
+
+  /// Backward-compatible alias.
+  int get availableStock => filledBottlesAvailable;
 }

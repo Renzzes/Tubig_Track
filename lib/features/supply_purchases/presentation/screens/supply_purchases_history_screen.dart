@@ -53,7 +53,7 @@ class _SupplyPurchasesHistoryScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Supply Purchases'),
+        title: const Text('Supplier Delivery History'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -113,13 +113,18 @@ class _SupplyPurchasesHistoryScreenState
               data: (all) {
                 final filtered = _filter(all);
                 if (filtered.isEmpty) {
-                  return const Center(child: Text('No supply purchases found'));
+                  return const Center(
+                    child: Text('No supplier deliveries found'),
+                  );
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) {
                     final p = filtered[i];
+                    final itemLabel = p.itemType == 'Bottles'
+                        ? '${p.quantity} Filled Bottles'
+                        : '${p.quantity} ${p.itemType}';
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
@@ -130,27 +135,20 @@ class _SupplyPurchasesHistoryScreenState
                           backgroundColor:
                               AppColors.primary.withValues(alpha: 0.1),
                           child: const Icon(
-                            Icons.inventory_2_outlined,
+                            Icons.local_shipping_outlined,
                             color: AppColors.primary,
                             size: 20,
                           ),
                         ),
                         title: Text(
-                          p.description,
+                          p.supplierName,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(p.supplierName),
                             Text(DateFormatter.format(p.purchaseDate)),
-                            Text(
-                              '${p.quantity} × ${CurrencyFormatter.format(p.unitCost)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
+                            Text(itemLabel),
                           ],
                         ),
                         trailing: Text(

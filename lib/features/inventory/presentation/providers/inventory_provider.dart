@@ -8,6 +8,7 @@ import '../../domain/entities/inventory_audit_summary.dart';
 import '../../domain/entities/inventory_summary.dart';
 import '../../domain/entities/customer_bottle_balance.dart';
 import '../../domain/repositories/inventory_repository.dart';
+import '../../../../core/utils/inventory_calculator.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
 import '../../../savings/presentation/providers/savings_goals_provider.dart';
@@ -59,6 +60,14 @@ void refreshInventoryProviders(WidgetRef ref) {
   ref.invalidate(inventoryAdjustmentsStreamProvider);
   ref.invalidate(inventoryAuditSummaryProvider);
   ref.invalidate(customerBottleBalancesProvider);
+  ref.invalidate(inventoryConsistencyProvider);
   ref.invalidate(supplyPurchasesStreamProvider);
   ref.invalidate(lowStockItemsProvider);
 }
+
+final inventoryConsistencyProvider =
+    FutureProvider<InventoryConsistencyReport>((ref) async {
+  ref.watch(bottleTransactionsStreamProvider);
+  ref.watch(customerBottleBalancesProvider);
+  return ref.read(inventoryRepositoryProvider).validateConsistency();
+});

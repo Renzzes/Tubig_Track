@@ -25,7 +25,8 @@ List<CustomerBottleLedgerEntry> buildCustomerBottleLedger(
       .where(
         (t) =>
             t.transactionType == TransactionType.borrow ||
-            t.transactionType == TransactionType.ret,
+            t.transactionType == TransactionType.ret ||
+            t.transactionType == TransactionType.customerAdjustment,
       )
       .toList()
     ..sort((a, b) => a.date.compareTo(b.date));
@@ -34,9 +35,12 @@ List<CustomerBottleLedgerEntry> buildCustomerBottleLedger(
   final chronological = <CustomerBottleLedgerEntry>[];
 
   for (final tx in relevant) {
-    final delta = tx.transactionType == TransactionType.borrow
-        ? tx.quantity
-        : -tx.quantity;
+    final delta = switch (tx.transactionType) {
+      TransactionType.borrow => tx.quantity,
+      TransactionType.ret => -tx.quantity,
+      TransactionType.customerAdjustment => tx.quantity,
+      _ => 0,
+    };
     balance = (balance + delta).clamp(0, 999999);
     chronological.add(
       CustomerBottleLedgerEntry(
@@ -53,15 +57,30 @@ List<CustomerBottleLedgerEntry> buildCustomerBottleLedger(
 int computeCustomerBottlesHeld(List<BottleTransaction> transactions) {
   var delivered = 0;
   var collected = 0;
+  var adjustments = 0;
   for (final tx in transactions) {
     switch (tx.transactionType) {
       case TransactionType.borrow:
         delivered += tx.quantity;
       case TransactionType.ret:
         collected += tx.quantity;
+      case TransactionType.customerAdjustment:
+        adjustments += tx.quantity;
       default:
         break;
     }
   }
-  return (delivered - collected).clamp(0, 999999);
+  return (delivered - collected + adjustments).clamp(0, 999999);
+}
+
+String ledgerHeadline(CustomerBottleLedgerEntry entry) {
+  final qty = entry.transaction.quantity.abs();
+  return switch (entry.transaction.transactionType) {
+    TransactionType.borrow => 'Delivered $qty Bottles',
+    TransactionType.ret => 'Collected $qty Bottles',
+    TransactionType.customerAdjustment => entry.quantityDelta >= 0
+        ? 'Corrected +$qty Bottles'
+        : 'Corrected -$qty Bottles',
+    _ => entry.actionLabel,
+  };
 }

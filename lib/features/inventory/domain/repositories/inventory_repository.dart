@@ -4,10 +4,12 @@ import '../entities/inventory_adjustment.dart';
 import '../entities/inventory_audit.dart';
 import '../entities/inventory_audit_summary.dart';
 import '../entities/inventory_summary.dart';
+import '../../../../core/utils/inventory_calculator.dart';
 
 abstract class InventoryRepository {
   Future<InventorySummary> getSummary();
   Future<List<CustomerBottleBalance>> getCustomerBottleBalances();
+  Future<InventoryConsistencyReport> validateConsistency();
   Stream<List<BottleTransaction>> watchAll();
   Future<List<BottleTransaction>> getAll();
   Future<void> recordTransaction(BottleTransaction transaction);

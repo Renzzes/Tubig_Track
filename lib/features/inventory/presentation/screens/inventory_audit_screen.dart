@@ -132,7 +132,7 @@ class _InventoryAuditScreenState extends ConsumerState<InventoryAuditScreen> {
       appBar: AppBar(title: const Text('Inventory Audit')),
       body: summaryAsync.when(
         data: (summary) {
-          final systemCount = summary.availableBottles;
+          final systemCount = summary.filledBottlesAvailable;
           if (_physicalCtrl.text.isEmpty) {
             _physicalCtrl.text = '$systemCount';
           }
@@ -143,7 +143,7 @@ class _InventoryAuditScreenState extends ConsumerState<InventoryAuditScreen> {
             children: [
               _AuditValueCard(
                 label: 'System Inventory',
-                valueLabel: 'Available Bottles',
+                valueLabel: 'Filled Bottles Available',
                 value: systemCount,
                 color: AppColors.primary,
               ),

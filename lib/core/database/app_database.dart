@@ -36,6 +36,7 @@ import 'daos/inventory_audits_dao.dart';
 import 'daos/inventory_adjustments_dao.dart';
 import 'daos/customer_deposits_dao.dart';
 import 'daos/copilot_messages_dao.dart';
+import 'migrations/inventory_state_migration.dart';
 
 part 'app_database.g.dart';
 
@@ -82,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration {
@@ -144,6 +145,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 10) {
           await m.createTable(copilotMessagesTable);
         }
+        if (from < 11) {
+          await migrateInventoryStateV11(this);
+        }
       },
     );
   }
@@ -167,6 +171,14 @@ class AppDatabase extends _$AppDatabase {
     await settingsDao.setValue(
       AppConstants.settingMinWaterStocks,
       '${AppConstants.defaultMinWaterStocks}',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingFilledBottlesAvailable,
+      '${AppConstants.defaultBottleInventory}',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingEmptyBottlesReadyForRefill,
+      '0',
     );
   }
 

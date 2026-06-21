@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../providers/inventory_provider.dart';
@@ -15,7 +16,7 @@ class CustomerBottleBalancesScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(inventorySummaryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Customer Bottle Balances')),
+      appBar: AppBar(title: const Text('Customers Holding Bottles')),
       body: balancesAsync.when(
         data: (balances) {
           final total = summaryAsync.value?.bottlesWithCustomers ?? 0;
@@ -32,22 +33,26 @@ class CustomerBottleBalancesScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Bottles With Customers',
+                        'Customers Holding Bottles',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$total bottles across ${balances.length} customers',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        '$total Bottles',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.warning,
+                        ),
                       ),
                       if (sumHeld != total && total > 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            'Ledger total: $sumHeld',
+                            'Customer sum: $sumHeld (check for corrections)',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Colors.orange[800],
                             ),
                           ),
                         ),
@@ -77,21 +82,40 @@ class CustomerBottleBalancesScreen extends ConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        b.customerName,
+                        '${b.customerName} — ${b.bottlesHeld}',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      trailing: Text(
-                        '${b.bottlesHeld}',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.warning,
-                        ),
-                      ),
+                      subtitle: b.lastDeliveryDate != null
+                          ? Text(
+                              'Last delivery: '
+                              '${DateFormatter.format(b.lastDeliveryDate!)}',
+                            )
+                          : null,
                       onTap: () => context.push('/customers/${b.customerId}'),
                     ),
                   ),
                 ),
+              if (balances.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Customers Holding Bottles: ${balances.length}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          'Total Bottles: $sumHeld',
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ],
           );
         },

@@ -32,6 +32,8 @@ import '../../features/inventory/presentation/screens/inventory_audit_screen.dar
 import '../../features/inventory/presentation/screens/inventory_audit_history_screen.dart';
 import '../../features/inventory/presentation/screens/inventory_adjustment_history_screen.dart';
 import '../../features/inventory/presentation/screens/customer_bottle_balances_screen.dart';
+import '../../features/inventory/presentation/screens/inventory_tools_screen.dart';
+import '../../features/inventory/presentation/screens/business_timeline_screen.dart';
 
 import '../../features/settings/presentation/screens/archive_reset_screen.dart';
 
@@ -387,7 +389,15 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         path: '/inventory/history',
 
-        builder: (context, state) => const InventoryHistoryScreen(),
+        builder: (context, state) => const BusinessTimelineScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/business-timeline',
+
+        builder: (context, state) => const BusinessTimelineScreen(),
 
       ),
 
@@ -420,6 +430,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/inventory/adjustments',
 
         builder: (context, state) => const InventoryAdjustmentHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/tools',
+
+        builder: (context, state) => const InventoryToolsScreen(),
 
       ),
 

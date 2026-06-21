@@ -55,6 +55,11 @@ class BottleTransactionsDao extends DatabaseAccessor<AppDatabase>
         .go();
   }
 
+  Future<BottleTransactionsTableData?> getById(String id) {
+    return (select(bottleTransactionsTable)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+  }
+
   Future<int> getTotalByType(String type) async {
     final qtyExpr = bottleTransactionsTable.quantity.sum();
     final query = selectOnly(bottleTransactionsTable)
@@ -79,14 +84,15 @@ class BottleTransactionsDao extends DatabaseAccessor<AppDatabase>
     return row.read(qtyExpr) ?? 0;
   }
 
-  /// Per-customer bottle balance: sum(borrow) − sum(return), only positive balances.
+  /// Per-customer bottle balance: borrow − return + customer_adjustment.
   Future<Map<String, int>> getCustomerBottleBalances() async {
     final rows = await (select(bottleTransactionsTable)
           ..where(
             (t) =>
                 t.customerId.isNotNull() &
                 (t.transactionType.equals('borrow') |
-                    t.transactionType.equals('return')),
+                    t.transactionType.equals('return') |
+                    t.transactionType.equals('customer_adjustment')),
           ))
         .get();
 
@@ -94,10 +100,13 @@ class BottleTransactionsDao extends DatabaseAccessor<AppDatabase>
     for (final row in rows) {
       if (row.customerId == null) continue;
       balances.putIfAbsent(row.customerId!, () => 0);
-      if (row.transactionType == 'borrow') {
-        balances[row.customerId!] = balances[row.customerId!]! + row.quantity;
-      } else {
-        balances[row.customerId!] = balances[row.customerId!]! - row.quantity;
+      switch (row.transactionType) {
+        case 'borrow':
+          balances[row.customerId!] = balances[row.customerId!]! + row.quantity;
+        case 'return':
+          balances[row.customerId!] = balances[row.customerId!]! - row.quantity;
+        case 'customer_adjustment':
+          balances[row.customerId!] = balances[row.customerId!]! + row.quantity;
       }
     }
     balances.removeWhere((_, balance) => balance <= 0);

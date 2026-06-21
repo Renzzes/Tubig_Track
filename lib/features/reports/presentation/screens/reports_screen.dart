@@ -138,7 +138,7 @@ class ReportsScreen extends ConsumerWidget {
               pw.SizedBox(height: 20),
               pw.Text('Inventory', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               _pdfRow('Total Bottles Owned', '${report.totalBottlesOwned}'),
-              _pdfRow('Available Bottles', '${report.availableBottles}'),
+              _pdfRow('Filled Bottles Available', '${report.availableBottles}'),
               _pdfRow('Bottles With Customers', '${report.bottlesWithCustomers}'),
               _pdfRow('Damaged Bottles', '${report.damagedBottles}'),
               _pdfRow('Missing Bottles', '${report.missingBottles}'),
@@ -318,7 +318,7 @@ class ReportsScreen extends ConsumerWidget {
         xl.IntCellValue(report.totalBottlesOwned),
       ]);
       sheet.appendRow([
-        xl.TextCellValue('Available Bottles'),
+        xl.TextCellValue('Filled Bottles Available'),
         xl.IntCellValue(report.availableBottles),
       ]);
       sheet.appendRow([
@@ -666,7 +666,7 @@ class _ReportContent extends ConsumerWidget {
           value: '${report.totalBottlesOwned}',
         ),
         _MetricRow(
-          label: 'Available Bottles',
+          label: 'Filled Bottles Available',
           value: '${report.availableBottles}',
         ),
         _MetricRow(

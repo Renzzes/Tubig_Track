@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/utils/expense_category_utils.dart';
 import '../../domain/entities/supply_purchase.dart';
 import '../../domain/repositories/supply_purchase_repository.dart';
@@ -118,6 +119,8 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
             ),
           ),
         );
+        await InventoryStateService(_db)
+            .applySupplierFilledDelivery(purchase.quantity);
       } else {
         final stockKey = SupplyPurchase.stockKeyForItemType(purchase.itemType);
         await _db.inventoryStockDao.addQuantity(stockKey, purchase.quantity);
@@ -153,6 +156,8 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
         await _db.bottleTransactionsDao.deleteTransaction(
           row.bottleTransactionId!,
         );
+        await InventoryStateService(_db)
+            .reverseSupplierFilledDelivery(row.quantity);
       } else {
         final stockKey = SupplyPurchase.stockKeyForItemType(row.itemType);
         await _db.inventoryStockDao.subtractQuantity(stockKey, row.quantity);

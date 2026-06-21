@@ -1,7 +1,10 @@
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/inventory_state_effects.dart';
+import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/utils/payment_status_utils.dart';
+import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../domain/entities/delivery.dart';
 import '../../domain/repositories/delivery_repository.dart';
 
@@ -77,6 +80,18 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
 
   Future<void> _syncBorrowTransaction(Delivery delivery) async {
     final borrowId = '${delivery.id}_borrow';
+    final effects = InventoryStateEffects(InventoryStateService(_db));
+    final existing = await _db.bottleTransactionsDao.getById(borrowId);
+    final wasActive = existing != null;
+    final oldQty = existing?.quantity ?? 0;
+
+    if (wasActive) {
+      await effects.applyTransaction(
+        TransactionType.borrow,
+        oldQty,
+        reverse: true,
+      );
+    }
     await _db.bottleTransactionsDao.deleteTransaction(borrowId);
 
     if (delivery.deliveryStatus == DeliveryStatus.completed ||
@@ -90,6 +105,10 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
           date: Value(delivery.deliveryDate),
           notes: Value('Delivery #${delivery.id.substring(0, 8)}'),
         ),
+      );
+      await effects.applyTransaction(
+        TransactionType.borrow,
+        delivery.quantity,
       );
     }
   }
@@ -252,9 +271,19 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   @override
   Future<void> deleteDelivery(String id) async {
     await _db.transaction(() async {
+      final borrowId = '${id}_borrow';
+      final existing = await _db.bottleTransactionsDao.getById(borrowId);
+      if (existing != null) {
+        final effects = InventoryStateEffects(InventoryStateService(_db));
+        await effects.applyTransaction(
+          TransactionType.borrow,
+          existing.quantity,
+          reverse: true,
+        );
+      }
       await _db.customerDepositsDao.deleteByDelivery(id);
       await _db.paymentsDao.deleteByDelivery(id);
-      await _db.bottleTransactionsDao.deleteTransaction('${id}_borrow');
+      await _db.bottleTransactionsDao.deleteTransaction(borrowId);
       await _db.deliveriesDao.deleteDelivery(id);
     });
   }

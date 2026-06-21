@@ -70,7 +70,7 @@ class _CollectBottlesScreenState extends ConsumerState<CollectBottlesScreen> {
               quantity: qty,
               date: _selectedDate,
               notes: _notesCtrl.text.trim().isEmpty
-                  ? 'Empty bottles collected'
+                  ? 'Collected $qty Bottles'
                   : _notesCtrl.text.trim(),
             ),
           );

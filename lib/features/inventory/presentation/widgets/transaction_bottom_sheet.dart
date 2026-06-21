@@ -36,12 +36,18 @@ class _TransactionBottomSheetState
 
   bool get _requiresCustomer =>
       widget.transactionType == TransactionType.borrow ||
-      widget.transactionType == TransactionType.ret;
+      widget.transactionType == TransactionType.ret ||
+      widget.transactionType == TransactionType.customerAdjustment;
 
   bool get _requiresReason =>
       widget.transactionType == TransactionType.missing ||
       widget.transactionType == TransactionType.donation ||
-      widget.transactionType == TransactionType.adjustment;
+      widget.transactionType == TransactionType.adjustment ||
+      widget.transactionType == TransactionType.customerAdjustment;
+
+  bool get _allowsSignedQuantity =>
+      widget.transactionType == TransactionType.adjustment ||
+      widget.transactionType == TransactionType.customerAdjustment;
 
   @override
   void initState() {
@@ -123,6 +129,10 @@ class _TransactionBottomSheetState
         return 'Donate Bottles';
       case TransactionType.adjustment:
         return 'Inventory Adjustment';
+      case TransactionType.added:
+        return 'Add Filled Bottles';
+      case TransactionType.customerAdjustment:
+        return 'Bottle Correction';
       case TransactionType.audit:
         return 'Inventory Audit';
       default:
@@ -196,12 +206,12 @@ class _TransactionBottomSheetState
                   const SizedBox(height: 16),
                 ],
                 AppTextField(
-                  label: widget.transactionType == TransactionType.adjustment
-                      ? 'Adjustment Quantity *'
+                  label: _allowsSignedQuantity
+                      ? 'Quantity * (+ or −)'
                       : 'Quantity *',
                   controller: _quantityCtrl,
                   keyboardType: TextInputType.number,
-                  inputFormatters: widget.transactionType == TransactionType.adjustment
+                  inputFormatters: _allowsSignedQuantity
                       ? [FilteringTextInputFormatter.allow(RegExp(r'^-?\d*$'))]
                       : [FilteringTextInputFormatter.digitsOnly],
                   autofocus: !_requiresCustomer,
@@ -209,7 +219,7 @@ class _TransactionBottomSheetState
                     if (v == null || v.isEmpty) return 'Required';
                     final n = int.tryParse(v);
                     if (n == null) return 'Invalid number';
-                    if (widget.transactionType == TransactionType.adjustment) {
+                    if (_allowsSignedQuantity) {
                       if (n == 0) return 'Must not be 0';
                     } else if (n <= 0) {
                       return 'Must be > 0';

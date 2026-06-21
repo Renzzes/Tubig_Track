@@ -305,7 +305,7 @@ class _InventoryHistoryScreenState extends ConsumerState<InventoryHistoryScreen>
     final customersAsync = ref.watch(customersStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inventory History')),
+      appBar: AppBar(title: const Text('Inventory Timeline')),
       body: Column(
         children: [
           HistoryFilterBar(
@@ -440,6 +440,8 @@ class _InventoryHistoryScreenState extends ConsumerState<InventoryHistoryScreen>
         return Icons.tune_outlined;
       case TransactionType.audit:
         return Icons.fact_check_outlined;
+      case TransactionType.customerAdjustment:
+        return Icons.edit_outlined;
     }
   }
 }

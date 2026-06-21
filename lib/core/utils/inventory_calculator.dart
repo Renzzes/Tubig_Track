@@ -2,76 +2,91 @@
 class InventoryTotals {
   final int initialInventory;
   final int purchasedBottles;
-  final int addedBottles;
   final int permanentlyRemovedBottles;
   final int donatedBottles;
   final int borrowedBottles;
   final int returnedBottles;
   final int damagedBottles;
   final int missingBottles;
-  final int adjustmentNet;
+  final int customerAdjustmentNet;
+  /// Bottles refilled via supplier delivery (supply purchases of filled bottles).
+  final int refilledBottles;
 
   const InventoryTotals({
     required this.initialInventory,
     required this.purchasedBottles,
-    this.addedBottles = 0,
     this.permanentlyRemovedBottles = 0,
     required this.donatedBottles,
     required this.borrowedBottles,
     required this.returnedBottles,
     required this.damagedBottles,
     required this.missingBottles,
-    this.adjustmentNet = 0,
+    this.customerAdjustmentNet = 0,
+    this.refilledBottles = 0,
   });
 }
 
 class InventoryCalculator {
   InventoryCalculator._();
 
-  /// Lifetime bottles owned by the business (ownership baseline).
+  /// Physical bottle assets: initial + purchased − damaged − missing − donated.
   static int totalBottlesOwned(InventoryTotals t) =>
       (t.initialInventory +
-              t.purchasedBottles +
-              t.addedBottles -
-              t.permanentlyRemovedBottles)
+              t.purchasedBottles -
+              t.permanentlyRemovedBottles -
+              t.donatedBottles -
+              t.missingBottles -
+              t.damagedBottles)
           .clamp(0, 999999);
 
-  /// Bottles currently held by customers (delivered − collected).
+  /// Global bottles with customers (delivered − collected + manual adjustments).
   static int bottlesWithCustomers(InventoryTotals t) =>
-      (t.borrowedBottles - t.returnedBottles).clamp(0, 999999);
+      (t.borrowedBottles -
+              t.returnedBottles +
+              t.customerAdjustmentNet)
+          .clamp(0, 999999);
 
-  /// Physical bottles in warehouse and ready for use.
-  static int availableStock(InventoryTotals t) {
-    final owned = totalBottlesOwned(t);
-    final withCustomers = bottlesWithCustomers(t);
-    return (owned -
-            withCustomers -
-            t.damagedBottles -
-            t.missingBottles -
-            t.donatedBottles +
-            t.adjustmentNet)
-        .clamp(0, 999999);
-  }
+  /// Empties collected from customers waiting for refill.
+  static int emptyBottlesReadyForRefill(InventoryTotals t) =>
+      (t.returnedBottles - t.refilledBottles).clamp(0, 999999);
 
   /// Backward-compatible alias.
-  static int availableBottles(InventoryTotals t) => availableStock(t);
-
-  /// Validates reconciliation: owned = stock + with customers + damaged + missing + donated − adjustment
-  static bool isBalanced(InventoryTotals t) {
-    final owned = totalBottlesOwned(t);
-    final sum = availableStock(t) +
-        bottlesWithCustomers(t) +
-        t.damagedBottles +
-        t.missingBottles +
-        t.donatedBottles -
-        t.adjustmentNet;
-    return owned == sum;
-  }
+  static int collectedEmptyBottles(InventoryTotals t) =>
+      emptyBottlesReadyForRefill(t);
 
   /// Per-customer bottles currently held.
   static int customerBottlesHeld({
     required int delivered,
     required int collected,
+    int manualAdjustments = 0,
   }) =>
-      (delivered - collected).clamp(0, 999999);
+      (delivered - collected + manualAdjustments).clamp(0, 999999);
+
+  /// Validates customer balances sum matches global with-customers count.
+  static bool customerBalancesMatchGlobal({
+    required int globalWithCustomers,
+    required int sumCustomerHeld,
+  }) =>
+      globalWithCustomers == sumCustomerHeld;
+}
+
+class InventoryConsistencyReport {
+  final int globalWithCustomers;
+  final int sumCustomerHeld;
+  final int filledBottlesAvailable;
+  final int emptyBottlesReadyForRefill;
+  final int totalBottlesOwned;
+
+  const InventoryConsistencyReport({
+    required this.globalWithCustomers,
+    required this.sumCustomerHeld,
+    required this.filledBottlesAvailable,
+    required this.emptyBottlesReadyForRefill,
+    required this.totalBottlesOwned,
+  });
+
+  bool get isCustomerBalanceConsistent =>
+      globalWithCustomers == sumCustomerHeld;
+
+  int get customerBalanceDelta => sumCustomerHeld - globalWithCustomers;
 }

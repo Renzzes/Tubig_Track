@@ -14,6 +14,9 @@ class AppConstants {
   static const String preUpdateBackupPrefix = 'tubigtrack_preupdate_';
 
   static const String settingTotalBottleInventory = 'total_bottle_inventory';
+  static const String settingFilledBottlesAvailable = 'filled_bottles_available';
+  static const String settingEmptyBottlesReadyForRefill =
+      'empty_bottles_ready_for_refill';
   static const String settingLowInventoryThreshold = 'low_inventory_threshold';
   static const String settingMinBottles = 'min_bottles';
   static const String settingMinGallons = 'min_gallons';
@@ -58,6 +61,7 @@ class AppConstants {
   static const String transactionReturn = 'return';
   static const String transactionDamaged = 'damaged';
   static const String transactionPurchase = 'purchase';
+  static const String transactionCustomerAdjustment = 'customer_adjustment';
 
   static const String paymentStatusPaid = 'paid';
   static const String paymentStatusUnpaid = 'unpaid';

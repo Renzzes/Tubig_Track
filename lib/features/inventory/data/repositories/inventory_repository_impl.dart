@@ -2,6 +2,8 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/inventory_state_effects.dart';
+import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/utils/inventory_calculator.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../../domain/entities/inventory_adjustment.dart';
@@ -13,6 +15,8 @@ import '../../domain/repositories/inventory_repository.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
   final AppDatabase _db;
+  late final InventoryStateService _state = InventoryStateService(_db);
+  late final InventoryStateEffects _effects = InventoryStateEffects(_state);
 
   InventoryRepositoryImpl(this._db);
 
@@ -42,45 +46,62 @@ class InventoryRepositoryImpl implements InventoryRepository {
       damagedBottles: await _db.bottleTransactionsDao.getTotalByType('damaged'),
       purchasedBottles:
           await _db.bottleTransactionsDao.getTotalByType('purchase'),
-      addedBottles: await _db.bottleTransactionsDao.getTotalByType('added'),
       missingBottles: await _db.bottleTransactionsDao.getTotalByType('missing'),
       donatedBottles:
           await _db.bottleTransactionsDao.getTotalByType('donation'),
-      adjustmentNet:
-          await _db.bottleTransactionsDao.getTotalByType('adjustment'),
+      customerAdjustmentNet: await _db.bottleTransactionsDao
+          .getTotalByType('customer_adjustment'),
+      refilledBottles: await _db.supplyPurchasesDao.getTotalBottleQuantity(),
     );
   }
 
   @override
   Future<List<CustomerBottleBalance>> getCustomerBottleBalances() async {
-    final balanceMap = await _db.bottleTransactionsDao.getCustomerBottleBalances();
+    final balanceMap =
+        await _db.bottleTransactionsDao.getCustomerBottleBalances();
     if (balanceMap.isEmpty) return [];
 
     final customers = await _db.customersDao.getAll();
     final nameMap = {for (final c in customers) c.id: c.name};
 
-    final balances = balanceMap.entries
-        .map(
-          (e) => CustomerBottleBalance(
-            customerId: e.key,
-            customerName: nameMap[e.key] ?? 'Unknown',
-            bottlesHeld: e.value,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.bottlesHeld.compareTo(a.bottlesHeld));
-
+    final balances = <CustomerBottleBalance>[];
+    for (final entry in balanceMap.entries) {
+      final deliveries = await _db.deliveriesDao.getByCustomer(entry.key);
+      final lastDelivery =
+          deliveries.isNotEmpty ? deliveries.first.deliveryDate : null;
+      balances.add(
+        CustomerBottleBalance(
+          customerId: entry.key,
+          customerName: nameMap[entry.key] ?? 'Unknown',
+          bottlesHeld: entry.value,
+          lastDeliveryDate: lastDelivery,
+        ),
+      );
+    }
+    balances.sort((a, b) => b.bottlesHeld.compareTo(a.bottlesHeld));
     return balances;
+  }
+
+  @override
+  Future<InventoryConsistencyReport> validateConsistency() async {
+    final summary = await getSummary();
+    final balances = await getCustomerBottleBalances();
+    final sumHeld = balances.fold<int>(0, (s, b) => s + b.bottlesHeld);
+    return InventoryConsistencyReport(
+      globalWithCustomers: summary.bottlesWithCustomers,
+      sumCustomerHeld: sumHeld,
+      filledBottlesAvailable: summary.filledBottlesAvailable,
+      emptyBottlesReadyForRefill: summary.emptyBottlesReadyForRefill,
+      totalBottlesOwned: summary.totalBottlesOwned,
+    );
   }
 
   @override
   Future<InventorySummary> getSummary() async {
     final totals = await _loadTotals();
-
-    final totalBottlesOwned = InventoryCalculator.totalBottlesOwned(totals);
-    final bottlesWithCustomers =
-        InventoryCalculator.bottlesWithCustomers(totals);
-    final availableBottles = InventoryCalculator.availableStock(totals);
+    final filledBottlesAvailable = await _state.getFilledBottlesAvailable();
+    final emptyBottlesReadyForRefill =
+        await _state.getEmptyBottlesReadyForRefill();
 
     final gallonsStock = await _db.inventoryStockDao.getQuantity('gallons');
     final capsStock = await _db.inventoryStockDao.getQuantity('caps');
@@ -90,17 +111,18 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
     return InventorySummary(
       initialInventory: totals.initialInventory,
-      totalBottlesOwned: totalBottlesOwned,
-      bottlesWithCustomers: bottlesWithCustomers,
-      availableBottles: availableBottles,
+      totalBottlesOwned: InventoryCalculator.totalBottlesOwned(totals),
+      bottlesWithCustomers: InventoryCalculator.bottlesWithCustomers(totals),
+      filledBottlesAvailable: filledBottlesAvailable,
+      emptyBottlesReadyForRefill: emptyBottlesReadyForRefill,
       borrowedBottles: totals.borrowedBottles,
       returnedBottles: totals.returnedBottles,
       damagedBottles: totals.damagedBottles,
       missingBottles: totals.missingBottles,
       purchasedBottles: totals.purchasedBottles,
-      addedBottles: totals.addedBottles,
       donatedBottles: totals.donatedBottles,
-      adjustmentNet: totals.adjustmentNet,
+      customerAdjustmentNet: totals.customerAdjustmentNet,
+      refilledBottles: totals.refilledBottles,
       gallonsStock: gallonsStock,
       capsStock: capsStock,
       waterStocks: waterStocks,
@@ -121,8 +143,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     return rows.map(_map).toList();
   }
 
-  @override
-  Future<void> recordTransaction(BottleTransaction transaction) async {
+  Future<void> _insertTransactionRow(BottleTransaction transaction) async {
     await _db.bottleTransactionsDao.insertTransaction(
       BottleTransactionsTableCompanion.insert(
         id: transaction.id,
@@ -138,22 +159,49 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
+  Future<void> recordTransaction(BottleTransaction transaction) async {
+    if (transaction.isDeliveryLinked) {
+      throw StateError('Delivery-linked transactions are managed by deliveries.');
+    }
+    await _db.transaction(() async {
+      await _effects.applyTransaction(
+        transaction.transactionType,
+        transaction.quantity,
+      );
+      await _insertTransactionRow(transaction);
+    });
+  }
+
+  @override
   Future<void> updateTransaction(BottleTransaction transaction) async {
     if (transaction.isDeliveryLinked) {
       throw StateError('Delivery-linked transactions cannot be edited here.');
     }
-    await _db.bottleTransactionsDao.updateTransaction(
-      BottleTransactionsTableCompanion(
-        id: Value(transaction.id),
-        customerId: Value(transaction.customerId),
-        transactionType:
-            Value(BottleTransaction.typeToString(transaction.transactionType)),
-        quantity: Value(transaction.quantity),
-        date: Value(transaction.date),
-        reason: Value(transaction.reason),
-        notes: Value(transaction.notes),
-      ),
-    );
+    final existing = await _db.bottleTransactionsDao.getById(transaction.id);
+    if (existing == null) return;
+
+    await _db.transaction(() async {
+      final oldType =
+          BottleTransaction.typeFromString(existing.transactionType);
+      await _effects.applyTransaction(oldType, existing.quantity, reverse: true);
+      await _effects.applyTransaction(
+        transaction.transactionType,
+        transaction.quantity,
+      );
+      await _db.bottleTransactionsDao.updateTransaction(
+        BottleTransactionsTableCompanion(
+          id: Value(transaction.id),
+          customerId: Value(transaction.customerId),
+          transactionType: Value(
+            BottleTransaction.typeToString(transaction.transactionType),
+          ),
+          quantity: Value(transaction.quantity),
+          date: Value(transaction.date),
+          reason: Value(transaction.reason),
+          notes: Value(transaction.notes),
+        ),
+      );
+    });
   }
 
   @override
@@ -161,7 +209,15 @@ class InventoryRepositoryImpl implements InventoryRepository {
     if (id.endsWith('_borrow')) {
       throw StateError('Delivery-linked transactions cannot be deleted here.');
     }
-    await _db.bottleTransactionsDao.deleteTransaction(id);
+    final existing = await _db.bottleTransactionsDao.getById(id);
+    if (existing == null) return;
+
+    await _db.transaction(() async {
+      final type =
+          BottleTransaction.typeFromString(existing.transactionType);
+      await _effects.applyTransaction(type, existing.quantity, reverse: true);
+      await _db.bottleTransactionsDao.deleteTransaction(id);
+    });
   }
 
   @override
@@ -213,7 +269,8 @@ class InventoryRepositoryImpl implements InventoryRepository {
     final count = await _db.inventoryAuditsDao.getCount();
     final latest = await _db.inventoryAuditsDao.getLatest();
     final missingFromAudits = await _sumAuditMissing();
-    final adjustmentQuantity = await _db.inventoryAdjustmentsDao.getNetQuantity();
+    final adjustmentQuantity =
+        await _db.inventoryAdjustmentsDao.getNetQuantity();
 
     return InventoryAuditSummary(
       totalAudits: count,
@@ -234,6 +291,13 @@ class InventoryRepositoryImpl implements InventoryRepository {
     return total;
   }
 
+  Future<void> _applyAuditSideEffects({
+    required TransactionType type,
+    required int quantity,
+  }) async {
+    await _effects.applyTransaction(type, quantity);
+  }
+
   @override
   Future<void> performAudit({
     required int physicalCount,
@@ -242,7 +306,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     String? notes,
   }) async {
     final summary = await getSummary();
-    final systemCount = summary.availableBottles;
+    final systemCount = summary.filledBottlesAvailable;
     final difference = physicalCount - systemCount;
     final now = DateTime.now();
     final auditId = const Uuid().v4();
@@ -256,18 +320,20 @@ class InventoryRepositoryImpl implements InventoryRepository {
             systemCount: systemCount,
             physicalCount: physicalCount,
             difference: difference,
-            actionTaken: InventoryAudit.actionToString(InventoryAuditAction.balanced),
+            actionTaken: InventoryAudit.actionToString(
+              InventoryAuditAction.balanced,
+            ),
             notes: Value(notes),
           ),
         );
-        await _db.bottleTransactionsDao.insertTransaction(
-          BottleTransactionsTableCompanion.insert(
+        await _insertTransactionRow(
+          BottleTransaction(
             id: const Uuid().v4(),
-            transactionType: BottleTransaction.typeToString(TransactionType.audit),
+            transactionType: TransactionType.audit,
             quantity: 0,
-            date: Value(now),
-            reason: const Value('Inventory Audit'),
-            notes: Value('Audit balanced'),
+            date: now,
+            reason: 'Inventory Audit',
+            notes: 'Audit balanced',
           ),
         );
         return;
@@ -275,20 +341,25 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
       if (difference < 0 && action == InventoryAuditAction.markedMissing) {
         final qty = difference.abs();
-        await _db.bottleTransactionsDao.insertTransaction(
-          BottleTransactionsTableCompanion.insert(
+        await _applyAuditSideEffects(
+          type: TransactionType.missing,
+          quantity: qty,
+        );
+        await _insertTransactionRow(
+          BottleTransaction(
             id: const Uuid().v4(),
-            transactionType: BottleTransaction.typeToString(TransactionType.missing),
+            transactionType: TransactionType.missing,
             quantity: qty,
-            date: Value(now),
-            reason: const Value('Inventory Audit'),
-            notes: const Value('Auto-generated from audit'),
+            date: now,
+            reason: 'Inventory Audit',
+            notes: 'Auto-generated from audit',
           ),
         );
       } else if (action == InventoryAuditAction.adjustment) {
-        final reason = (adjustmentReason == null || adjustmentReason.trim().isEmpty)
-            ? 'Inventory Reconciliation'
-            : adjustmentReason.trim();
+        final reason =
+            (adjustmentReason == null || adjustmentReason.trim().isEmpty)
+                ? 'Inventory Reconciliation'
+                : adjustmentReason.trim();
         await _db.inventoryAdjustmentsDao.insertAdjustment(
           InventoryAdjustmentsTableCompanion.insert(
             id: const Uuid().v4(),
@@ -298,15 +369,18 @@ class InventoryRepositoryImpl implements InventoryRepository {
             notes: Value(notes),
           ),
         );
-        await _db.bottleTransactionsDao.insertTransaction(
-          BottleTransactionsTableCompanion.insert(
+        await _applyAuditSideEffects(
+          type: TransactionType.adjustment,
+          quantity: difference,
+        );
+        await _insertTransactionRow(
+          BottleTransaction(
             id: const Uuid().v4(),
-            transactionType:
-                BottleTransaction.typeToString(TransactionType.adjustment),
+            transactionType: TransactionType.adjustment,
             quantity: difference,
-            date: Value(now),
-            reason: Value(reason),
-            notes: Value(notes),
+            date: now,
+            reason: reason,
+            notes: notes,
           ),
         );
       } else if (action == InventoryAuditAction.cancelled) {
@@ -317,7 +391,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
             systemCount: systemCount,
             physicalCount: physicalCount,
             difference: difference,
-            actionTaken: InventoryAudit.actionToString(InventoryAuditAction.cancelled),
+            actionTaken: InventoryAudit.actionToString(
+              InventoryAuditAction.cancelled,
+            ),
             notes: Value(notes),
           ),
         );
@@ -338,16 +414,15 @@ class InventoryRepositoryImpl implements InventoryRepository {
         ),
       );
 
-      await _db.bottleTransactionsDao.insertTransaction(
-        BottleTransactionsTableCompanion.insert(
+      await _insertTransactionRow(
+        BottleTransaction(
           id: const Uuid().v4(),
-          transactionType: BottleTransaction.typeToString(TransactionType.audit),
+          transactionType: TransactionType.audit,
           quantity: difference,
-          date: Value(now),
-          reason: const Value('Inventory Audit'),
-          notes: Value(
-            'System $systemCount, Physical $physicalCount, Difference $difference',
-          ),
+          date: now,
+          reason: 'Inventory Audit',
+          notes:
+              'System $systemCount, Physical $physicalCount, Difference $difference',
         ),
       );
     });

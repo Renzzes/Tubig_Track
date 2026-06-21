@@ -107,10 +107,11 @@ class DashboardScreen extends ConsumerWidget {
                     onTap: () => context.go('/deliveries'),
                   ),
                   SummaryCard(
-                    title: 'Available Bottles',
+                    title: 'Filled Bottles Available',
                     value: '${summary.availableBottles}',
                     icon: Icons.inventory_2_outlined,
                     color: AppColors.primary,
+                    subtitle: 'Ready for delivery',
                     onTap: () => context.go('/inventory'),
                   ),
                   SummaryCard(
@@ -118,8 +119,8 @@ class DashboardScreen extends ConsumerWidget {
                     value: '${summary.borrowedBottles}',
                     icon: Icons.people_outline,
                     color: AppColors.warning,
-                    subtitle: 'outside business',
-                    onTap: () => context.go('/inventory'),
+                    subtitle: 'Tap for customer list',
+                    onTap: () => context.push('/inventory/customer-balances'),
                   ),
                 ],
               ),
