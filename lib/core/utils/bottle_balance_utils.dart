@@ -1,3 +1,4 @@
+import '../../../../core/constants/app_constants.dart';
 import '../../features/inventory/domain/entities/bottle_transaction.dart';
 
 class CustomerBottleLedgerEntry {
@@ -75,12 +76,16 @@ int computeCustomerBottlesHeld(List<BottleTransaction> transactions) {
 
 String ledgerHeadline(CustomerBottleLedgerEntry entry) {
   final qty = entry.transaction.quantity.abs();
+  final reason = entry.transaction.reason;
   return switch (entry.transaction.transactionType) {
     TransactionType.borrow => 'Delivered $qty Bottles',
     TransactionType.ret => 'Collected $qty Bottles',
-    TransactionType.customerAdjustment => entry.quantityDelta >= 0
-        ? 'Corrected +$qty Bottles'
-        : 'Corrected -$qty Bottles',
+    TransactionType.customerAdjustment =>
+      reason == AppConstants.initialBalanceMigrationReason
+          ? 'Initial Balance +$qty'
+          : entry.quantityDelta >= 0
+              ? 'Customer Bottle Adjustment +$qty'
+              : 'Customer Bottle Adjustment -$qty',
     _ => entry.actionLabel,
   };
 }

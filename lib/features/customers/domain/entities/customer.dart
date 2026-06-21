@@ -47,6 +47,9 @@ class CustomerStats {
   final double lifetimeRevenue;
   final int lifetimeBottlesDelivered;
   final DateTime? lastDeliveryDate;
+  final DateTime? lastActivityDate;
+  final bool hasInitialBalance;
+  final int initialBottleBalance;
 
   const CustomerStats({
     required this.borrowedBottles,
@@ -61,6 +64,9 @@ class CustomerStats {
     required this.lifetimeRevenue,
     required this.lifetimeBottlesDelivered,
     this.lastDeliveryDate,
+    this.lastActivityDate,
+    this.hasInitialBalance = false,
+    this.initialBottleBalance = 0,
   });
 
   double get totalBalance => unpaidBalance + totalAmountPaid;

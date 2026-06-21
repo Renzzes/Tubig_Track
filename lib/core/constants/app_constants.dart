@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'TubigTrack';
-  static const String appVersion = '1.3.8';
+  static const String appVersion = '1.4.3';
   static const String applicationId = 'com.tubigtrack.tubig_track';
 
   /// GitHub Releases API for self-update.
@@ -17,6 +17,10 @@ class AppConstants {
   static const String settingFilledBottlesAvailable = 'filled_bottles_available';
   static const String settingEmptyBottlesReadyForRefill =
       'empty_bottles_ready_for_refill';
+  static const String settingInitialCustomerBottleBalance =
+      'initial_customer_bottle_balance';
+  static const String settingCustomerBottleAdjustments =
+      'customer_bottle_adjustments';
   static const String settingLowInventoryThreshold = 'low_inventory_threshold';
   static const String settingMinBottles = 'min_bottles';
   static const String settingMinGallons = 'min_gallons';
@@ -62,6 +66,12 @@ class AppConstants {
   static const String transactionDamaged = 'damaged';
   static const String transactionPurchase = 'purchase';
   static const String transactionCustomerAdjustment = 'customer_adjustment';
+
+  /// Reason stored on initial migration customer_adjustment rows.
+  static const String initialBalanceMigrationReason = 'Initial Balance Migration';
+
+  static String initialBalanceTransactionId(String customerId) =>
+      '${customerId}_initial_balance';
 
   static const String paymentStatusPaid = 'paid';
   static const String paymentStatusUnpaid = 'unpaid';

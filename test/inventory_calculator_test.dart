@@ -65,9 +65,50 @@ void main() {
         isFalse,
       );
     });
+    test('audit balance equation', () {
+      expect(
+        InventoryCalculator.isAuditBalanced(
+          totalOwned: 157,
+          filledAvailable: 40,
+          emptyReadyForRefill: 15,
+          bottlesWithCustomers: 90,
+          damagedBottles: 2,
+          missingBottles: 10,
+        ),
+        isTrue,
+      );
+      expect(
+        InventoryCalculator.isAuditBalanced(
+          totalOwned: 157,
+          filledAvailable: 157,
+          emptyReadyForRefill: 10,
+          bottlesWithCustomers: 5,
+          damagedBottles: 0,
+          missingBottles: 0,
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('Customer bottle ledger', () {
+    test('initial balance appears in ledger', () {
+      final txs = [
+        BottleTransaction(
+          id: 'c1_initial_balance',
+          customerId: 'c1',
+          transactionType: TransactionType.customerAdjustment,
+          quantity: 18,
+          date: DateTime(2024, 6, 1),
+          reason: 'Initial Balance Migration',
+        ),
+      ];
+
+      final ledger = buildCustomerBottleLedger(txs);
+      expect(ledger.length, 1);
+      expect(ledgerHeadline(ledger.first), 'Initial Balance +18');
+      expect(ledger.first.balanceAfter, 18);
+    });
     test('computes running balance newest first with corrections', () {
       final txs = [
         BottleTransaction(

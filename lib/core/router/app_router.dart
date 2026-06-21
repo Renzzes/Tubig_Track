@@ -16,6 +16,8 @@ import '../../features/customers/presentation/screens/customer_history_screen.da
 
 import '../../features/customers/presentation/screens/customer_profile_screen.dart';
 import '../../features/customers/presentation/screens/collect_bottles_screen.dart';
+import '../../features/customers/presentation/screens/set_initial_bottle_balance_screen.dart';
+import '../../features/customers/presentation/screens/adjust_customer_bottle_balance_screen.dart';
 
 import '../../features/savings/presentation/screens/savings_detail_screen.dart';
 
@@ -265,6 +267,34 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
 
           return CollectBottlesScreen(customerId: id);
+
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id/initial-balance',
+
+        builder: (context, state) {
+
+          final id = state.pathParameters['id']!;
+
+          return SetInitialBottleBalanceScreen(customerId: id);
+
+        },
+
+      ),
+
+      GoRoute(
+
+        path: '/customers/:id/adjust-bottles',
+
+        builder: (context, state) {
+
+          final id = state.pathParameters['id']!;
+
+          return AdjustCustomerBottleBalanceScreen(customerId: id);
 
         },
 

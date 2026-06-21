@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/inventory_calculator.dart';
 import '../../domain/entities/customer.dart';
 import '../../domain/repositories/customer_repository.dart';
@@ -97,6 +98,12 @@ class CustomerRepositoryImpl implements CustomerRepository {
       customerId,
     );
 
+    final initialRow = await _db.bottleTransactionsDao.getById(
+      AppConstants.initialBalanceTransactionId(customerId),
+    );
+    final hasInitialBalance = initialRow != null;
+    final initialBottleBalance = initialRow?.quantity ?? 0;
+
     final bottlesHeld = InventoryCalculator.customerBottlesHeld(
       delivered: borrowed,
       collected: returned,
@@ -126,6 +133,21 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final lastDeliveryDate =
         allDeliveries.isNotEmpty ? allDeliveries.first.deliveryDate : null;
 
+    final payments = await _db.paymentsDao.getByCustomer(customerId);
+    final bottleTxs = await _db.bottleTransactionsDao.getByCustomer(customerId);
+
+    DateTime? lastActivityDate = lastDeliveryDate;
+    for (final p in payments) {
+      if (lastActivityDate == null || p.paymentDate.isAfter(lastActivityDate)) {
+        lastActivityDate = p.paymentDate;
+      }
+    }
+    for (final tx in bottleTxs) {
+      if (lastActivityDate == null || tx.date.isAfter(lastActivityDate)) {
+        lastActivityDate = tx.date;
+      }
+    }
+
     final depositBalance =
         await _db.customerDepositsDao.getBalanceForCustomer(customerId);
 
@@ -142,6 +164,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
       lifetimeRevenue: lifetimeRevenue,
       lifetimeBottlesDelivered: lifetimeBottles,
       lastDeliveryDate: lastDeliveryDate,
+      lastActivityDate: lastActivityDate,
+      hasInitialBalance: hasInitialBalance,
+      initialBottleBalance: initialBottleBalance,
     );
   }
 }

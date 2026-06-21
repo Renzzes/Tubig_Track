@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/customer_status_utils.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customers_provider.dart';
 
@@ -22,17 +23,14 @@ class CustomerListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(customerStatsProvider(customer.id));
 
-    // Determine payment badge from stats
     final badgeData = statsAsync.whenOrNull(
       data: (stats) {
-        if (stats.totalDeliveries == 0) return null;
-        if (stats.unpaidBalance <= 0) {
-          return (label: 'Paid', color: AppColors.paid);
-        } else if (stats.totalAmountPaid > 0) {
-          return (label: 'Partial', color: AppColors.partial);
-        } else {
-          return (label: 'Unpaid', color: AppColors.unpaid);
-        }
+        final info = CustomerStatusUtils.infoFor(stats);
+        if (info.status == CustomerStatus.newCustomer) return null;
+        return (
+          label: info.label,
+          color: Color(info.colorValue),
+        );
       },
     );
 

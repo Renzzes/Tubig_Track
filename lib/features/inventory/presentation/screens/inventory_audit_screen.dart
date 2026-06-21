@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/inventory_calculator.dart';
 import '../../domain/entities/inventory_audit.dart';
 import '../providers/inventory_provider.dart';
 
@@ -132,7 +133,20 @@ class _InventoryAuditScreenState extends ConsumerState<InventoryAuditScreen> {
       appBar: AppBar(title: const Text('Inventory Audit')),
       body: summaryAsync.when(
         data: (summary) {
-          final systemCount = summary.filledBottlesAvailable;
+          final systemCount = summary.totalBottlesOwned;
+          final locationSum = summary.filledBottlesAvailable +
+              summary.emptyBottlesReadyForRefill +
+              summary.bottlesWithCustomers +
+              summary.damagedBottles +
+              summary.missingBottles;
+          final auditBalanced = InventoryCalculator.isAuditBalanced(
+            totalOwned: summary.totalBottlesOwned,
+            filledAvailable: summary.filledBottlesAvailable,
+            emptyReadyForRefill: summary.emptyBottlesReadyForRefill,
+            bottlesWithCustomers: summary.bottlesWithCustomers,
+            damagedBottles: summary.damagedBottles,
+            missingBottles: summary.missingBottles,
+          );
           if (_physicalCtrl.text.isEmpty) {
             _physicalCtrl.text = '$systemCount';
           }
@@ -143,9 +157,63 @@ class _InventoryAuditScreenState extends ConsumerState<InventoryAuditScreen> {
             children: [
               _AuditValueCard(
                 label: 'System Inventory',
-                valueLabel: 'Filled Bottles Available',
+                valueLabel: 'Total Bottles Owned',
                 value: systemCount,
                 color: AppColors.primary,
+              ),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Location Breakdown',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      _BreakdownRow(
+                        label: 'Filled Bottles Available',
+                        value: summary.filledBottlesAvailable,
+                      ),
+                      _BreakdownRow(
+                        label: 'Empty Ready For Refill',
+                        value: summary.emptyBottlesReadyForRefill,
+                      ),
+                      _BreakdownRow(
+                        label: 'Bottles With Customers',
+                        value: summary.bottlesWithCustomers,
+                      ),
+                      _BreakdownRow(
+                        label: 'Damaged Bottles',
+                        value: summary.damagedBottles,
+                      ),
+                      _BreakdownRow(
+                        label: 'Missing Bottles',
+                        value: summary.missingBottles,
+                      ),
+                      const Divider(height: 16),
+                      _BreakdownRow(
+                        label: 'Sum of Locations',
+                        value: locationSum,
+                        bold: true,
+                      ),
+                      if (!auditBalanced)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Location sum ($locationSum) does not match '
+                            'total owned ($systemCount).',
+                            style: const TextStyle(
+                              color: AppColors.error,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -228,6 +296,42 @@ class _InventoryAuditScreenState extends ConsumerState<InventoryAuditScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+}
+
+class _BreakdownRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final bool bold;
+
+  const _BreakdownRow({
+    required this.label,
+    required this.value,
+    this.bold = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.normal,
+              ),
+            ),
+          ),
+          Text(
+            '$value',
+            style: TextStyle(fontWeight: bold ? FontWeight.w700 : FontWeight.w600),
+          ),
+        ],
       ),
     );
   }

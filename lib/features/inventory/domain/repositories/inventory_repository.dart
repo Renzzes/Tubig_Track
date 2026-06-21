@@ -10,6 +10,19 @@ abstract class InventoryRepository {
   Future<InventorySummary> getSummary();
   Future<List<CustomerBottleBalance>> getCustomerBottleBalances();
   Future<InventoryConsistencyReport> validateConsistency();
+  Future<bool> hasInitialCustomerBottleBalance(String customerId);
+  Future<void> setInitialCustomerBottleBalance({
+    required String customerId,
+    required int quantity,
+    DateTime? date,
+  });
+  Future<void> adjustCustomerBottleBalance({
+    required String customerId,
+    required int quantityDelta,
+    String? reason,
+    String? notes,
+    DateTime? date,
+  });
   Stream<List<BottleTransaction>> watchAll();
   Future<List<BottleTransaction>> getAll();
   Future<void> recordTransaction(BottleTransaction transaction);

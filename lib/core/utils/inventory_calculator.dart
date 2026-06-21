@@ -54,7 +54,24 @@ class InventoryCalculator {
   static int collectedEmptyBottles(InventoryTotals t) =>
       emptyBottlesReadyForRefill(t);
 
-  /// Per-customer bottles currently held.
+  /// Validates: owned = filled + empty + with customers + damaged + missing
+  static bool isAuditBalanced({
+    required int totalOwned,
+    required int filledAvailable,
+    required int emptyReadyForRefill,
+    required int bottlesWithCustomers,
+    required int damagedBottles,
+    required int missingBottles,
+  }) {
+    final sum = filledAvailable +
+        emptyReadyForRefill +
+        bottlesWithCustomers +
+        damagedBottles +
+        missingBottles;
+    return totalOwned == sum;
+  }
+
+  /// Per-customer: delivered − collected + all customer adjustments (incl. initial).
   static int customerBottlesHeld({
     required int delivered,
     required int collected,
@@ -76,6 +93,8 @@ class InventoryConsistencyReport {
   final int filledBottlesAvailable;
   final int emptyBottlesReadyForRefill;
   final int totalBottlesOwned;
+  final int damagedBottles;
+  final int missingBottles;
 
   const InventoryConsistencyReport({
     required this.globalWithCustomers,
@@ -83,10 +102,21 @@ class InventoryConsistencyReport {
     required this.filledBottlesAvailable,
     required this.emptyBottlesReadyForRefill,
     required this.totalBottlesOwned,
+    required this.damagedBottles,
+    required this.missingBottles,
   });
 
   bool get isCustomerBalanceConsistent =>
       globalWithCustomers == sumCustomerHeld;
 
   int get customerBalanceDelta => sumCustomerHeld - globalWithCustomers;
+
+  bool get isAuditBalanced => InventoryCalculator.isAuditBalanced(
+        totalOwned: totalBottlesOwned,
+        filledAvailable: filledBottlesAvailable,
+        emptyReadyForRefill: emptyBottlesReadyForRefill,
+        bottlesWithCustomers: globalWithCustomers,
+        damagedBottles: damagedBottles,
+        missingBottles: missingBottles,
+      );
 }

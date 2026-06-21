@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
@@ -82,15 +83,36 @@ class CustomerBottleBalancesScreen extends ConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        '${b.customerName} — ${b.bottlesHeld}',
+                        b.customerName,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      subtitle: b.lastDeliveryDate != null
-                          ? Text(
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${b.bottlesHeld} bottles held',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          if (b.lastDeliveryDate != null)
+                            Text(
                               'Last delivery: '
                               '${DateFormatter.format(b.lastDeliveryDate!)}',
-                            )
-                          : null,
+                            ),
+                          if (b.unpaidBalance > 0)
+                            Text(
+                              'Outstanding: '
+                              '${CurrencyFormatter.format(b.unpaidBalance)}',
+                              style: const TextStyle(color: AppColors.error),
+                            ),
+                        ],
+                      ),
+                      trailing: Text(
+                        '${b.bottlesHeld}',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.warning,
+                            ),
+                      ),
                       onTap: () => context.push('/customers/${b.customerId}'),
                     ),
                   ),

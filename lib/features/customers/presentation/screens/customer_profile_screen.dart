@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/bottle_balance_utils.dart';
+import '../../../../core/utils/customer_status_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
@@ -15,6 +16,7 @@ import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
 import '../../../deposits/domain/entities/customer_deposit.dart';
 import '../../../deposits/presentation/providers/deposits_provider.dart';
+import '../../domain/entities/customer.dart';
 import '../providers/customers_provider.dart';
 import '../widgets/customer_stats_row.dart';
 
@@ -163,8 +165,7 @@ class CustomerProfileScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            _paymentBadge(stats.unpaidBalance,
-                                stats.totalAmountPaid),
+                            _statusBadge(stats),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -325,6 +326,38 @@ class CustomerProfileScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push(
+                                  '/customers/$customerId/initial-balance',
+                                ),
+                                icon: Icon(
+                                  stats.hasInitialBalance
+                                      ? Icons.edit_outlined
+                                      : Icons.playlist_add,
+                                ),
+                                label: Text(
+                                  stats.hasInitialBalance
+                                      ? 'Edit'
+                                      : 'Set Initial Balance',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => context.push(
+                                  '/customers/$customerId/adjust-bottles',
+                                ),
+                                icon: const Icon(Icons.tune_outlined),
+                                label: const Text('Adjust Balance'),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -777,19 +810,9 @@ class CustomerProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _paymentBadge(double unpaidBalance, double totalPaid) {
-    String label;
-    Color color;
-    if (unpaidBalance <= 0) {
-      label = 'Paid';
-      color = AppColors.paid;
-    } else if (totalPaid > 0) {
-      label = 'Partial';
-      color = AppColors.partial;
-    } else {
-      label = 'Unpaid';
-      color = AppColors.unpaid;
-    }
+  Widget _statusBadge(CustomerStats stats) {
+    final info = CustomerStatusUtils.infoFor(stats);
+    final color = Color(info.colorValue);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -798,7 +821,7 @@ class CustomerProfileScreen extends ConsumerWidget {
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Text(
-        label,
+        info.label,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,

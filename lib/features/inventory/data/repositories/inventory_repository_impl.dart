@@ -4,6 +4,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/inventory_state_effects.dart';
 import '../../../../core/services/inventory_state_service.dart';
+import '../../../../core/database/migrations/inventory_state_migration.dart';
 import '../../../../core/utils/inventory_calculator.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../../domain/entities/inventory_adjustment.dart';
@@ -63,6 +64,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
     final customers = await _db.customersDao.getAll();
     final nameMap = {for (final c in customers) c.id: c.name};
+    final receivables = await _db.deliveriesDao.getReceivablesByCustomer();
 
     final balances = <CustomerBottleBalance>[];
     for (final entry in balanceMap.entries) {
@@ -75,11 +77,116 @@ class InventoryRepositoryImpl implements InventoryRepository {
           customerName: nameMap[entry.key] ?? 'Unknown',
           bottlesHeld: entry.value,
           lastDeliveryDate: lastDelivery,
+          unpaidBalance: receivables[entry.key] ?? 0,
         ),
       );
     }
     balances.sort((a, b) => b.bottlesHeld.compareTo(a.bottlesHeld));
     return balances;
+  }
+
+  @override
+  Future<bool> hasInitialCustomerBottleBalance(String customerId) async {
+    final row = await _db.bottleTransactionsDao.getById(
+      AppConstants.initialBalanceTransactionId(customerId),
+    );
+    return row != null;
+  }
+
+  @override
+  Future<void> setInitialCustomerBottleBalance({
+    required String customerId,
+    required int quantity,
+    DateTime? date,
+  }) async {
+    if (quantity < 0) {
+      throw ArgumentError('Initial balance cannot be negative.');
+    }
+    final txId = AppConstants.initialBalanceTransactionId(customerId);
+    final when = date ?? DateTime.now();
+
+    await _db.transaction(() async {
+      final existing = await _db.bottleTransactionsDao.getById(txId);
+      if (existing != null) {
+        await _db.bottleTransactionsDao.updateTransaction(
+          BottleTransactionsTableCompanion(
+            id: Value(txId),
+            customerId: Value(customerId),
+            transactionType: const Value('customer_adjustment'),
+            quantity: Value(quantity),
+            date: Value(when),
+            reason: const Value(AppConstants.initialBalanceMigrationReason),
+          ),
+        );
+      } else {
+        await _insertTransactionRow(
+          BottleTransaction(
+            id: txId,
+            customerId: customerId,
+            transactionType: TransactionType.customerAdjustment,
+            quantity: quantity,
+            date: when,
+            reason: AppConstants.initialBalanceMigrationReason,
+            notes: 'Customer Bottle Adjustment',
+          ),
+        );
+      }
+      await syncGlobalCustomerBottleSettings(_db);
+    });
+  }
+
+  @override
+  Future<void> adjustCustomerBottleBalance({
+    required String customerId,
+    required int quantityDelta,
+    String? reason,
+    String? notes,
+    DateTime? date,
+  }) async {
+    if (quantityDelta == 0) return;
+
+    final stats = await _db.customersDao.getById(customerId);
+    if (stats == null) throw StateError('Customer not found.');
+
+    final borrowed = await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'borrow',
+      customerId,
+    );
+    final returned = await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'return',
+      customerId,
+    );
+    final adjustments =
+        await _db.bottleTransactionsDao.getTotalByTypeForCustomer(
+      'customer_adjustment',
+      customerId,
+    );
+    final held = InventoryCalculator.customerBottlesHeld(
+      delivered: borrowed,
+      collected: returned,
+      manualAdjustments: adjustments + quantityDelta,
+    );
+    if (held < 0) {
+      throw StateError('Adjustment would result in negative bottles held.');
+    }
+
+    final when = date ?? DateTime.now();
+    await _db.transaction(() async {
+      await _insertTransactionRow(
+        BottleTransaction(
+          id: const Uuid().v4(),
+          customerId: customerId,
+          transactionType: TransactionType.customerAdjustment,
+          quantity: quantityDelta,
+          date: when,
+          reason: reason?.trim().isEmpty ?? true
+              ? 'Customer Bottle Adjustment'
+              : reason!.trim(),
+          notes: notes,
+        ),
+      );
+      await syncGlobalCustomerBottleSettings(_db);
+    });
   }
 
   @override
@@ -93,6 +200,8 @@ class InventoryRepositoryImpl implements InventoryRepository {
       filledBottlesAvailable: summary.filledBottlesAvailable,
       emptyBottlesReadyForRefill: summary.emptyBottlesReadyForRefill,
       totalBottlesOwned: summary.totalBottlesOwned,
+      damagedBottles: summary.damagedBottles,
+      missingBottles: summary.missingBottles,
     );
   }
 
@@ -169,6 +278,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
         transaction.quantity,
       );
       await _insertTransactionRow(transaction);
+      if (transaction.transactionType == TransactionType.customerAdjustment) {
+        await syncGlobalCustomerBottleSettings(_db);
+      }
     });
   }
 
@@ -201,6 +313,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
           notes: Value(transaction.notes),
         ),
       );
+      if (transaction.transactionType == TransactionType.customerAdjustment ||
+          oldType == TransactionType.customerAdjustment) {
+        await syncGlobalCustomerBottleSettings(_db);
+      }
     });
   }
 
@@ -217,6 +333,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
           BottleTransaction.typeFromString(existing.transactionType);
       await _effects.applyTransaction(type, existing.quantity, reverse: true);
       await _db.bottleTransactionsDao.deleteTransaction(id);
+      if (type == TransactionType.customerAdjustment) {
+        await syncGlobalCustomerBottleSettings(_db);
+      }
     });
   }
 
@@ -306,7 +425,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     String? notes,
   }) async {
     final summary = await getSummary();
-    final systemCount = summary.filledBottlesAvailable;
+    final systemCount = summary.totalBottlesOwned;
     final difference = physicalCount - systemCount;
     final now = DateTime.now();
     final auditId = const Uuid().v4();

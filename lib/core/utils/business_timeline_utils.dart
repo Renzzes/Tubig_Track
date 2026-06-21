@@ -1,3 +1,4 @@
+import '../constants/app_constants.dart';
 import '../../features/inventory/domain/entities/bottle_transaction.dart';
 import '../../features/supply_purchases/domain/entities/supply_purchase.dart';
 import '../utils/currency_formatter.dart';
@@ -67,10 +68,7 @@ List<BusinessTimelineEntry> buildBusinessTimeline({
 
     final customerName =
         tx.customerId != null ? customerNames[tx.customerId!] : null;
-    final headline = BottleTransaction.timelineLabel(
-      tx.transactionType,
-      tx.quantity,
-    );
+    final headline = _transactionHeadline(tx);
 
     BusinessTimelineFilter category;
     switch (tx.transactionType) {
@@ -166,4 +164,18 @@ String businessTimelineDateKey(DateTime date) {
     'Dec',
   ];
   return '${names[date.month - 1]} ${date.day}';
+}
+
+String _transactionHeadline(BottleTransaction tx) {
+  if (tx.transactionType == TransactionType.customerAdjustment) {
+    if (tx.reason == AppConstants.initialBalanceMigrationReason) {
+      return tx.quantity >= 0
+          ? 'Initial Balance +${tx.quantity} Bottles'
+          : 'Initial Balance ${tx.quantity} Bottles';
+    }
+    return tx.quantity >= 0
+        ? 'Customer Bottle Adjustment +${tx.quantity} Bottles'
+        : 'Customer Bottle Adjustment ${tx.quantity} Bottles';
+  }
+  return BottleTransaction.timelineLabel(tx.transactionType, tx.quantity);
 }

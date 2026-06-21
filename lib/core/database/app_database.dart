@@ -83,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
@@ -148,6 +148,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 11) {
           await migrateInventoryStateV11(this);
         }
+        if (from < 12) {
+          await migrateInventoryStateV12(this);
+        }
       },
     );
   }
@@ -174,10 +177,18 @@ class AppDatabase extends _$AppDatabase {
     );
     await settingsDao.setValue(
       AppConstants.settingFilledBottlesAvailable,
-      '${AppConstants.defaultBottleInventory}',
+      '0',
     );
     await settingsDao.setValue(
       AppConstants.settingEmptyBottlesReadyForRefill,
+      '0',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingInitialCustomerBottleBalance,
+      '0',
+    );
+    await settingsDao.setValue(
+      AppConstants.settingCustomerBottleAdjustments,
       '0',
     );
   }
