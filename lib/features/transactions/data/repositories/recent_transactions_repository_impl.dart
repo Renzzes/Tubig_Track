@@ -119,6 +119,8 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           type = RecentTransactionType.bottleDamaged;
         case 'purchase':
           type = RecentTransactionType.bottlePurchase;
+        case 'added':
+          type = RecentTransactionType.bottlePurchase;
         case 'missing':
           type = RecentTransactionType.bottleMissing;
         case 'donation':

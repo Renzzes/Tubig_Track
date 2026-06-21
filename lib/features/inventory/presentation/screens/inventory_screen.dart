@@ -8,7 +8,6 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
-import '../../domain/entities/inventory_summary.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../providers/inventory_provider.dart';
 import '../widgets/inventory_stat_card.dart';
@@ -151,14 +150,14 @@ class InventoryScreen extends ConsumerWidget {
                         value: '${s.totalBottlesOwned}',
                         icon: Icons.inventory_2,
                         color: AppColors.primary,
-                        subtitle: 'Initial + Purchased − Donated',
+                        subtitle: 'Lifetime bottles owned',
                       ),
                       InventoryStatCard(
-                        label: 'Available Bottles',
+                        label: 'Available Stock',
                         value: '${s.availableBottles}',
                         icon: Icons.check_circle_outline,
                         color: AppColors.success,
-                        subtitle: 'Ready for delivery',
+                        subtitle: 'Ready in warehouse',
                       ),
                     ],
                   ),
@@ -170,7 +169,9 @@ class InventoryScreen extends ConsumerWidget {
                         value: '${s.bottlesWithCustomers}',
                         icon: Icons.people_outline,
                         color: AppColors.warning,
-                        subtitle: 'Delivered − Returned',
+                        subtitle: 'Delivered − Collected • Tap for details',
+                        onTap: () =>
+                            context.push('/inventory/customer-balances'),
                       ),
                       InventoryStatCard(
                         label: 'Damaged Bottles',
@@ -192,13 +193,6 @@ class InventoryScreen extends ConsumerWidget {
               ),
               loading: () => const LoadingOverlay(),
               error: (e, _) => Text('Error: $e'),
-            ),
-            const SizedBox(height: 20),
-
-            summaryAsync.when(
-              data: (s) => _WaterInventorySection(summary: s),
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 20),
 
@@ -316,7 +310,7 @@ class InventoryScreen extends ConsumerWidget {
                   childAspectRatio: aspectRatio,
                   children: [
                     _ActionButton(
-                      label: 'Return Bottles',
+                      label: 'Collect Bottles',
                       icon: Icons.arrow_downward,
                       color: AppColors.success,
                       onTap: () => _openTransactionSheet(
@@ -343,6 +337,16 @@ class InventoryScreen extends ConsumerWidget {
                         context,
                         ref,
                         TransactionType.purchase,
+                      ),
+                    ),
+                    _ActionButton(
+                      label: 'Add Bottles',
+                      icon: Icons.add_circle_outline,
+                      color: Colors.teal,
+                      onTap: () => _openTransactionSheet(
+                        context,
+                        ref,
+                        TransactionType.added,
                       ),
                     ),
                     _ActionButton(
@@ -569,6 +573,8 @@ class InventoryScreen extends ConsumerWidget {
         return AppColors.error;
       case TransactionType.purchase:
         return AppColors.primary;
+      case TransactionType.added:
+        return Colors.teal;
       case TransactionType.missing:
         return AppColors.missing;
       case TransactionType.donation:
@@ -590,6 +596,8 @@ class InventoryScreen extends ConsumerWidget {
         return Icons.broken_image_outlined;
       case TransactionType.purchase:
         return Icons.shopping_cart_outlined;
+      case TransactionType.added:
+        return Icons.add_circle_outline;
       case TransactionType.missing:
         return Icons.help_outline;
       case TransactionType.donation:
@@ -599,97 +607,6 @@ class InventoryScreen extends ConsumerWidget {
       case TransactionType.audit:
         return Icons.fact_check_outlined;
     }
-  }
-}
-
-class _WaterInventorySection extends StatelessWidget {
-  final InventorySummary summary;
-
-  const _WaterInventorySection({required this.summary});
-
-  @override
-  Widget build(BuildContext context) {
-    final gallons = summary.gallonsStock;
-    final waterStocks = summary.waterStocks;
-    final caps = summary.capsStock;
-    final others = summary.othersStock;
-
-    if (gallons == 0 && waterStocks == 0 && caps == 0 && others == 0) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Water Inventory',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.cyan.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.cyan.withValues(alpha: 0.25)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.cyan.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.water_drop_outlined,
-                      color: Colors.cyan,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$gallons',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.cyan,
-                          ),
-                        ),
-                        const Text(
-                          'Gallons Available',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Colors.cyan,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (waterStocks > 0 || caps > 0 || others > 0) ...[
-                const SizedBox(height: 12),
-                const Divider(height: 1),
-                const SizedBox(height: 8),
-                if (waterStocks > 0)
-                  Text('Water Stocks: $waterStocks'),
-                if (caps > 0) Text('Caps: $caps'),
-                if (others > 0) Text('Others: $others'),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }
 

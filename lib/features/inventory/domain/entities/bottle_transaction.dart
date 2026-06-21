@@ -3,6 +3,7 @@ enum TransactionType {
   ret,
   damaged,
   purchase,
+  added,
   missing,
   donation,
   adjustment,
@@ -39,6 +40,8 @@ class BottleTransaction {
         return TransactionType.damaged;
       case 'purchase':
         return TransactionType.purchase;
+      case 'added':
+        return TransactionType.added;
       case 'missing':
         return TransactionType.missing;
       case 'donation':
@@ -60,6 +63,8 @@ class BottleTransaction {
         return 'damaged';
       case TransactionType.purchase:
         return 'purchase';
+      case TransactionType.added:
+        return 'added';
       case TransactionType.missing:
         return 'missing';
       case TransactionType.donation:
@@ -81,6 +86,8 @@ class BottleTransaction {
         return 'Damaged';
       case TransactionType.purchase:
         return 'Purchase';
+      case TransactionType.added:
+        return 'Add Bottles';
       case TransactionType.missing:
         return 'Missing';
       case TransactionType.donation:
@@ -91,6 +98,18 @@ class BottleTransaction {
         return 'Audit';
       case TransactionType.borrow:
         return 'Borrow';
+    }
+  }
+
+  /// Customer-facing ledger label (delivery/collection workflow).
+  static String ledgerLabel(TransactionType t) {
+    switch (t) {
+      case TransactionType.ret:
+        return 'Collected';
+      case TransactionType.borrow:
+        return 'Delivered';
+      default:
+        return typeLabel(t);
     }
   }
 }

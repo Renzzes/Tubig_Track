@@ -10,6 +10,7 @@ class InventorySummary {
   final int damagedBottles;
   final int missingBottles;
   final int purchasedBottles;
+  final int addedBottles;
   final int donatedBottles;
   final int adjustmentNet;
   final int gallonsStock;
@@ -27,6 +28,7 @@ class InventorySummary {
     required this.damagedBottles,
     required this.missingBottles,
     required this.purchasedBottles,
+    this.addedBottles = 0,
     required this.donatedBottles,
     required this.adjustmentNet,
     this.gallonsStock = 0,
@@ -41,10 +43,14 @@ class InventorySummary {
   /// Backward-compatible alias.
   int get borrowedOutstanding => bottlesWithCustomers;
 
+  /// UI label alias.
+  int get availableStock => availableBottles;
+
   bool get isBalanced {
     final totals = InventoryTotals(
       initialInventory: initialInventory,
       purchasedBottles: purchasedBottles,
+      addedBottles: addedBottles,
       donatedBottles: donatedBottles,
       borrowedBottles: borrowedBottles,
       returnedBottles: returnedBottles,

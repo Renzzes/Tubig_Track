@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/utils/inventory_calculator.dart';
 import '../../domain/entities/customer.dart';
 import '../../domain/repositories/customer_repository.dart';
 
@@ -92,6 +93,11 @@ class CustomerRepositoryImpl implements CustomerRepository {
       customerId,
     );
 
+    final bottlesHeld = InventoryCalculator.customerBottlesHeld(
+      delivered: borrowed,
+      collected: returned,
+    );
+
     final unpaidDeliveries =
         await _db.deliveriesDao.getUnpaidByCustomer(customerId);
     final unpaidBalance = unpaidDeliveries.fold<double>(
@@ -122,7 +128,8 @@ class CustomerRepositoryImpl implements CustomerRepository {
       borrowedBottles: borrowed,
       returnedBottles: returned,
       damagedBottles: damaged,
-      outstandingBottles: borrowed - returned - damaged,
+      outstandingBottles: bottlesHeld,
+      bottlesHeld: bottlesHeld,
       unpaidBalance: unpaidBalance,
       depositBalance: depositBalance,
       totalAmountPaid: totalAmountPaid,

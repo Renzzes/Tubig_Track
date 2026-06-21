@@ -15,29 +15,28 @@ class CustomerStatsRow extends StatelessWidget {
       spacing: 8,
       children: [
         _StatBox(
-          label: 'Borrowed',
+          label: 'Bottles Held',
+          value: '${stats.bottlesHeld}',
+          icon: Icons.inventory_2_outlined,
+          color: AppColors.primary,
+        ),
+        _StatBox(
+          label: 'Delivered',
           value: '${stats.borrowedBottles}',
-          icon: Icons.arrow_upward,
+          icon: Icons.local_shipping_outlined,
           color: AppColors.warning,
         ),
         _StatBox(
-          label: 'Returned',
+          label: 'Collected',
           value: '${stats.returnedBottles}',
           icon: Icons.arrow_downward,
           color: AppColors.success,
         ),
         _StatBox(
-          label: 'Outstanding',
-          value: '${stats.outstandingBottles}',
-          icon: Icons.inventory_2_outlined,
-          color: AppColors.primary,
-        ),
-        _StatBox(
           label: 'Unpaid Balance',
           value: CurrencyFormatter.format(stats.unpaidBalance),
           icon: Icons.account_balance_wallet_outlined,
-          color:
-              stats.unpaidBalance > 0 ? AppColors.error : AppColors.success,
+          color: stats.unpaidBalance > 0 ? AppColors.error : AppColors.success,
         ),
       ],
     );

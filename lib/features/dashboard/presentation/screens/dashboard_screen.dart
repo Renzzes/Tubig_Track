@@ -62,6 +62,10 @@ class DashboardScreen extends ConsumerWidget {
               _QuickActions(context: context),
               const SizedBox(height: 20),
 
+              // Copilot card
+              _CopilotCard(context: context),
+              const SizedBox(height: 12),
+
               // Today's summary header
               Row(
                 children: [
@@ -459,6 +463,41 @@ class _QuickActions extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _CopilotCard extends StatelessWidget {
+  final BuildContext context;
+
+  const _CopilotCard({required this.context});
+
+  @override
+  Widget build(BuildContext _) {
+    return ListTile(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.blue[100]!),
+      ),
+      tileColor: Colors.blue[50],
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Icon(
+          Icons.smart_toy_outlined,
+          color: AppColors.primary,
+        ),
+      ),
+      title: const Text(
+        'TubigTrack Copilot',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: const Text('Ask questions about your business'),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+      onTap: () => context.push('/copilot'),
     );
   }
 }

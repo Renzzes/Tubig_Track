@@ -6,7 +6,9 @@ import '../../domain/entities/inventory_adjustment.dart';
 import '../../domain/entities/inventory_audit.dart';
 import '../../domain/entities/inventory_audit_summary.dart';
 import '../../domain/entities/inventory_summary.dart';
+import '../../domain/entities/customer_bottle_balance.dart';
 import '../../domain/repositories/inventory_repository.dart';
+import '../../../customers/presentation/providers/customers_provider.dart';
 import '../../../supply_purchases/presentation/providers/supply_purchase_provider.dart';
 import '../../../savings/presentation/providers/savings_goals_provider.dart';
 
@@ -43,12 +45,20 @@ final inventoryAuditSummaryProvider = FutureProvider<InventoryAuditSummary>((ref
   return ref.read(inventoryRepositoryProvider).getAuditSummary();
 });
 
+final customerBottleBalancesProvider =
+    FutureProvider<List<CustomerBottleBalance>>((ref) async {
+  ref.watch(bottleTransactionsStreamProvider);
+  ref.watch(customersStreamProvider);
+  return ref.read(inventoryRepositoryProvider).getCustomerBottleBalances();
+});
+
 void refreshInventoryProviders(WidgetRef ref) {
   ref.invalidate(bottleTransactionsStreamProvider);
   ref.invalidate(inventorySummaryProvider);
   ref.invalidate(inventoryAuditsStreamProvider);
   ref.invalidate(inventoryAdjustmentsStreamProvider);
   ref.invalidate(inventoryAuditSummaryProvider);
+  ref.invalidate(customerBottleBalancesProvider);
   ref.invalidate(supplyPurchasesStreamProvider);
   ref.invalidate(lowStockItemsProvider);
 }

@@ -8,6 +8,7 @@ import '../../domain/entities/inventory_adjustment.dart';
 import '../../domain/entities/inventory_audit.dart';
 import '../../domain/entities/inventory_audit_summary.dart';
 import '../../domain/entities/inventory_summary.dart';
+import '../../domain/entities/customer_bottle_balance.dart';
 import '../../domain/repositories/inventory_repository.dart';
 
 class InventoryRepositoryImpl implements InventoryRepository {
@@ -41,6 +42,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
       damagedBottles: await _db.bottleTransactionsDao.getTotalByType('damaged'),
       purchasedBottles:
           await _db.bottleTransactionsDao.getTotalByType('purchase'),
+      addedBottles: await _db.bottleTransactionsDao.getTotalByType('added'),
       missingBottles: await _db.bottleTransactionsDao.getTotalByType('missing'),
       donatedBottles:
           await _db.bottleTransactionsDao.getTotalByType('donation'),
@@ -50,13 +52,35 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
+  Future<List<CustomerBottleBalance>> getCustomerBottleBalances() async {
+    final balanceMap = await _db.bottleTransactionsDao.getCustomerBottleBalances();
+    if (balanceMap.isEmpty) return [];
+
+    final customers = await _db.customersDao.getAll();
+    final nameMap = {for (final c in customers) c.id: c.name};
+
+    final balances = balanceMap.entries
+        .map(
+          (e) => CustomerBottleBalance(
+            customerId: e.key,
+            customerName: nameMap[e.key] ?? 'Unknown',
+            bottlesHeld: e.value,
+          ),
+        )
+        .toList()
+      ..sort((a, b) => b.bottlesHeld.compareTo(a.bottlesHeld));
+
+    return balances;
+  }
+
+  @override
   Future<InventorySummary> getSummary() async {
     final totals = await _loadTotals();
 
     final totalBottlesOwned = InventoryCalculator.totalBottlesOwned(totals);
     final bottlesWithCustomers =
         InventoryCalculator.bottlesWithCustomers(totals);
-    final availableBottles = InventoryCalculator.availableBottles(totals);
+    final availableBottles = InventoryCalculator.availableStock(totals);
 
     final gallonsStock = await _db.inventoryStockDao.getQuantity('gallons');
     final capsStock = await _db.inventoryStockDao.getQuantity('caps');
@@ -74,6 +98,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
       damagedBottles: totals.damagedBottles,
       missingBottles: totals.missingBottles,
       purchasedBottles: totals.purchasedBottles,
+      addedBottles: totals.addedBottles,
       donatedBottles: totals.donatedBottles,
       adjustmentNet: totals.adjustmentNet,
       gallonsStock: gallonsStock,

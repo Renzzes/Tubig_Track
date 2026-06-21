@@ -78,4 +78,29 @@ class BottleTransactionsDao extends DatabaseAccessor<AppDatabase>
     final row = await query.getSingle();
     return row.read(qtyExpr) ?? 0;
   }
+
+  /// Per-customer bottle balance: sum(borrow) − sum(return), only positive balances.
+  Future<Map<String, int>> getCustomerBottleBalances() async {
+    final rows = await (select(bottleTransactionsTable)
+          ..where(
+            (t) =>
+                t.customerId.isNotNull() &
+                (t.transactionType.equals('borrow') |
+                    t.transactionType.equals('return')),
+          ))
+        .get();
+
+    final balances = <String, int>{};
+    for (final row in rows) {
+      if (row.customerId == null) continue;
+      balances.putIfAbsent(row.customerId!, () => 0);
+      if (row.transactionType == 'borrow') {
+        balances[row.customerId!] = balances[row.customerId!]! + row.quantity;
+      } else {
+        balances[row.customerId!] = balances[row.customerId!]! - row.quantity;
+      }
+    }
+    balances.removeWhere((_, balance) => balance <= 0);
+    return balances;
+  }
 }

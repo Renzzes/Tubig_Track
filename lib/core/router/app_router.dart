@@ -15,6 +15,7 @@ import '../../features/customers/presentation/screens/customer_form_screen.dart'
 import '../../features/customers/presentation/screens/customer_history_screen.dart';
 
 import '../../features/customers/presentation/screens/customer_profile_screen.dart';
+import '../../features/customers/presentation/screens/collect_bottles_screen.dart';
 
 import '../../features/savings/presentation/screens/savings_detail_screen.dart';
 
@@ -30,6 +31,7 @@ import '../../features/inventory/presentation/screens/inventory_screen.dart';
 import '../../features/inventory/presentation/screens/inventory_audit_screen.dart';
 import '../../features/inventory/presentation/screens/inventory_audit_history_screen.dart';
 import '../../features/inventory/presentation/screens/inventory_adjustment_history_screen.dart';
+import '../../features/inventory/presentation/screens/customer_bottle_balances_screen.dart';
 
 import '../../features/settings/presentation/screens/archive_reset_screen.dart';
 
@@ -70,6 +72,7 @@ import '../../features/update/presentation/screens/recovery_center_screen.dart';
 import '../../features/update/presentation/screens/update_history_screen.dart';
 
 import '../../features/update/presentation/screens/update_diagnostics_screen.dart';
+import '../../features/copilot/presentation/screens/copilot_screen.dart';
 
 import '../../shared/widgets/main_scaffold.dart';
 
@@ -253,6 +256,20 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/customers/:id/collect-bottles',
+
+        builder: (context, state) {
+
+          final id = state.pathParameters['id']!;
+
+          return CollectBottlesScreen(customerId: id);
+
+        },
+
+      ),
+
+      GoRoute(
+
         path: '/deliveries/:id/edit',
 
         builder: (context, state) {
@@ -371,6 +388,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/inventory/history',
 
         builder: (context, state) => const InventoryHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/inventory/customer-balances',
+
+        builder: (context, state) => const CustomerBottleBalancesScreen(),
 
       ),
 
@@ -508,6 +533,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/update-diagnostics',
 
         builder: (context, state) => const UpdateDiagnosticsScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/copilot',
+
+        builder: (context, state) => const CopilotScreen(),
 
       ),
 

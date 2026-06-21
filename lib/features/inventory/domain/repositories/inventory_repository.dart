@@ -1,3 +1,4 @@
+import '../entities/customer_bottle_balance.dart';
 import '../entities/bottle_transaction.dart';
 import '../entities/inventory_adjustment.dart';
 import '../entities/inventory_audit.dart';
@@ -6,6 +7,7 @@ import '../entities/inventory_summary.dart';
 
 abstract class InventoryRepository {
   Future<InventorySummary> getSummary();
+  Future<List<CustomerBottleBalance>> getCustomerBottleBalances();
   Stream<List<BottleTransaction>> watchAll();
   Future<List<BottleTransaction>> getAll();
   Future<void> recordTransaction(BottleTransaction transaction);

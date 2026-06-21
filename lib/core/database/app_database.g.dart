@@ -6764,6 +6764,361 @@ class CustomerDepositsTableCompanion
   }
 }
 
+class $CopilotMessagesTableTable extends CopilotMessagesTable
+    with TableInfo<$CopilotMessagesTableTable, CopilotMessagesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CopilotMessagesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _questionMeta = const VerificationMeta(
+    'question',
+  );
+  @override
+  late final GeneratedColumn<String> question = GeneratedColumn<String>(
+    'question',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _answerMeta = const VerificationMeta('answer');
+  @override
+  late final GeneratedColumn<String> answer = GeneratedColumn<String>(
+    'answer',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _intentMeta = const VerificationMeta('intent');
+  @override
+  late final GeneratedColumn<String> intent = GeneratedColumn<String>(
+    'intent',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    question,
+    answer,
+    intent,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'copilot_messages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CopilotMessagesTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('question')) {
+      context.handle(
+        _questionMeta,
+        question.isAcceptableOrUnknown(data['question']!, _questionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_questionMeta);
+    }
+    if (data.containsKey('answer')) {
+      context.handle(
+        _answerMeta,
+        answer.isAcceptableOrUnknown(data['answer']!, _answerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_answerMeta);
+    }
+    if (data.containsKey('intent')) {
+      context.handle(
+        _intentMeta,
+        intent.isAcceptableOrUnknown(data['intent']!, _intentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_intentMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CopilotMessagesTableData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CopilotMessagesTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      question: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}question'],
+      )!,
+      answer: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}answer'],
+      )!,
+      intent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}intent'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CopilotMessagesTableTable createAlias(String alias) {
+    return $CopilotMessagesTableTable(attachedDatabase, alias);
+  }
+}
+
+class CopilotMessagesTableData extends DataClass
+    implements Insertable<CopilotMessagesTableData> {
+  final int id;
+  final String question;
+  final String answer;
+  final String intent;
+  final int createdAt;
+  const CopilotMessagesTableData({
+    required this.id,
+    required this.question,
+    required this.answer,
+    required this.intent,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['question'] = Variable<String>(question);
+    map['answer'] = Variable<String>(answer);
+    map['intent'] = Variable<String>(intent);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  CopilotMessagesTableCompanion toCompanion(bool nullToAbsent) {
+    return CopilotMessagesTableCompanion(
+      id: Value(id),
+      question: Value(question),
+      answer: Value(answer),
+      intent: Value(intent),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CopilotMessagesTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CopilotMessagesTableData(
+      id: serializer.fromJson<int>(json['id']),
+      question: serializer.fromJson<String>(json['question']),
+      answer: serializer.fromJson<String>(json['answer']),
+      intent: serializer.fromJson<String>(json['intent']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'question': serializer.toJson<String>(question),
+      'answer': serializer.toJson<String>(answer),
+      'intent': serializer.toJson<String>(intent),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  CopilotMessagesTableData copyWith({
+    int? id,
+    String? question,
+    String? answer,
+    String? intent,
+    int? createdAt,
+  }) => CopilotMessagesTableData(
+    id: id ?? this.id,
+    question: question ?? this.question,
+    answer: answer ?? this.answer,
+    intent: intent ?? this.intent,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CopilotMessagesTableData copyWithCompanion(
+    CopilotMessagesTableCompanion data,
+  ) {
+    return CopilotMessagesTableData(
+      id: data.id.present ? data.id.value : this.id,
+      question: data.question.present ? data.question.value : this.question,
+      answer: data.answer.present ? data.answer.value : this.answer,
+      intent: data.intent.present ? data.intent.value : this.intent,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CopilotMessagesTableData(')
+          ..write('id: $id, ')
+          ..write('question: $question, ')
+          ..write('answer: $answer, ')
+          ..write('intent: $intent, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, question, answer, intent, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CopilotMessagesTableData &&
+          other.id == this.id &&
+          other.question == this.question &&
+          other.answer == this.answer &&
+          other.intent == this.intent &&
+          other.createdAt == this.createdAt);
+}
+
+class CopilotMessagesTableCompanion
+    extends UpdateCompanion<CopilotMessagesTableData> {
+  final Value<int> id;
+  final Value<String> question;
+  final Value<String> answer;
+  final Value<String> intent;
+  final Value<int> createdAt;
+  const CopilotMessagesTableCompanion({
+    this.id = const Value.absent(),
+    this.question = const Value.absent(),
+    this.answer = const Value.absent(),
+    this.intent = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  CopilotMessagesTableCompanion.insert({
+    this.id = const Value.absent(),
+    required String question,
+    required String answer,
+    required String intent,
+    required int createdAt,
+  }) : question = Value(question),
+       answer = Value(answer),
+       intent = Value(intent),
+       createdAt = Value(createdAt);
+  static Insertable<CopilotMessagesTableData> custom({
+    Expression<int>? id,
+    Expression<String>? question,
+    Expression<String>? answer,
+    Expression<String>? intent,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (question != null) 'question': question,
+      if (answer != null) 'answer': answer,
+      if (intent != null) 'intent': intent,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  CopilotMessagesTableCompanion copyWith({
+    Value<int>? id,
+    Value<String>? question,
+    Value<String>? answer,
+    Value<String>? intent,
+    Value<int>? createdAt,
+  }) {
+    return CopilotMessagesTableCompanion(
+      id: id ?? this.id,
+      question: question ?? this.question,
+      answer: answer ?? this.answer,
+      intent: intent ?? this.intent,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (question.present) {
+      map['question'] = Variable<String>(question.value);
+    }
+    if (answer.present) {
+      map['answer'] = Variable<String>(answer.value);
+    }
+    if (intent.present) {
+      map['intent'] = Variable<String>(intent.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CopilotMessagesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('question: $question, ')
+          ..write('answer: $answer, ')
+          ..write('intent: $intent, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6793,6 +7148,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $InventoryAdjustmentsTableTable(this);
   late final $CustomerDepositsTableTable customerDepositsTable =
       $CustomerDepositsTableTable(this);
+  late final $CopilotMessagesTableTable copilotMessagesTable =
+      $CopilotMessagesTableTable(this);
   late final CustomersDao customersDao = CustomersDao(this as AppDatabase);
   late final DeliveriesDao deliveriesDao = DeliveriesDao(this as AppDatabase);
   late final BottleTransactionsDao bottleTransactionsDao =
@@ -6822,6 +7179,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CustomerDepositsDao customerDepositsDao = CustomerDepositsDao(
     this as AppDatabase,
   );
+  late final CopilotMessagesDao copilotMessagesDao = CopilotMessagesDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6842,6 +7202,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inventoryAuditsTable,
     inventoryAdjustmentsTable,
     customerDepositsTable,
+    copilotMessagesTable,
   ];
 }
 
@@ -10551,6 +10912,216 @@ typedef $$CustomerDepositsTableTableProcessedTableManager =
       CustomerDepositsTableData,
       PrefetchHooks Function()
     >;
+typedef $$CopilotMessagesTableTableCreateCompanionBuilder =
+    CopilotMessagesTableCompanion Function({
+      Value<int> id,
+      required String question,
+      required String answer,
+      required String intent,
+      required int createdAt,
+    });
+typedef $$CopilotMessagesTableTableUpdateCompanionBuilder =
+    CopilotMessagesTableCompanion Function({
+      Value<int> id,
+      Value<String> question,
+      Value<String> answer,
+      Value<String> intent,
+      Value<int> createdAt,
+    });
+
+class $$CopilotMessagesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CopilotMessagesTableTable> {
+  $$CopilotMessagesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get question => $composableBuilder(
+    column: $table.question,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get answer => $composableBuilder(
+    column: $table.answer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get intent => $composableBuilder(
+    column: $table.intent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CopilotMessagesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CopilotMessagesTableTable> {
+  $$CopilotMessagesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get question => $composableBuilder(
+    column: $table.question,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get answer => $composableBuilder(
+    column: $table.answer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get intent => $composableBuilder(
+    column: $table.intent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CopilotMessagesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CopilotMessagesTableTable> {
+  $$CopilotMessagesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get question =>
+      $composableBuilder(column: $table.question, builder: (column) => column);
+
+  GeneratedColumn<String> get answer =>
+      $composableBuilder(column: $table.answer, builder: (column) => column);
+
+  GeneratedColumn<String> get intent =>
+      $composableBuilder(column: $table.intent, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CopilotMessagesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CopilotMessagesTableTable,
+          CopilotMessagesTableData,
+          $$CopilotMessagesTableTableFilterComposer,
+          $$CopilotMessagesTableTableOrderingComposer,
+          $$CopilotMessagesTableTableAnnotationComposer,
+          $$CopilotMessagesTableTableCreateCompanionBuilder,
+          $$CopilotMessagesTableTableUpdateCompanionBuilder,
+          (
+            CopilotMessagesTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $CopilotMessagesTableTable,
+              CopilotMessagesTableData
+            >,
+          ),
+          CopilotMessagesTableData,
+          PrefetchHooks Function()
+        > {
+  $$CopilotMessagesTableTableTableManager(
+    _$AppDatabase db,
+    $CopilotMessagesTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CopilotMessagesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CopilotMessagesTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CopilotMessagesTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> question = const Value.absent(),
+                Value<String> answer = const Value.absent(),
+                Value<String> intent = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => CopilotMessagesTableCompanion(
+                id: id,
+                question: question,
+                answer: answer,
+                intent: intent,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String question,
+                required String answer,
+                required String intent,
+                required int createdAt,
+              }) => CopilotMessagesTableCompanion.insert(
+                id: id,
+                question: question,
+                answer: answer,
+                intent: intent,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CopilotMessagesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CopilotMessagesTableTable,
+      CopilotMessagesTableData,
+      $$CopilotMessagesTableTableFilterComposer,
+      $$CopilotMessagesTableTableOrderingComposer,
+      $$CopilotMessagesTableTableAnnotationComposer,
+      $$CopilotMessagesTableTableCreateCompanionBuilder,
+      $$CopilotMessagesTableTableUpdateCompanionBuilder,
+      (
+        CopilotMessagesTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $CopilotMessagesTableTable,
+          CopilotMessagesTableData
+        >,
+      ),
+      CopilotMessagesTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10594,4 +11165,6 @@ class $AppDatabaseManager {
       );
   $$CustomerDepositsTableTableTableManager get customerDepositsTable =>
       $$CustomerDepositsTableTableTableManager(_db, _db.customerDepositsTable);
+  $$CopilotMessagesTableTableTableManager get copilotMessagesTable =>
+      $$CopilotMessagesTableTableTableManager(_db, _db.copilotMessagesTable);
 }

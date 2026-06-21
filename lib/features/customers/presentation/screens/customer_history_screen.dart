@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/bottle_balance_utils.dart';
 import '../../../../shared/widgets/history_filter_bar.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../deliveries/domain/entities/delivery.dart';
@@ -51,7 +53,7 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
       case CustomerHistoryType.payments:
         return 'Payment History';
       case CustomerHistoryType.bottleTransactions:
-        return 'Bottle Transaction History';
+        return 'Bottle History';
       case CustomerHistoryType.deposits:
         return 'Deposit History';
     }
@@ -152,24 +154,64 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
     final async = ref.watch(bottleTransactionsStreamProvider);
     return async.when(
       data: (all) {
-        final items = all
-            .where((t) => t.customerId == widget.customerId)
-            .where((t) {
-              if (!isInDateRange(t.date, _startDate, _endDate)) return false;
-              final q = _searchCtrl.text.trim().toLowerCase();
-              if (q.isEmpty) return true;
-              return BottleTransaction.typeLabel(t.transactionType)
-                      .toLowerCase()
-                      .contains(q) ||
-                  t.quantity.toString().contains(q);
-            })
-            .toList();
-        return _buildPagedList<BottleTransaction>(
-          items,
-          (t) => ListTile(
-            title: Text(BottleTransaction.typeLabel(t.transactionType)),
-            subtitle: Text(DateFormatter.formatDateTime(t.date)),
-            trailing: Text('${t.quantity} btl'),
+        final items = all.where((t) => t.customerId == widget.customerId).toList();
+        final ledger = buildCustomerBottleLedger(items).where((entry) {
+          if (!isInDateRange(entry.transaction.date, _startDate, _endDate)) {
+            return false;
+          }
+          final q = _searchCtrl.text.trim().toLowerCase();
+          if (q.isEmpty) return true;
+          return entry.actionLabel.toLowerCase().contains(q) ||
+              entry.transaction.quantity.toString().contains(q) ||
+              entry.balanceAfter.toString().contains(q) ||
+              (entry.transaction.notes?.toLowerCase().contains(q) ?? false);
+        }).toList();
+
+        if (ledger.isEmpty) {
+          return const Center(child: Text('No records found'));
+        }
+
+        final visible = ledger.take(_visibleCount).toList();
+        return NotificationListener<ScrollNotification>(
+          onNotification: (n) {
+            if (n is ScrollEndNotification &&
+                n.metrics.pixels >= n.metrics.maxScrollExtent - 100 &&
+                _visibleCount < ledger.length) {
+              setState(() => _visibleCount += _pageSize);
+            }
+            return false;
+          },
+          child: ListView.builder(
+            itemCount: visible.length,
+            itemBuilder: (_, i) {
+              final entry = visible[i];
+              final sign = entry.isIncrease ? '+' : '-';
+              final color =
+                  entry.isIncrease ? AppColors.warning : AppColors.success;
+              return ListTile(
+                title: Text(entry.actionLabel),
+                subtitle: Text(
+                  '${DateFormatter.format(entry.transaction.date)}${entry.transaction.notes != null ? ' • ${entry.transaction.notes}' : ''}',
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '$sign${entry.transaction.quantity}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                    Text(
+                      'Balance: ${entry.balanceAfter}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         );
       },
@@ -386,6 +428,8 @@ class _InventoryHistoryScreenState extends ConsumerState<InventoryHistoryScreen>
         return Icons.arrow_downward;
       case TransactionType.purchase:
         return Icons.add_shopping_cart;
+      case TransactionType.added:
+        return Icons.add_circle_outline;
       case TransactionType.damaged:
         return Icons.broken_image_outlined;
       case TransactionType.missing:

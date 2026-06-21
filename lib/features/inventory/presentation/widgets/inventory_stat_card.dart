@@ -7,6 +7,7 @@ class InventoryStatCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String? subtitle;
+  final VoidCallback? onTap;
 
   const InventoryStatCard({
     super.key,
@@ -15,6 +16,7 @@ class InventoryStatCard extends StatelessWidget {
     required this.icon,
     required this.color,
     this.subtitle,
+    this.onTap,
   });
 
   @override
@@ -23,7 +25,7 @@ class InventoryStatCard extends StatelessWidget {
     final labelSize = context.scaledFontSize(13);
     final subtitleSize = context.scaledFontSize(11);
 
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
@@ -82,6 +84,17 @@ class InventoryStatCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: card,
       ),
     );
   }
