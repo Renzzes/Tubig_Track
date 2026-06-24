@@ -21,7 +21,6 @@ class CustomerStatementData {
   final double totalPaid;
   final int missingBottles;
   final int damagedBottles;
-  final String verificationStatus;
   final List<CustomerStatementLine> recentDeliveries;
   final List<CustomerStatementLine> recentCollections;
   final List<CustomerStatementLine> recentPayments;
@@ -40,7 +39,6 @@ class CustomerStatementData {
     required this.totalPaid,
     required this.missingBottles,
     required this.damagedBottles,
-    required this.verificationStatus,
     required this.recentDeliveries,
     required this.recentCollections,
     required this.recentPayments,

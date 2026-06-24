@@ -121,7 +121,7 @@ class _CustomersScreenState extends ConsumerState<CustomersScreen> {
                     final customer = customers[index];
                     return CustomerListTile(
                       customer: customer,
-                      onTap: () => context.push('/customers/${customer.id}'),
+                      onTap: () => context.push('/customers/${customer.id}/visit'),
                       onEdit: () =>
                           context.push('/customers/${customer.id}/edit'),
                       onDelete: () async {

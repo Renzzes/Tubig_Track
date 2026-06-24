@@ -675,8 +675,66 @@ class InventoryRepositoryImpl implements InventoryRepository {
         actualCount: null,
       );
     }
+  }
 
-    await _db.customersDao.updatePhysicalCountVerification(customerId, now);
+  @override
+  Future<void> recordCustomerBottleCountCheck({
+    required String customerId,
+    required int expectedBusinessOwned,
+    required int actualBusinessOwned,
+    required int expectedCustomerOwned,
+    required int actualCustomerOwned,
+    String? notes,
+  }) async {
+    final businessVariance = actualBusinessOwned - expectedBusinessOwned;
+    final customerVariance = actualCustomerOwned - expectedCustomerOwned;
+    if (businessVariance == 0 && customerVariance == 0) return;
+
+    final now = DateTime.now();
+    final noteText = notes?.trim().isNotEmpty == true ? notes!.trim() : null;
+
+    if (businessVariance != 0) {
+      await _db.customerBottleReconciliationsDao.insertReconciliation(
+        CustomerBottleReconciliationsTableCompanion.insert(
+          id: const Uuid().v4(),
+          customerId: customerId,
+          expectedCount: expectedBusinessOwned,
+          actualCount: actualBusinessOwned,
+          variance: businessVariance,
+          reason: Value(
+            noteText ??
+                (businessVariance < 0
+                    ? 'Bottle Count Check — Missing'
+                    : 'Bottle Count Check — Excess'),
+          ),
+          notes: Value(noteText),
+          adjustmentApplied: const Value(true),
+          createdAt: Value(now),
+        ),
+      );
+      await adjustCustomerBottleBalance(
+        customerId: customerId,
+        quantityDelta: businessVariance,
+        reason: 'Bottle Count Check',
+        notes: noteText,
+        date: now,
+      );
+    }
+
+    if (customerVariance != 0) {
+      await adjustCustomerOwnedBottleBalance(
+        customerId: customerId,
+        quantityDelta: customerVariance,
+        reason: 'Bottle Count Check',
+        notes: noteText,
+        date: now,
+      );
+    }
+
+    await setPendingPhysicalBottleCount(
+      customerId: customerId,
+      actualCount: null,
+    );
   }
 
   CustomerOwnedBottleLog _mapOwnedLog(CustomerOwnedBottleLogsTableData row) {

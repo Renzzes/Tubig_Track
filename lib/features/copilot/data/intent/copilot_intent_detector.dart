@@ -286,36 +286,7 @@ class CopilotIntentDetector {
       return CopilotIntent.getInactiveCustomers;
     }
 
-    // ── BOTTLE VERIFICATION ──────────────────────────────────────────────
-    if (_matchesAny(q, [
-      'who needs reconciliation',
-      'which customers need reconciliation',
-      'customers need reconciliation',
-      'need reconciliation',
-    ])) {
-      return CopilotIntent.getCustomersNeedingReconciliation;
-    }
-    if (_matchesAny(q, [
-      'need reconciliation',
-      'needs reconciliation',
-      'need bottle reconciliation',
-      'not physically counted',
-      'not verified in 30',
-      'overdue reconciliation',
-      'stale physical count',
-    ])) {
-      return CopilotIntent.getCustomersNeedingReconciliation;
-    }
-    if (_matchesAny(q, [
-      'never verified',
-      'never reconciled',
-      'no physical count',
-      'not verified customers',
-      'customers never verified',
-    ])) {
-      return CopilotIntent.getNeverVerifiedCustomers;
-    }
-
+    // ── CUSTOMERS WITH MISSING BOTTLES ─────────────────────────────────
     if (_matchesAny(q, [
       'who has missing bottles',
       'customers with missing bottles',

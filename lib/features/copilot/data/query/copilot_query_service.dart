@@ -2,7 +2,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../customers/domain/entities/customer.dart';
 import '../../domain/entities/copilot_intent.dart';
 import '../../domain/query/business_query_handler.dart';
@@ -73,10 +72,6 @@ class CopilotQueryService implements BusinessQueryHandler {
         return getCustomersWithBottlesAndOverdue(db);
       case CopilotIntent.getCustomerMostDeliveries:
         return getCustomerMostDeliveries(db);
-      case CopilotIntent.getCustomersNeedingReconciliation:
-        return getCustomersNeedingReconciliation(db);
-      case CopilotIntent.getNeverVerifiedCustomers:
-        return getNeverVerifiedCustomers(db);
       case CopilotIntent.getCustomersWithMissingBottles:
         return getCustomersWithMissingBottles(db);
       case CopilotIntent.getCustomersWithOverdueBalances:
@@ -446,46 +441,7 @@ class CopilotQueryService implements BusinessQueryHandler {
     return buf.toString().trim();
   }
 
-  // ── BOTTLE VERIFICATION ───────────────────────────────────────────────────
-
-  Future<String> getCustomersNeedingReconciliation(AppDatabase db) async {
-    final customers = _mapCustomers(await db.customersDao.getAll());
-    final stale = BottleVerificationUtils.customersNeedingReconciliation(
-      customers,
-    );
-    if (stale.isEmpty) {
-      return 'All customers with a recorded physical count were verified within the last $physicalCountVerificationWindowDays days.';
-    }
-    final buf = StringBuffer(
-      '${stale.length} customer${stale.length > 1 ? 's need' : ' needs'} bottle reconciliation (last count over $physicalCountVerificationWindowDays days ago):\n',
-    );
-    for (final c in stale.take(15)) {
-      final days = BottleVerificationUtils.daysSinceLabel(c);
-      buf.writeln('• ${c.name} — last count $days ago');
-    }
-    if (stale.length > 15) buf.writeln('... and ${stale.length - 15} more');
-    return buf.toString().trim();
-  }
-
-  Future<String> getNeverVerifiedCustomers(AppDatabase db) async {
-    final customers = _mapCustomers(await db.customersDao.getAll());
-    final unverified = BottleVerificationUtils.neverVerifiedCustomers(
-      customers,
-    );
-    if (unverified.isEmpty) {
-      return 'Every customer has at least one recorded physical bottle count.';
-    }
-    final buf = StringBuffer(
-      '${unverified.length} customer${unverified.length > 1 ? 's have' : ' has'} never been physically verified:\n',
-    );
-    for (final c in unverified.take(15)) {
-      buf.writeln('• ${c.name}');
-    }
-    if (unverified.length > 15) {
-      buf.writeln('... and ${unverified.length - 15} more');
-    }
-    return buf.toString().trim();
-  }
+  // ── CUSTOMERS WITH MISSING BOTTLES ────────────────────────────────────────
 
   Future<String> getCustomersWithMissingBottles(AppDatabase db) async {
     final customers = _mapCustomers(await db.customersDao.getAll());
@@ -580,9 +536,7 @@ class CopilotQueryService implements BusinessQueryHandler {
         'Financial Summary:\n'
         '• Outstanding balance: ${_fmt(unpaid)}\n'
         '• Deposit balance: ${_fmt(depositBalance)}\n'
-        '• Total paid: ${_fmt(totalPaid)}\n\n'
-        'Verification: ${BottleVerificationUtils.statusFor(customer).label}\n'
-        'Last physical count: ${BottleVerificationUtils.lastPhysicalCountLabel(customer)}';
+        '• Total paid: ${_fmt(totalPaid)}';
   }
 
   Future<String> getWalkInRevenue(AppDatabase db, String question) async {
@@ -799,8 +753,7 @@ class CopilotQueryService implements BusinessQueryHandler {
         '• Lifetime revenue: ${_fmt(totalRevenue)}\n'
         '• Total deliveries: $completedCount\n'
         '• Last delivery: ${lastDelivery != null ? DateFormat('MMM d, yyyy').format(lastDelivery) : 'None'}\n'
-        '• Payment status: $paymentStatus\n'
-        '• Verification: ${BottleVerificationUtils.statusFor(_mapCustomers([customer]).first).label}';
+        '• Payment status: $paymentStatus';
   }
 
   // ── SPECIFIC CUSTOMER BALANCE ─────────────────────────────────────────────

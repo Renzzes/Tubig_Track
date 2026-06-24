@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/customer_status_utils.dart';
 import '../../../../core/utils/bottle_variance_utils.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customers_provider.dart';
 
@@ -42,15 +41,6 @@ class CustomerListTile extends ConsumerWidget {
         );
       },
     );
-
-    final verificationBadge = () {
-      final status = BottleVerificationUtils.statusFor(customer);
-      if (status == PhysicalCountStatus.verified) return null;
-      return (
-        label: status.listBadgeLabel,
-        color: Color(status.colorValue),
-      );
-    }();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -104,30 +94,6 @@ class CustomerListTile extends ConsumerWidget {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: badgeData.color,
-                  ),
-                ),
-              ),
-            ],
-            if (verificationBadge != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: verificationBadge.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: verificationBadge.color.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Text(
-                  verificationBadge.label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: verificationBadge.color,
                   ),
                 ),
               ),

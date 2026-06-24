@@ -80,8 +80,6 @@ class CustomerStats {
   final DateTime? lastActivityDate;
   final bool hasInitialBalance;
   final int initialBottleBalance;
-  final DateTime? lastPhysicalCountDate;
-  final String daysSinceLastPhysicalCountLabel;
   final int operationalCollected;
   final int pendingDeliveryQty;
 
@@ -103,8 +101,6 @@ class CustomerStats {
     this.lastActivityDate,
     this.hasInitialBalance = false,
     this.initialBottleBalance = 0,
-    this.lastPhysicalCountDate,
-    this.daysSinceLastPhysicalCountLabel = 'Never Verified',
     this.operationalCollected = 0,
     this.pendingDeliveryQty = 0,
   });

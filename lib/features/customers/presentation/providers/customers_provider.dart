@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/database_provider.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../deliveries/presentation/providers/deliveries_provider.dart';
 import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../data/repositories/customer_repository_impl.dart';
@@ -77,23 +76,7 @@ Future<List<Customer>> _sortCustomers(
         return a.$1.name.toLowerCase().compareTo(b.$1.name.toLowerCase());
       });
       return indexed.map((e) => e.$1).toList();
-    case CustomerSortOption.needsReconciliationFirst:
-      final sorted = [...customers]..sort((a, b) {
-          final rankA = _reconciliationRank(a);
-          final rankB = _reconciliationRank(b);
-          if (rankA != rankB) return rankA.compareTo(rankB);
-          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        });
-      return sorted;
   }
-}
-
-int _reconciliationRank(Customer customer) {
-  return switch (BottleVerificationUtils.statusFor(customer)) {
-    PhysicalCountStatus.needsReconciliation => 0,
-    PhysicalCountStatus.notVerified => 1,
-    PhysicalCountStatus.verified => 2,
-  };
 }
 
 int _compareDates(DateTime? a, DateTime? b) {

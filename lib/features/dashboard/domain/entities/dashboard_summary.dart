@@ -29,8 +29,7 @@ class DashboardSummary {
   final double customerDepositsHeld;
   final List<UpcomingDeliveryItem> upcomingDeliveries;
 
-  /// Action Required alerts (v1.5.0).
-  final int customersNeedingReconciliation;
+  /// Action Required alerts.
   final int customersWithMissingBottles;
   final bool inventoryAuditRecommended;
 
@@ -53,7 +52,6 @@ class DashboardSummary {
     required this.lastInventoryAuditDate,
     required this.customerDepositsHeld,
     required this.upcomingDeliveries,
-    required this.customersNeedingReconciliation,
     required this.customersWithMissingBottles,
     required this.inventoryAuditRecommended,
     required this.todayWalkInSalesCount,
@@ -62,7 +60,6 @@ class DashboardSummary {
   });
 
   bool get hasActionRequired =>
-      customersNeedingReconciliation > 0 ||
       customersWithMissingBottles > 0 ||
       overdueCustomerCount > 0 ||
       inventoryAuditRecommended;

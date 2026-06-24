@@ -19,8 +19,6 @@ enum CopilotIntent {
   getCustomersWithDeposits,
   getCustomersWithBottlesAndOverdue,
   getCustomerMostDeliveries,
-  getCustomersNeedingReconciliation,
-  getNeverVerifiedCustomers,
   getCustomersWithMissingBottles,
   getCustomersWithOverdueBalances,
   getTotalCustomerOwnedBottles,

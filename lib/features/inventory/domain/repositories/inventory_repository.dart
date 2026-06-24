@@ -51,6 +51,16 @@ abstract class InventoryRepository {
     required bool applyAdjustment,
   });
 
+  /// Updates stored bottle counts when a physical count differs from system.
+  Future<void> recordCustomerBottleCountCheck({
+    required String customerId,
+    required int expectedBusinessOwned,
+    required int actualBusinessOwned,
+    required int expectedCustomerOwned,
+    required int actualCustomerOwned,
+    String? notes,
+  });
+
   Future<void> setPendingPhysicalBottleCount({
     required String customerId,
     int? actualCount,

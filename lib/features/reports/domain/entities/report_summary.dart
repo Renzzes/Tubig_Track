@@ -96,11 +96,6 @@ class ReportSummary {
   final double totalDepositsUsed;
   final double currentDepositLiability;
 
-  /// Customer bottle physical verification snapshot.
-  final int verifiedCustomers;
-  final int customersNeedingReconciliation;
-  final int notVerifiedCustomers;
-
   /// Extended fields for full business report (v1.5.0).
   final int totalCustomerOwnedBottles;
   final String inventoryHealthLabel;
@@ -168,9 +163,6 @@ class ReportSummary {
     required this.totalDepositsAdded,
     required this.totalDepositsUsed,
     required this.currentDepositLiability,
-    required this.verifiedCustomers,
-    required this.customersNeedingReconciliation,
-    required this.notVerifiedCustomers,
     required this.totalCustomerOwnedBottles,
     required this.inventoryHealthLabel,
     required this.periodCollections,

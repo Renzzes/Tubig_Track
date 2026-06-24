@@ -299,19 +299,6 @@ class ReportsScreen extends ConsumerWidget {
         xl.TextCellValue('Payments Received'),
         xl.DoubleCellValue(report.totalPaymentsReceived),
       ]);
-      sheet.appendRow([xl.TextCellValue('Customer Bottle Verification')]);
-      sheet.appendRow([
-        xl.TextCellValue('Verified'),
-        xl.IntCellValue(report.verifiedCustomers),
-      ]);
-      sheet.appendRow([
-        xl.TextCellValue('Needs Reconciliation'),
-        xl.IntCellValue(report.customersNeedingReconciliation),
-      ]);
-      sheet.appendRow([
-        xl.TextCellValue('Not Verified'),
-        xl.IntCellValue(report.notVerifiedCustomers),
-      ]);
       sheet.appendRow([
         xl.TextCellValue('Customer-Owned Bottles (Total)'),
         xl.IntCellValue(report.totalCustomerOwnedBottles),
@@ -700,46 +687,20 @@ class _ReportContent extends ConsumerWidget {
               label: 'Missing Bottles',
               value: '-${report.periodMissingBottles}',
             ),
-            if (report.periodCustomerOwnedCollected > 0 ||
-                report.periodCustomerOwnedDelivered > 0) ...[
-              const Divider(),
-              _MetricRow(
-                label: 'Collected Customer-Owned Bottles',
-                value: '${report.periodCustomerOwnedCollected}',
-              ),
-              _MetricRow(
-                label: 'Delivered Customer-Owned Bottles',
-                value: '${report.periodCustomerOwnedDelivered}',
-              ),
-            ],
-          ],
-        ),
-        if (report.verifiedCustomers +
-                report.customersNeedingReconciliation +
-                report.notVerifiedCustomers >
-            0) ...[
-          const SizedBox(height: 8),
-          _ReportExpansionSection(
-            title: 'Customer Bottle Verification',
-            icon: Icons.verified_user_outlined,
-            color: AppColors.primary,
-            summary: '${report.verifiedCustomers} verified',
-            children: [
-              _MetricRow(
-                label: 'Verified Customers',
-                value: '${report.verifiedCustomers}',
-              ),
-              _MetricRow(
-                label: 'Needs Reconciliation',
-                value: '${report.customersNeedingReconciliation}',
-              ),
-              _MetricRow(
-                label: 'Not Verified',
-                value: '${report.notVerifiedCustomers}',
-              ),
-            ],
+        if (report.periodCustomerOwnedCollected > 0 ||
+            report.periodCustomerOwnedDelivered > 0) ...[
+          const Divider(),
+          _MetricRow(
+            label: 'Collected Customer-Owned Bottles',
+            value: '${report.periodCustomerOwnedCollected}',
+          ),
+          _MetricRow(
+            label: 'Delivered Customer-Owned Bottles',
+            value: '${report.periodCustomerOwnedDelivered}',
           ),
         ],
+          ],
+        ),
         const SizedBox(height: 8),
 
         _ReportExpansionSection(

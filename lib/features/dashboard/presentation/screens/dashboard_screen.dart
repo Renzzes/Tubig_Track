@@ -71,13 +71,6 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (summary.customersNeedingReconciliation > 0)
-                  _ActionAlertTile(
-                    icon: Icons.verified_user_outlined,
-                    label:
-                        '${summary.customersNeedingReconciliation} Customer${summary.customersNeedingReconciliation > 1 ? 's' : ''} Need Reconciliation',
-                    onTap: () => context.go('/customers'),
-                  ),
                 if (summary.customersWithMissingBottles > 0)
                   _ActionAlertTile(
                     icon: Icons.search_off_outlined,

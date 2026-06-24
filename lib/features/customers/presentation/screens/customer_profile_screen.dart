@@ -5,7 +5,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/customer_bottle_ownership_utils.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../../core/utils/customer_status_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
@@ -56,6 +55,12 @@ class CustomerProfileScreen extends ConsumerWidget {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.directions_walk_outlined),
+                    tooltip: 'Customer Visit',
+                    onPressed: () =>
+                        context.push('/customers/$customerId/visit'),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     tooltip: 'Print Statement',
@@ -177,8 +182,6 @@ class CustomerProfileScreen extends ConsumerWidget {
               statsAsync.when(
                 data: (stats) {
                   final accountInfo = CustomerStatusUtils.infoFor(stats);
-                  final verificationStatus =
-                      BottleVerificationUtils.statusFor(customer);
                   return Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -240,40 +243,6 @@ class CustomerProfileScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Verification Status',
-                                  style:
-                                      Theme.of(context).textTheme.titleSmall,
-                                ),
-                              ),
-                              _PhysicalCountStatusBadge(
-                                status: verificationStatus,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            verificationStatus.description,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (customer.lastPhysicalCountDate != null) ...[
-                            const SizedBox(height: 8),
-                            _AnalyticsRow(
-                              label: 'Last Physical Count',
-                              value: BottleVerificationUtils
-                                  .lastPhysicalCountLabel(customer),
-                            ),
-                            _AnalyticsRow(
-                              label: 'Days Since Count',
-                              value: stats.daysSinceLastPhysicalCountLabel,
-                            ),
-                          ],
                           const SizedBox(height: 16),
                           SizedBox(
                             width: double.infinity,
@@ -732,38 +701,6 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _AnalyticsRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _AnalyticsRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-              textAlign: TextAlign.end,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SummaryStatBox extends StatelessWidget {
   final String label;
   final String value;
@@ -819,33 +756,6 @@ class _SummaryStatBox extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PhysicalCountStatusBadge extends StatelessWidget {
-  final PhysicalCountStatus status;
-
-  const _PhysicalCountStatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Color(status.colorValue);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.listBadgeLabel,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
       ),
     );
   }

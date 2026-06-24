@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/responsive.dart';
@@ -12,7 +11,7 @@ import '../providers/customers_provider.dart';
 import '../utils/customer_statement_export.dart';
 import '../widgets/customer_bottle_reconcile_dialog.dart';
 
-/// Field-optimized hub for customer visits (v1.5.0).
+/// Field-optimized hub for customer visits.
 class CustomerVisitScreen extends ConsumerWidget {
   final String customerId;
 
@@ -45,8 +44,6 @@ class CustomerVisitScreen extends ConsumerWidget {
           }
           return statsAsync.when(
             data: (stats) {
-              final verificationStatus =
-                  BottleVerificationUtils.statusFor(customer);
               return ResponsiveContent(
                 padding: EdgeInsets.all(context.pageHorizontalPadding),
                 child: ListView(
@@ -86,10 +83,6 @@ class CustomerVisitScreen extends ConsumerWidget {
                                   ? DateFormatter.format(stats.lastDeliveryDate!)
                                   : 'None',
                             ),
-                            _VisitRow(
-                              label: 'Verification Status',
-                              value: verificationStatus.label,
-                            ),
                           ],
                         ),
                       ),
@@ -104,18 +97,18 @@ class CustomerVisitScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     _ActionButton(
-                      icon: Icons.arrow_downward,
-                      label: 'Collect Bottles',
-                      onPressed: () => context.push(
-                        '/customers/$customerId/collect-bottles',
-                      ),
-                    ),
-                    _ActionButton(
                       icon: Icons.local_shipping_outlined,
                       label: 'Deliver Bottles',
                       onPressed: () => context.push(
                         '/deliveries/add',
                         extra: {'customerId': customerId},
+                      ),
+                    ),
+                    _ActionButton(
+                      icon: Icons.arrow_downward,
+                      label: 'Collect Bottles',
+                      onPressed: () => context.push(
+                        '/customers/$customerId/collect-bottles',
                       ),
                     ),
                     _ActionButton(
@@ -125,13 +118,14 @@ class CustomerVisitScreen extends ConsumerWidget {
                           context.push('/customers/$customerId/payment'),
                     ),
                     _ActionButton(
-                      icon: Icons.balance_outlined,
-                      label: 'Reconcile Bottles',
-                      onPressed: () => CustomerBottleReconcileDialog.show(
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Check Bottle Count',
+                      onPressed: () => CustomerBottleCountDialog.show(
                         context,
                         ref,
                         customerId: customerId,
-                        expectedBottles: stats.bottlesHeld,
+                        businessOwnedHeld: stats.bottlesHeld,
+                        customerOwnedHeld: stats.customerOwnedBottlesHeld,
                       ),
                     ),
                     _ActionButton(

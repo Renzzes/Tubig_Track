@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/inventory_calculator.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../../core/utils/customer_operational_bottles_utils.dart';
 import '../../domain/entities/customer.dart';
 import '../../../deliveries/domain/entities/delivery.dart';
@@ -165,7 +164,6 @@ class CustomerRepositoryImpl implements CustomerRepository {
 
     final customerRow = await _db.customersDao.getById(customerId);
     final customerOwnedHeld = customerRow?.customerOwnedBottlesHeld ?? 0;
-    final customerEntity = customerRow != null ? _map(customerRow) : null;
 
     final deliveryEntities = allDeliveries.map((row) {
       return Delivery(
@@ -219,10 +217,6 @@ class CustomerRepositoryImpl implements CustomerRepository {
       lastActivityDate: lastActivityDate,
       hasInitialBalance: hasInitialBalance,
       initialBottleBalance: initialBottleBalance,
-      lastPhysicalCountDate: customerEntity?.lastPhysicalCountDate,
-      daysSinceLastPhysicalCountLabel: customerEntity != null
-          ? BottleVerificationUtils.daysSinceLabel(customerEntity)
-          : 'Never Verified',
       operationalCollected: operationalCollected,
       pendingDeliveryQty: pendingDeliveryQty,
     );

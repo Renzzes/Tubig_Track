@@ -5,7 +5,6 @@ import '../../domain/entities/report_summary.dart';
 import '../../domain/repositories/reports_repository.dart';
 import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../../savings/data/repositories/savings_repository_impl.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../../core/utils/inventory_health_utils.dart';
 import '../../../walk_in_operations/domain/entities/walk_in_sale.dart';
 import '../../../customers/data/repositories/customer_repository_impl.dart';
@@ -185,7 +184,6 @@ class ReportsRepositoryImpl implements ReportsRepository {
     final depositUsed = await _db.customerDepositsDao.getTotalUsed();
 
     final allCustomers = await CustomerRepositoryImpl(_db).getAll();
-    final verification = BottleVerificationUtils.summarize(allCustomers);
 
     var totalCustomerOwned = 0;
     for (final c in allCustomers) {
@@ -277,9 +275,6 @@ class ReportsRepositoryImpl implements ReportsRepository {
       totalDepositsAdded: depositAdded,
       totalDepositsUsed: depositUsed,
       currentDepositLiability: depositHeld,
-      verifiedCustomers: verification.verified,
-      customersNeedingReconciliation: verification.needsReconciliation,
-      notVerifiedCustomers: verification.notVerified,
       totalCustomerOwnedBottles: totalCustomerOwned,
       inventoryHealthLabel: healthLabel,
       periodCollections: periodCollections,

@@ -1,6 +1,5 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_formatter.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../customers/data/repositories/customer_repository_impl.dart';
 import '../../../inventory/data/repositories/inventory_repository_impl.dart';
 import '../../../overdue/data/repositories/overdue_repository_impl.dart';
@@ -61,7 +60,6 @@ class DashboardRepositoryImpl implements DashboardRepository {
         await _db.customerDepositsDao.getTotalDepositsHeld();
 
     final domainCustomers = await CustomerRepositoryImpl(_db).getAll();
-    final verification = BottleVerificationUtils.summarize(domainCustomers);
     final bottleBalances =
         await _db.bottleTransactionsDao.getCustomerBottleBalances();
 
@@ -96,7 +94,6 @@ class DashboardRepositoryImpl implements DashboardRepository {
       lastInventoryAuditDate: auditSummary.lastAuditDate,
       customerDepositsHeld: customerDepositsHeld,
       upcomingDeliveries: upcomingDeliveries,
-      customersNeedingReconciliation: verification.needsReconciliation,
       customersWithMissingBottles: customersWithMissingBottles,
       inventoryAuditRecommended: auditRecommended,
       todayWalkInSalesCount: todayWalkInCount,

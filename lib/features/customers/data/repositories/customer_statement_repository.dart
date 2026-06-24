@@ -1,5 +1,4 @@
 import '../../../../core/database/app_database.dart';
-import '../../../../core/utils/bottle_verification_utils.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../inventory/data/repositories/inventory_repository_impl.dart';
@@ -103,7 +102,6 @@ class CustomerStatementRepository {
       totalPaid: stats.totalAmountPaid,
       missingBottles: missingBottles,
       damagedBottles: stats.damagedBottles,
-      verificationStatus: BottleVerificationUtils.statusFor(customer).label,
       recentDeliveries: recentDeliveries,
       recentCollections: recentCollections,
       recentPayments: recentPayments,

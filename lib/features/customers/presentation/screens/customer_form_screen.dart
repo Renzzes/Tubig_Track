@@ -274,14 +274,15 @@ class _BottleOwnershipManagementSection extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => CustomerBottleReconcileDialog.show(
+                  onPressed: () => CustomerBottleCountDialog.show(
                     context,
                     ref,
                     customerId: customerId,
-                    expectedBottles: stats.bottlesHeld,
+                    businessOwnedHeld: stats.bottlesHeld,
+                    customerOwnedHeld: stats.customerOwnedBottlesHeld,
                   ),
-                  icon: const Icon(Icons.balance_outlined),
-                  label: const Text('Reconcile Bottles'),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Check Bottle Count'),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 48),
                   ),
