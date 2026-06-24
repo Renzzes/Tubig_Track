@@ -6,7 +6,6 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/customer_bottle_ownership_utils.dart';
 import '../../../../core/utils/bottle_verification_utils.dart';
-import '../../../../core/utils/bottle_variance_utils.dart';
 import '../../../../core/utils/customer_status_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/empty_state_widget.dart';
@@ -22,8 +21,6 @@ import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../domain/entities/customer.dart';
 import '../providers/customers_provider.dart';
 import '../utils/customer_statement_export.dart';
-import '../widgets/customer_bottle_reconcile_dialog.dart';
-import '../widgets/customer_stats_row.dart';
 
 class CustomerProfileScreen extends ConsumerWidget {
   final String customerId;
@@ -59,12 +56,6 @@ class CustomerProfileScreen extends ConsumerWidget {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.directions_walk_outlined),
-                    tooltip: 'Start Customer Visit',
-                    onPressed: () =>
-                        context.push('/customers/$customerId/visit'),
-                  ),
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     tooltip: 'Print Statement',
@@ -182,177 +173,125 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // Stats card — Outstanding Balance + Bottles
+              // Customer Summary
               statsAsync.when(
-                data: (stats) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Account Overview',
-                                style: Theme.of(context).textTheme.titleMedium,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _statusBadge(stats),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        CustomerStatsRow(stats: stats),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: Row(
+                data: (stats) {
+                  final accountInfo = CustomerStatusUtils.infoFor(stats);
+                  final verificationStatus =
+                      BottleVerificationUtils.statusFor(customer);
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              const Icon(
-                                Icons.savings_outlined,
+                              Expanded(
+                                child: Text(
+                                  'Customer Summary',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                              _statusBadge(stats),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            CustomerStatusUtils.descriptionFor(
+                              accountInfo.status,
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 16),
+                          ResponsiveStatGrid(
+                            spacing: 8,
+                            children: [
+                              _SummaryStatBox(
+                                label: 'Business-Owned Held',
+                                value: '${stats.bottlesHeld}',
+                                icon: Icons.inventory_2_outlined,
                                 color: AppColors.primary,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Deposit Balance (Pundo)',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                    Text(
-                                      CurrencyFormatter.format(
-                                        stats.depositBalance,
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
+                              _SummaryStatBox(
+                                label: 'Customer-Owned Held',
+                                value: '${stats.customerOwnedBottlesHeld}',
+                                icon: Icons.person_outline,
+                                color: AppColors.primary,
+                              ),
+                              _SummaryStatBox(
+                                label: 'Outstanding Balance',
+                                value: CurrencyFormatter.format(
+                                  stats.unpaidBalance,
                                 ),
+                                icon: Icons.account_balance_wallet_outlined,
+                                color: stats.unpaidBalance > 0
+                                    ? AppColors.error
+                                    : AppColors.success,
+                              ),
+                              _SummaryStatBox(
+                                label: 'Deposit Balance',
+                                value: CurrencyFormatter.format(
+                                  stats.depositBalance,
+                                ),
+                                icon: Icons.savings_outlined,
+                                color: AppColors.primary,
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Customer Analytics',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Bottle Ownership Summary',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.2),
+                          const SizedBox(height: 16),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Verification Status',
+                                  style:
+                                      Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                              _PhysicalCountStatusBadge(
+                                status: verificationStatus,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            verificationStatus.description,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (customer.lastPhysicalCountDate != null) ...[
+                            const SizedBox(height: 8),
+                            _AnalyticsRow(
+                              label: 'Last Physical Count',
+                              value: BottleVerificationUtils
+                                  .lastPhysicalCountLabel(customer),
+                            ),
+                            _AnalyticsRow(
+                              label: 'Days Since Count',
+                              value: stats.daysSinceLastPhysicalCountLabel,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => CustomerStatementExport.exportPdf(
+                                context,
+                                ref,
+                                customerId,
+                              ),
+                              icon: const Icon(Icons.picture_as_pdf_outlined),
+                              label: const Text('Export Customer Statement'),
                             ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Total Bottles At Customer',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: Colors.grey[700]),
-                              ),
-                              Text(
-                                '${stats.totalBottlesAtCustomer}',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _AnalyticsRow(
-                          label: 'Business-Owned',
-                          value: '${stats.bottlesHeld}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Customer-Owned',
-                          value: '${stats.customerOwnedBottlesHeld}',
-                        ),
-                        const Divider(height: 24),
-                        _AnalyticsRow(
-                          label: 'Last Physical Count',
-                          value: BottleVerificationUtils.lastPhysicalCountLabel(
-                            customer,
-                          ),
-                        ),
-                        _AnalyticsRow(
-                          label: 'Physical Count Status',
-                          value: BottleVerificationUtils.statusFor(customer)
-                              .label,
-                        ),
-                        _AnalyticsRow(
-                          label: 'Days Since Last Physical Count',
-                          value: stats.daysSinceLastPhysicalCountLabel,
-                        ),
-                        const Divider(height: 24),
-                        _AnalyticsRow(
-                          label: 'Total Business-Owned Delivered',
-                          value: '${stats.borrowedBottles}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Total Business-Owned Collected',
-                          value: '${stats.returnedBottles}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Outstanding Business-Owned',
-                          value: '${stats.bottlesHeld}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Deposit Balance',
-                          value: CurrencyFormatter.format(stats.depositBalance),
-                        ),
-                        _AnalyticsRow(
-                          label: 'Outstanding Balance',
-                          value: CurrencyFormatter.format(stats.unpaidBalance),
-                        ),
-                        _AnalyticsRow(
-                          label: 'Last Delivery Date',
-                          value: stats.lastDeliveryDate != null
-                              ? DateFormatter.format(stats.lastDeliveryDate!)
-                              : 'None',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Lifetime Revenue',
-                          value: CurrencyFormatter.format(stats.lifetimeRevenue),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
                 loading: () => const Card(
                   child: Padding(
                     padding: EdgeInsets.all(16),
@@ -365,353 +304,6 @@ class CustomerProfileScreen extends ConsumerWidget {
                     child: Text('Error: $e'),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Bottle Activity — operational snapshot (resets when delivery completes)
-              statsAsync.when(
-                data: (stats) => deliveriesAsync.when(
-                  data: (deliveries) {
-                    final hasPending = stats.pendingDeliveryQty > 0;
-                    final inProgress = deliveries.any(
-                      (d) => d.deliveryStatus == DeliveryStatus.inProgress,
-                    );
-                    final statusLabel = !hasPending
-                        ? 'None'
-                        : inProgress
-                            ? 'In Progress'
-                            : 'Scheduled';
-
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bottle Activity',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 12),
-                            _AnalyticsRow(
-                              label: 'Business-Owned Held',
-                              value: '${stats.bottlesHeld} Bottles',
-                            ),
-                            _AnalyticsRow(
-                              label: 'Customer-Owned Held',
-                              value: '${stats.customerOwnedBottlesHeld} Bottles',
-                            ),
-                            if (stats.operationalCollected > 0)
-                              _AnalyticsRow(
-                                label: 'Collected',
-                                value: '${stats.operationalCollected} Bottles',
-                              ),
-                            if (hasPending) ...[
-                              _AnalyticsRow(
-                                label: 'Pending Delivery',
-                                value: '${stats.pendingDeliveryQty} Bottles',
-                              ),
-                              _AnalyticsRow(
-                                label: 'Delivery Status',
-                                value: statusLabel,
-                              ),
-                            ],
-                            customerAsync.when(
-                              data: (c) {
-                                if (c == null) return const SizedBox();
-                                final variance = c.bottleVariance(stats.bottlesHeld);
-                                if (variance == null || variance == 0) {
-                                  return const SizedBox();
-                                }
-                                final color =
-                                    BottleVarianceUtils.colorFor(variance);
-                                return Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: color.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: color.withValues(alpha: 0.3),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      BottleVarianceUtils.listLabel(variance),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: color,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              loading: () => const SizedBox(),
-                              error: (_, __) => const SizedBox(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
-                ),
-                loading: () => const SizedBox(),
-                error: (_, __) => const SizedBox(),
-              ),
-              const SizedBox(height: 16),
-
-              // Bottle Ownership
-              statsAsync.when(
-                data: (stats) {
-                  final verificationStatus =
-                      BottleVerificationUtils.statusFor(customer);
-                  return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Bottle Ownership',
-                                style:
-                                    Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ),
-                            _PhysicalCountStatusBadge(
-                              status: verificationStatus,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.25),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Total Bottles At Customer',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${stats.totalBottlesAtCustomer} Bottles',
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w800,
-                                  color:
-                                      Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _AnalyticsRow(
-                          label: 'Business-Owned Bottles',
-                          value: '${stats.bottlesHeld}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Customer-Owned Bottles',
-                          value: '${stats.customerOwnedBottlesHeld}',
-                        ),
-                        const Divider(height: 20),
-                        _AnalyticsRow(
-                          label: 'Last Physical Count',
-                          value: BottleVerificationUtils.lastPhysicalCountLabel(
-                            customer,
-                          ),
-                        ),
-                        _AnalyticsRow(
-                          label: 'Status',
-                          value: verificationStatus.label,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => context.push(
-                                  '/customers/$customerId/set-customer-owned-balance',
-                                ),
-                                icon: const Icon(Icons.playlist_add),
-                                label: const Text('Set Customer-Owned'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => context.push(
-                                  '/customers/$customerId/adjust-customer-owned-bottles',
-                                ),
-                                icon: const Icon(Icons.tune_outlined),
-                                label: const Text('Adjust Customer-Owned'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-                },
-                loading: () => const SizedBox(),
-                error: (_, __) => const SizedBox(),
-              ),
-              const SizedBox(height: 16),
-
-              // Bottle Management — primary bottle tracking hub
-              statsAsync.when(
-                data: (stats) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Bottle Management',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.warning.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.warning.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.inventory_2_outlined,
-                                color: AppColors.warning,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Business-Owned Bottles Held',
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                    Text(
-                                      '${stats.bottlesHeld} Bottles',
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.warning,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => context.push(
-                                  '/customers/$customerId/initial-balance',
-                                ),
-                                icon: Icon(
-                                  stats.hasInitialBalance
-                                      ? Icons.edit_outlined
-                                      : Icons.playlist_add,
-                                ),
-                                label: Text(
-                                  stats.hasInitialBalance
-                                      ? 'Edit Business-Owned'
-                                      : 'Set Business-Owned Balance',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => context.push(
-                                  '/customers/$customerId/adjust-bottles',
-                                ),
-                                icon: const Icon(Icons.tune_outlined),
-                                label: const Text('Adjust Business-Owned'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => context.push(
-                              '/customers/$customerId/collect-bottles',
-                            ),
-                            icon: const Icon(Icons.arrow_downward),
-                            label: const Text('Collect Bottles'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => CustomerBottleReconcileDialog.show(
-                              context,
-                              ref,
-                              customerId: customerId,
-                              expectedBottles: stats.bottlesHeld,
-                            ),
-                            icon: const Icon(Icons.balance_outlined),
-                            label: const Text('Reconcile Bottles'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(double.infinity, 48),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _AnalyticsRow(
-                          label: 'Outstanding Business-Owned',
-                          value: '${stats.bottlesHeld}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Total Bottles Delivered',
-                          value: '${stats.borrowedBottles}',
-                        ),
-                        _AnalyticsRow(
-                          label: 'Total Bottles Collected',
-                          value: '${stats.returnedBottles}',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                loading: () => const SizedBox(),
-                error: (_, __) => const SizedBox(),
               ),
               const SizedBox(height: 16),
 
@@ -734,69 +326,6 @@ class CustomerProfileScreen extends ConsumerWidget {
                   entries: ownershipLedger.take(5).toList(),
                 ),
               const SizedBox(height: 16),
-
-              // Primary actions — visit, delivery, collect, payment
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () =>
-                      context.push('/customers/$customerId/visit'),
-                  icon: const Icon(Icons.directions_walk_outlined),
-                  label: const Text('Start Customer Visit'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => context.push(
-                            '/deliveries/add',
-                            extra: {'customerId': customerId},
-                          ),
-                          icon: const Icon(Icons.local_shipping_outlined),
-                          label: const Text('New Delivery'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(0, 48),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => context.push(
-                            '/customers/$customerId/collect-bottles',
-                          ),
-                          icon: const Icon(Icons.arrow_downward),
-                          label: const Text('Collect Bottles'),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 48),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () =>
-                          context.push('/customers/$customerId/payment'),
-                      icon: const Icon(Icons.payments_outlined),
-                      label: const Text('Receive Payment'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
 
               // ── DELIVERIES ──────────────────────────────────────────────
               _SectionHeader(
@@ -1228,6 +757,66 @@ class _AnalyticsRow extends StatelessWidget {
               textAlign: TextAlign.end,
               overflow: TextOverflow.ellipsis,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryStatBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _SummaryStatBox({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

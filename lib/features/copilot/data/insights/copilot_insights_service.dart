@@ -138,7 +138,9 @@ class CopilotInsightsService {
         final disp = await _db.dispenserSalesDao.getByDateRange(s, e);
         var p = 0.0;
         for (final d in dels) {
-          if (d.deliveryStatus != 'cancelled') p += d.quantity * (d.pricePerBottle - cost);
+          if (d.deliveryStatus == 'completed') {
+            p += d.quantity * (d.pricePerBottle - cost);
+          }
         }
         p += disp.fold(0.0, (s, d) => s + d.amount);
         p -= exps.fold(0.0, (s, e) => s + e.amount);

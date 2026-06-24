@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../features/update/presentation/widgets/update_coordinator.dart';
 
 class MainScaffold extends StatelessWidget {
   final Widget child;
@@ -20,10 +19,9 @@ class MainScaffold extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
     final selectedIndex = _locationToIndex(location);
 
-    return UpdateCoordinator(
-      child: Scaffold(
-        body: child,
-        bottomNavigationBar: BottomNavigationBar(
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
         onTap: (index) {
           switch (index) {
@@ -66,7 +64,6 @@ class MainScaffold extends StatelessWidget {
             label: 'Reports',
           ),
         ],
-        ),
       ),
     );
   }

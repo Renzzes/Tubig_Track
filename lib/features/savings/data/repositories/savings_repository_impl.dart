@@ -54,7 +54,7 @@ class SavingsRepositoryImpl implements SavingsRepository {
 
     var deliveryProfit = 0.0;
     for (final d in deliveries) {
-      if (d.deliveryStatus == 'cancelled') continue;
+      if (d.deliveryStatus != 'completed') continue;
       deliveryProfit += d.quantity * (d.pricePerBottle - costPerBottle);
     }
 
@@ -103,7 +103,7 @@ class SavingsRepositoryImpl implements SavingsRepository {
     final entries = <SavingsLedgerEntry>[];
 
     for (final d in await _db.deliveriesDao.getAll()) {
-      if (d.deliveryStatus == 'cancelled') continue;
+      if (d.deliveryStatus != 'completed') continue;
       final profit = d.quantity * (d.pricePerBottle - costPerBottle);
       if (profit == 0) continue;
       entries.add(

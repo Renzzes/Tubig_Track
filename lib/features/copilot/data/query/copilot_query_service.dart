@@ -178,7 +178,7 @@ class CopilotQueryService implements BusinessQueryHandler {
 
     var profit = 0.0;
     for (final d in deliveries) {
-      if (d.deliveryStatus == 'cancelled') continue;
+      if (d.deliveryStatus != 'completed') continue;
       profit += d.quantity * (d.pricePerBottle - costPerBottle);
     }
     profit += dispenser.fold(0.0, (s, d) => s + d.amount);
@@ -215,7 +215,7 @@ class CopilotQueryService implements BusinessQueryHandler {
 
     var deliveryProfit = 0.0;
     for (final d in deliveries) {
-      if (d.deliveryStatus == 'cancelled') continue;
+      if (d.deliveryStatus != 'completed') continue;
       deliveryProfit += d.quantity * (d.pricePerBottle - costPerBottle);
     }
 
@@ -1387,7 +1387,7 @@ class CopilotQueryService implements BusinessQueryHandler {
 
     var dProfit = 0.0;
     for (final d in allDeliveries) {
-      if (d.deliveryStatus == 'cancelled') continue;
+      if (d.deliveryStatus != 'completed') continue;
       dProfit += d.quantity * (d.pricePerBottle - costPerBottle);
     }
     final dispProfit = allDisp.fold(0.0, (s, d) => s + d.amount);

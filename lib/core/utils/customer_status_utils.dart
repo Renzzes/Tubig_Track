@@ -66,6 +66,15 @@ class CustomerStatusUtils {
         CustomerStatus.newCustomer => 'New',
       };
 
+  static String descriptionFor(CustomerStatus status) => switch (status) {
+        CustomerStatus.unpaid => 'Customer has an outstanding balance',
+        CustomerStatus.depositAvailable =>
+          'Customer has deposit funds available',
+        CustomerStatus.active => 'Customer account is active',
+        CustomerStatus.inactive => 'No activity in the last 60 days',
+        CustomerStatus.newCustomer => 'New customer with no activity yet',
+      };
+
   static int colorFor(CustomerStatus status) => switch (status) {
         CustomerStatus.unpaid => _colorUnpaid,
         CustomerStatus.depositAvailable => _colorDeposit,

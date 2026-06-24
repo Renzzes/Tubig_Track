@@ -4,6 +4,7 @@ import 'core/router/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/update/presentation/widgets/post_update_recovery_gate.dart';
+import 'features/update/presentation/widgets/update_coordinator.dart';
 
 class TubigTrackApp extends ConsumerStatefulWidget {
   const TubigTrackApp({super.key});
@@ -27,11 +28,13 @@ class _TubigTrackAppState extends ConsumerState<TubigTrackApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     return PostUpdateRecoveryGate(
-      child: MaterialApp.router(
-        title: 'TubigTrack',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        routerConfig: router,
+      child: UpdateCoordinator(
+        child: MaterialApp.router(
+          title: 'TubigTrack',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          routerConfig: router,
+        ),
       ),
     );
   }

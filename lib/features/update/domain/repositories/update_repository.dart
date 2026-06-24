@@ -16,5 +16,7 @@ abstract class UpdateRepository {
   Future<void> savePendingReleaseNotes(List<String> notes);
   Future<List<String>> getPendingReleaseNotes();
   Future<void> clearPendingReleaseNotes();
+  Future<String?> getDismissedUpdateVersion();
+  Future<void> setDismissedUpdateVersion(String version);
   UpdateFetchResult? get lastFetchResult;
 }

@@ -32,18 +32,12 @@ class UpdateInfo {
     );
   }
 
-  /// True when remote [version] is newer than [currentVersion].
-  /// Falls back to [build] comparison when versions are equal.
+  /// True only when remote [version] is strictly greater than [currentVersion].
+  /// Equal versions (e.g. 1.6.3 vs 1.6.3) never qualify as an update.
   bool isNewerThan({
     required String currentVersion,
     required int currentBuild,
   }) {
-    final cmp = VersionUtils.compare(version, currentVersion);
-    if (cmp > 0) return true;
-    if (cmp < 0) return false;
-    if (build > 0 && currentBuild > 0) {
-      return build > currentBuild;
-    }
-    return false;
+    return VersionUtils.isNewer(version, currentVersion);
   }
 }

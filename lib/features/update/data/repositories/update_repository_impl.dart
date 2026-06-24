@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/utils/version_utils.dart';
 import '../../domain/entities/update_channel.dart';
 import '../../domain/entities/update_fetch_result.dart';
 import '../../domain/entities/update_history_entry.dart';
@@ -19,6 +20,7 @@ class UpdateRepositoryImpl implements UpdateRepository {
   static const _keyHistory = 'update_history';
   static const _keyRecordedBuild = 'update_recorded_build';
   static const _keyPendingNotes = 'update_pending_notes';
+  static const _keyDismissedVersion = 'update_dismissed_version';
 
   final http.Client _client;
   UpdateFetchResult? _lastFetchResult;
@@ -325,5 +327,17 @@ class UpdateRepositoryImpl implements UpdateRepository {
   Future<void> clearPendingReleaseNotes() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyPendingNotes);
+  }
+
+  @override
+  Future<String?> getDismissedUpdateVersion() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyDismissedVersion);
+  }
+
+  @override
+  Future<void> setDismissedUpdateVersion(String version) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyDismissedVersion, VersionUtils.normalize(version));
   }
 }

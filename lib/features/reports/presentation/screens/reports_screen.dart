@@ -437,148 +437,165 @@ class _ReportContent extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
 
-        // Revenue section
-        _SectionHeader(title: 'Revenue', icon: Icons.trending_up, color: AppColors.primary),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Delivery Revenue',
-          value: CurrencyFormatter.format(report.deliverySales),
-        ),
-        _MetricRow(
-          label: 'Dispenser Revenue',
-          value: CurrencyFormatter.format(report.dispenserSales),
-        ),
-        const Divider(),
-        _MetricRow(
-          label: 'Total Sales',
-          value: CurrencyFormatter.format(report.totalSales),
-          isTotal: true,
+        _ReportExpansionSection(
+          title: 'Revenue',
+          icon: Icons.trending_up,
           color: AppColors.primary,
+          summary: CurrencyFormatter.format(report.totalSales),
+          children: [
+            _MetricRow(
+              label: 'Delivery Revenue',
+              value: CurrencyFormatter.format(report.deliverySales),
+            ),
+            _MetricRow(
+              label: 'Dispenser Revenue',
+              value: CurrencyFormatter.format(report.dispenserSales),
+            ),
+            _MetricRow(
+              label: 'Walk-In Revenue',
+              value: CurrencyFormatter.format(report.walkInRevenue),
+            ),
+            const Divider(),
+            _MetricRow(
+              label: 'Total Sales',
+              value: CurrencyFormatter.format(report.totalSales),
+              isTotal: true,
+              color: AppColors.primary,
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-
-        // Expenses section
-        _SectionHeader(title: 'Expenses', icon: Icons.receipt_outlined, color: AppColors.error),
         const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Operations',
-          value: CurrencyFormatter.format(report.operationsExpenses),
-        ),
-        _MetricRow(
-          label: 'Maintenance',
-          value: CurrencyFormatter.format(report.maintenanceExpenses),
-        ),
-        _MetricRow(
-          label: 'Utilities',
-          value: CurrencyFormatter.format(report.utilitiesExpenses),
-        ),
-        _MetricRow(
-          label: 'Miscellaneous',
-          value: CurrencyFormatter.format(report.miscellaneousExpenses),
-        ),
-        const Divider(),
-        _MetricRow(
-          label: 'Total Expenses',
-          value: CurrencyFormatter.format(report.totalExpenses),
-          isTotal: true,
-          color: AppColors.error,
-        ),
-        const SizedBox(height: 16),
 
-        // Supplies Purchased section
-        _SectionHeader(
+        _ReportExpansionSection(
+          title: 'Expenses',
+          icon: Icons.receipt_outlined,
+          color: AppColors.error,
+          summary: CurrencyFormatter.format(report.totalExpenses),
+          children: [
+            _MetricRow(
+              label: 'Operations',
+              value: CurrencyFormatter.format(report.operationsExpenses),
+            ),
+            _MetricRow(
+              label: 'Maintenance',
+              value: CurrencyFormatter.format(report.maintenanceExpenses),
+            ),
+            _MetricRow(
+              label: 'Utilities',
+              value: CurrencyFormatter.format(report.utilitiesExpenses),
+            ),
+            _MetricRow(
+              label: 'Miscellaneous',
+              value: CurrencyFormatter.format(report.miscellaneousExpenses),
+            ),
+            const Divider(),
+            _MetricRow(
+              label: 'Total Expenses',
+              value: CurrencyFormatter.format(report.totalExpenses),
+              isTotal: true,
+              color: AppColors.error,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        _ReportExpansionSection(
           title: 'Supplies Purchased',
           icon: Icons.inventory_outlined,
           color: AppColors.warning,
+          summary: CurrencyFormatter.format(report.totalSuppliesPurchased),
+          children: [
+            _MetricRow(
+              label: 'Supplies',
+              value: CurrencyFormatter.format(report.suppliesExpenses),
+            ),
+            if (report.suppliesDetails.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              ...report.suppliesDetails.map(
+                (d) => _DetailRow(
+                  label: d.description,
+                  value: CurrencyFormatter.format(d.amount),
+                  subtitle: d.supplier,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            _MetricRow(
+              label: 'Other Supplies',
+              value: CurrencyFormatter.format(report.otherSuppliesExpenses),
+            ),
+            if (report.otherSuppliesDetails.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              ...report.otherSuppliesDetails.map(
+                (d) => _DetailRow(
+                  label: d.description,
+                  value: CurrencyFormatter.format(d.amount),
+                  subtitle: d.supplier,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            const Text(
+              'Purchase Details',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            if (report.otherSuppliesDetails.isEmpty &&
+                report.suppliesDetails.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'No supply purchase details for this period',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                ),
+              ),
+            const Divider(),
+            _MetricRow(
+              label: 'Total Supplies Purchased',
+              value: CurrencyFormatter.format(report.totalSuppliesPurchased),
+              isTotal: true,
+              color: AppColors.warning,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/reports/supplier-summary'),
+              icon: const Icon(Icons.store_outlined, size: 18),
+              label: const Text('View Supplier Summary'),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Supplies',
-          value: CurrencyFormatter.format(report.suppliesExpenses),
-        ),
-        if (report.suppliesDetails.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          ...report.suppliesDetails.map(
-            (d) => _DetailRow(
-              label: d.description,
-              value: CurrencyFormatter.format(d.amount),
-              subtitle: d.supplier,
-            ),
-          ),
-        ],
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Other Supplies',
-          value: CurrencyFormatter.format(report.otherSuppliesExpenses),
-        ),
-        if (report.otherSuppliesDetails.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          ...report.otherSuppliesDetails.map(
-            (d) => _DetailRow(
-              label: d.description,
-              value: CurrencyFormatter.format(d.amount),
-              subtitle: d.supplier,
-            ),
-          ),
-        ],
-        const SizedBox(height: 8),
-        const Text(
-          'Supply Purchase Details',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        if (report.otherSuppliesDetails.isEmpty && report.suppliesDetails.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'No supply purchase details for this period',
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-            ),
-          ),
-        const Divider(),
-        _MetricRow(
-          label: 'Total Supplies Purchased',
-          value: CurrencyFormatter.format(report.totalSuppliesPurchased),
-          isTotal: true,
-          color: AppColors.warning,
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: () => context.push('/reports/supplier-summary'),
-          icon: const Icon(Icons.store_outlined, size: 18),
-          label: const Text('View Supplier Summary'),
-        ),
-        const SizedBox(height: 16),
 
-        // Savings section
-        _SectionHeader(
+        _ReportExpansionSection(
           title: 'Savings Summary',
           icon: Icons.savings_outlined,
           color: AppColors.success,
-        ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Current Savings',
-          value: CurrencyFormatter.format(report.currentSavings),
-        ),
-        _MetricRow(
-          label: 'Manual Savings Additions',
-          value: CurrencyFormatter.format(report.totalManualSavings),
-        ),
-        if (report.manualSavingsInPeriod > 0)
-          _MetricRow(
-            label: 'Manual Additions (This Period)',
-            value: CurrencyFormatter.format(report.manualSavingsInPeriod),
-          ),
-        const Divider(),
-        _MetricRow(
-          label: 'Net Savings',
-          value: CurrencyFormatter.format(report.netSavings),
-          isTotal: true,
-          color: AppColors.success,
+          summary: CurrencyFormatter.format(report.netSavings),
+          children: [
+            _MetricRow(
+              label: 'Current Savings',
+              value: CurrencyFormatter.format(report.currentSavings),
+            ),
+            _MetricRow(
+              label: 'Manual Savings Additions',
+              value: CurrencyFormatter.format(report.totalManualSavings),
+            ),
+            if (report.manualSavingsInPeriod > 0)
+              _MetricRow(
+                label: 'Manual Additions (This Period)',
+                value: CurrencyFormatter.format(report.manualSavingsInPeriod),
+              ),
+            const Divider(),
+            _MetricRow(
+              label: 'Net Savings',
+              value: CurrencyFormatter.format(report.netSavings),
+              isTotal: true,
+              color: AppColors.success,
+            ),
+          ],
         ),
         const SizedBox(height: 16),
 
@@ -628,229 +645,217 @@ class _ReportContent extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
-        _SectionHeader(
+        _ReportExpansionSection(
           title: 'Inventory Ownership Changes',
           icon: Icons.add_circle_outline,
           color: AppColors.primary,
+          summary: '+${report.periodPurchasedNewBottles} purchased',
+          children: [
+            _MetricRow(
+              label: 'Purchased New Bottles',
+              value: '+${report.periodPurchasedNewBottles}',
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Purchased New Bottles',
-          value: '+${report.periodPurchasedNewBottles}',
-        ),
-        const SizedBox(height: 16),
-        _SectionHeader(
+        _ReportExpansionSection(
           title: 'Supplier Deliveries',
           icon: Icons.local_shipping_outlined,
           color: AppColors.primary,
+          summary: '${report.periodSupplierDeliveries} deliveries',
+          children: [
+            _MetricRow(
+              label: 'Filled Bottles Received',
+              value: '+${report.periodSupplierFilledBottlesReceived}',
+            ),
+            _MetricRow(
+              label: 'Delivery Count',
+              value: '${report.periodSupplierDeliveries}',
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Filled Bottles Received',
-          value: '+${report.periodSupplierFilledBottlesReceived}',
-        ),
-        _MetricRow(
-          label: 'Delivery Count',
-          value: '${report.periodSupplierDeliveries}',
-        ),
-        const SizedBox(height: 16),
-        _SectionHeader(
+        _ReportExpansionSection(
           title: 'Inventory Adjustments',
           icon: Icons.tune_outlined,
           color: AppColors.primary,
+          summary: '${report.periodFilledBottleAdjustments} corrected',
+          children: [
+            _MetricRow(
+              label: 'Filled Bottles Corrected',
+              value: '+${report.periodFilledBottleAdjustments}',
+            ),
+            const SizedBox(height: 8),
+            _MetricRow(
+              label: 'Donated Bottles',
+              value: '-${report.periodDonatedBottles}',
+            ),
+            _MetricRow(
+              label: 'Damaged Bottles',
+              value: '-${report.periodDamagedBottles}',
+            ),
+            _MetricRow(
+              label: 'Missing Bottles',
+              value: '-${report.periodMissingBottles}',
+            ),
+            if (report.periodCustomerOwnedCollected > 0 ||
+                report.periodCustomerOwnedDelivered > 0) ...[
+              const Divider(),
+              _MetricRow(
+                label: 'Collected Customer-Owned Bottles',
+                value: '${report.periodCustomerOwnedCollected}',
+              ),
+              _MetricRow(
+                label: 'Delivered Customer-Owned Bottles',
+                value: '${report.periodCustomerOwnedDelivered}',
+              ),
+            ],
+          ],
         ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Filled Bottles Corrected',
-          value: '+${report.periodFilledBottleAdjustments}',
-        ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Donated Bottles',
-          value: '-${report.periodDonatedBottles}',
-        ),
-        _MetricRow(
-          label: 'Damaged Bottles',
-          value: '-${report.periodDamagedBottles}',
-        ),
-        _MetricRow(
-          label: 'Missing Bottles',
-          value: '-${report.periodMissingBottles}',
-        ),
-        if (report.periodCustomerOwnedCollected > 0 ||
-            report.periodCustomerOwnedDelivered > 0) ...[
-          const SizedBox(height: 16),
-          _SectionHeader(
-            title: 'Customer-Owned Bottle Activity',
-            icon: Icons.person_outline,
-            color: AppColors.primary,
-          ),
-          const SizedBox(height: 8),
-          _MetricRow(
-            label: 'Collected Customer-Owned Bottles',
-            value: '${report.periodCustomerOwnedCollected}',
-          ),
-          _MetricRow(
-            label: 'Delivered Customer-Owned Bottles',
-            value: '${report.periodCustomerOwnedDelivered}',
-          ),
-        ],
         if (report.verifiedCustomers +
                 report.customersNeedingReconciliation +
                 report.notVerifiedCustomers >
             0) ...[
-          const SizedBox(height: 16),
-          _SectionHeader(
+          const SizedBox(height: 8),
+          _ReportExpansionSection(
             title: 'Customer Bottle Verification',
             icon: Icons.verified_user_outlined,
             color: AppColors.primary,
-          ),
-          const SizedBox(height: 8),
-          _MetricRow(
-            label: 'Verified Customers',
-            value: '${report.verifiedCustomers}',
-          ),
-          _MetricRow(
-            label: 'Needs Reconciliation',
-            value: '${report.customersNeedingReconciliation}',
-          ),
-          _MetricRow(
-            label: 'Not Verified',
-            value: '${report.notVerifiedCustomers}',
+            summary: '${report.verifiedCustomers} verified',
+            children: [
+              _MetricRow(
+                label: 'Verified Customers',
+                value: '${report.verifiedCustomers}',
+              ),
+              _MetricRow(
+                label: 'Needs Reconciliation',
+                value: '${report.customersNeedingReconciliation}',
+              ),
+              _MetricRow(
+                label: 'Not Verified',
+                value: '${report.notVerifiedCustomers}',
+              ),
+            ],
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
-        // Inventory snapshot
-        _SectionHeader(
+        _ReportExpansionSection(
           title: 'Inventory',
           icon: Icons.inventory_2_outlined,
           color: AppColors.primary,
+          summary: '${report.availableBottles} filled available',
+          children: [
+            _MetricRow(
+              label: 'Total Bottles Owned',
+              value: '${report.totalBottlesOwned}',
+            ),
+            _MetricRow(
+              label: 'Filled Bottles Available',
+              value: '${report.availableBottles}',
+            ),
+            _MetricRow(
+              label: 'Bottles With Customers',
+              value: '${report.bottlesWithCustomers}',
+            ),
+            _MetricRow(
+              label: 'Damaged Bottles',
+              value: '${report.damagedBottles}',
+            ),
+            _MetricRow(
+              label: 'Missing Bottles',
+              value: '${report.missingBottles}',
+            ),
+            _MetricRow(
+              label: 'Donated Bottles',
+              value: '${report.donatedBottles}',
+            ),
+            _MetricRow(
+              label: 'Inventory Audits',
+              value: '${report.totalAudits}',
+            ),
+            _MetricRow(
+              label: 'Last Audit',
+              value: report.lastAuditDate != null
+                  ? DateFormatter.format(report.lastAuditDate!)
+                  : 'Never',
+            ),
+            _MetricRow(
+              label: 'Missing Bottles Found',
+              value: '${report.auditMissingBottles}',
+            ),
+            _MetricRow(
+              label: 'Adjustment Quantity',
+              value:
+                  '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Total Bottles Owned',
-          value: '${report.totalBottlesOwned}',
-        ),
-        _MetricRow(
-          label: 'Filled Bottles Available',
-          value: '${report.availableBottles}',
-        ),
-        _MetricRow(
-          label: 'Bottles With Customers',
-          value: '${report.bottlesWithCustomers}',
-        ),
-        _MetricRow(
-          label: 'Damaged Bottles',
-          value: '${report.damagedBottles}',
-        ),
-        _MetricRow(
-          label: 'Missing Bottles',
-          value: '${report.missingBottles}',
-        ),
-        _MetricRow(
-          label: 'Donated Bottles',
-          value: '${report.donatedBottles}',
-        ),
-        _MetricRow(
-          label: 'Inventory Audits',
-          value: '${report.totalAudits}',
-        ),
-        _MetricRow(
-          label: 'Last Audit',
-          value: report.lastAuditDate != null
-              ? DateFormatter.format(report.lastAuditDate!)
-              : 'Never',
-        ),
-        _MetricRow(
-          label: 'Missing Bottles Found',
-          value: '${report.auditMissingBottles}',
-        ),
-        _MetricRow(
-          label: 'Adjustment Quantity',
-          value:
-              '${report.totalAdjustmentQuantity >= 0 ? '+' : ''}${report.totalAdjustmentQuantity}',
-        ),
-        const SizedBox(height: 16),
 
-        _SectionHeader(
-          title: 'Customer Deposits',
-          icon: Icons.savings_outlined,
+        _ReportExpansionSection(
+          title: 'Customer Analytics',
+          icon: Icons.people_outline,
           color: AppColors.primary,
-        ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Total Deposits Held',
-          value: CurrencyFormatter.format(report.totalDepositsHeld),
-        ),
-        _MetricRow(
-          label: 'Active Customers With Deposits',
-          value: '${report.activeCustomersWithDeposits}',
-        ),
-        _MetricRow(
-          label: 'Total Deposits Added',
-          value: CurrencyFormatter.format(report.totalDepositsAdded),
-        ),
-        _MetricRow(
-          label: 'Total Deposits Used',
-          value: CurrencyFormatter.format(report.totalDepositsUsed),
-        ),
-        _MetricRow(
-          label: 'Current Deposit Liability',
-          value: CurrencyFormatter.format(report.currentDepositLiability),
-        ),
-        const SizedBox(height: 16),
-
-        _SectionHeader(
-          title: 'Walk-In Operations',
-          icon: Icons.storefront_outlined,
-          color: AppColors.success,
-        ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Borrow Bottle Sales',
-          value: '${report.walkInBusinessBottleSalesCount}',
-        ),
-        _MetricRow(
-          label: 'Refill Own Bottle',
-          value: '${report.walkInCustomerRefillsCount}',
-        ),
-        _MetricRow(
-          label: 'Bottle Exchanges',
-          value: '${report.walkInExchangeCount}',
-        ),
-        _MetricRow(
-          label: 'Walk-In Revenue',
-          value: CurrencyFormatter.format(report.walkInRevenue),
-          isTotal: true,
-          color: AppColors.success,
-        ),
-        _MetricRow(
-          label: 'Transaction Count',
-          value: '${report.walkInTransactionCount}',
-        ),
-        const SizedBox(height: 16),
-
-        // Delivery activity section
-        _SectionHeader(
-          title: 'Delivery Activity',
-          icon: Icons.local_shipping_outlined,
-          color: AppColors.primary,
-        ),
-        const SizedBox(height: 8),
-        _MetricRow(
-          label: 'Total Deliveries',
-          value: '${report.totalDeliveries}',
-        ),
-        _MetricRow(
-          label: 'Bottles Delivered',
-          value: '${report.totalBottlesDelivered} bottles',
-        ),
-        _MetricRow(
-          label: 'Payments Received',
-          value: CurrencyFormatter.format(report.totalPaymentsReceived),
+          summary: CurrencyFormatter.format(report.currentDepositLiability),
+          children: [
+            _MetricRow(
+              label: 'Total Deposits Held',
+              value: CurrencyFormatter.format(report.totalDepositsHeld),
+            ),
+            _MetricRow(
+              label: 'Active Customers With Deposits',
+              value: '${report.activeCustomersWithDeposits}',
+            ),
+            _MetricRow(
+              label: 'Total Deposits Added',
+              value: CurrencyFormatter.format(report.totalDepositsAdded),
+            ),
+            _MetricRow(
+              label: 'Total Deposits Used',
+              value: CurrencyFormatter.format(report.totalDepositsUsed),
+            ),
+            _MetricRow(
+              label: 'Current Deposit Liability',
+              value: CurrencyFormatter.format(report.currentDepositLiability),
+            ),
+            const Divider(),
+            _MetricRow(
+              label: 'Borrow Bottle Sales',
+              value: '${report.walkInBusinessBottleSalesCount}',
+            ),
+            _MetricRow(
+              label: 'Refill Own Bottle',
+              value: '${report.walkInCustomerRefillsCount}',
+            ),
+            _MetricRow(
+              label: 'Bottle Exchanges',
+              value: '${report.walkInExchangeCount}',
+            ),
+            _MetricRow(
+              label: 'Walk-In Revenue',
+              value: CurrencyFormatter.format(report.walkInRevenue),
+            ),
+            _MetricRow(
+              label: 'Walk-In Transaction Count',
+              value: '${report.walkInTransactionCount}',
+            ),
+            const Divider(),
+            _MetricRow(
+              label: 'Total Deliveries',
+              value: '${report.totalDeliveries}',
+            ),
+            _MetricRow(
+              label: 'Bottles Delivered',
+              value: '${report.totalBottlesDelivered} bottles',
+            ),
+            _MetricRow(
+              label: 'Payments Received',
+              value: CurrencyFormatter.format(report.totalPaymentsReceived),
+            ),
+          ],
         ),
         const SizedBox(height: 32),
       ],
@@ -858,32 +863,51 @@ class _ReportContent extends ConsumerWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
+class _ReportExpansionSection extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color color;
+  final String summary;
+  final List<Widget> children;
 
-  const _SectionHeader({
+  const _ReportExpansionSection({
     required this.title,
     required this.icon,
     required this.color,
+    required this.summary,
+    required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 18),
-        const SizedBox(width: 6),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: color,
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          leading: Icon(icon, color: color, size: 22),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
           ),
+          subtitle: Text(
+            summary,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          children: children,
         ),
-      ],
+      ),
     );
   }
 }

@@ -19,6 +19,16 @@ extension PhysicalCountStatusX on PhysicalCountStatus {
         PhysicalCountStatus.notVerified => '❓ Not Verified',
       };
 
+  /// Plain-language explanation shown on customer profile and detail views.
+  String get description => switch (this) {
+        PhysicalCountStatus.verified =>
+          'Physical bottle count verified within the last 30 days',
+        PhysicalCountStatus.needsReconciliation =>
+          'Last physical count was more than 30 days ago — reconcile soon',
+        PhysicalCountStatus.notVerified =>
+          'Physical bottle count has never been verified',
+      };
+
   int get colorValue => switch (this) {
         PhysicalCountStatus.verified => 0xFF2E7D32,
         PhysicalCountStatus.needsReconciliation => 0xFFF57C00,

@@ -352,29 +352,6 @@ class DashboardScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // Dispenser sales link
-              ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey[200]!),
-                ),
-                tileColor: Colors.white,
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.local_drink,
-                    color: AppColors.primary,
-                  ),
-                ),
-                title: const Text('Dispenser Sales'),
-                subtitle: const Text('Record walk-in cash sales'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                onTap: () => context.push('/dispenser-sales'),
-              ),
               const SizedBox(height: 16),
             ],
           ),

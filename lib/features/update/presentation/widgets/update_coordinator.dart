@@ -7,7 +7,8 @@ import '../providers/update_provider.dart';
 import '../widgets/download_progress_dialog.dart';
 import '../widgets/update_dialog.dart';
 
-/// Listens for updates 3 seconds after mount and shows dialogs when needed.
+/// Runs update checks once per app session and shows the dialog only when a
+/// newer semver is available (latest > installed).
 class UpdateCoordinator extends ConsumerStatefulWidget {
   final Widget child;
 
@@ -17,16 +18,37 @@ class UpdateCoordinator extends ConsumerStatefulWidget {
   ConsumerState<UpdateCoordinator> createState() => _UpdateCoordinatorState();
 }
 
-class _UpdateCoordinatorState extends ConsumerState<UpdateCoordinator> {
-  bool _autoCheckDone = false;
+class _UpdateCoordinatorState extends ConsumerState<UpdateCoordinator>
+    with WidgetsBindingObserver {
+  /// Prevents duplicate auto-checks when the coordinator remounts.
+  static bool _sessionAutoCheckScheduled = false;
+
+  /// Tracks which version dialog was shown this session.
+  static String? _sessionShownVersion;
+
+  bool _updateDialogVisible = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scheduleAutoCheck();
       _recordVersion();
+      _scheduleAutoCheck(fromStartup: true);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleAutoCheck(fromResume: true);
+    }
   }
 
   Future<void> _recordVersion() async {
@@ -34,34 +56,80 @@ class _UpdateCoordinatorState extends ConsumerState<UpdateCoordinator> {
     ref.invalidate(updateHistoryProvider);
   }
 
-  Future<void> _scheduleAutoCheck() async {
-    if (_autoCheckDone) return;
-    _autoCheckDone = true;
+  Future<void> _scheduleAutoCheck({
+    bool fromStartup = false,
+    bool fromResume = false,
+  }) async {
+    if (!mounted || _updateDialogVisible) return;
 
-    await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
+    if (fromStartup) {
+      if (_sessionAutoCheckScheduled) return;
+      _sessionAutoCheckScheduled = true;
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+    } else if (fromResume) {
+      final lastCheck = await ref.read(updateServiceProvider).getLastCheckTime();
+      if (lastCheck != null &&
+          DateTime.now().difference(lastCheck).inHours < 6) {
+        return;
+      }
+    } else {
+      return;
+    }
 
-    final result = await ref.read(updateServiceProvider).checkForUpdates();
+    await _runAutoCheck();
+  }
+
+  Future<void> _runAutoCheck() async {
+    if (!mounted || _updateDialogVisible) return;
+
+    final service = ref.read(updateServiceProvider);
+    final result = await service.checkForUpdates();
     ref.invalidate(lastUpdateCheckProvider);
     ref.invalidate(updateDiagnosticsProvider);
 
     if (!mounted) return;
-    if (result.isUpdateAvailable && result.updateInfo != null) {
-      await _showUpdateDialog(result);
+    if (!result.isUpdateAvailable || result.updateInfo == null) return;
+
+    final updateInfo = result.updateInfo!;
+    if (_sessionShownVersion == updateInfo.version) return;
+
+    final dismissed =
+        await ref.read(updateRepositoryProvider).getDismissedUpdateVersion();
+    if (dismissed != null &&
+        dismissed.isNotEmpty &&
+        dismissed == updateInfo.version) {
+      return;
     }
+
+    _sessionShownVersion = updateInfo.version;
+    await _showUpdateDialog(result);
   }
 
   Future<void> _showUpdateDialog(UpdateCheckResult result) async {
-    await UpdateDialog.show(
-      context,
-      updateInfo: result.updateInfo!,
-      currentVersion: result.currentVersion,
-      onLater: () => Navigator.pop(context),
-      onUpdateNow: () {
-        Navigator.pop(context);
-        _startUpdate(result.updateInfo!);
-      },
-    );
+    if (_updateDialogVisible || !mounted) return;
+    _updateDialogVisible = true;
+
+    try {
+      await UpdateDialog.show(
+        context,
+        updateInfo: result.updateInfo!,
+        currentVersion: result.currentVersion,
+        onLater: () {
+          final navigator = Navigator.of(context);
+          ref
+              .read(updateRepositoryProvider)
+              .setDismissedUpdateVersion(result.updateInfo!.version)
+              .then((_) => navigator.pop());
+        },
+        onUpdateNow: () {
+          Navigator.pop(context);
+          _startUpdate(result.updateInfo!);
+        },
+      );
+    } finally {
+      _updateDialogVisible = false;
+    }
   }
 
   Future<void> _startUpdate(UpdateInfo updateInfo) async {
@@ -130,7 +198,13 @@ Future<void> performManualUpdateCheck(
         context,
         updateInfo: result.updateInfo!,
         currentVersion: result.currentVersion,
-        onLater: () => Navigator.pop(context),
+        onLater: () {
+          final navigator = Navigator.of(context);
+          ref
+              .read(updateRepositoryProvider)
+              .setDismissedUpdateVersion(result.updateInfo!.version)
+              .then((_) => navigator.pop());
+        },
         onUpdateNow: () async {
           Navigator.pop(context);
           final progress = await DownloadProgressDialog.show(context);

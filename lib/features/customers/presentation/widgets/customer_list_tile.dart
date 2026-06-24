@@ -45,6 +45,7 @@ class CustomerListTile extends ConsumerWidget {
 
     final verificationBadge = () {
       final status = BottleVerificationUtils.statusFor(customer);
+      if (status == PhysicalCountStatus.verified) return null;
       return (
         label: status.listBadgeLabel,
         color: Color(status.colorValue),
@@ -107,28 +108,30 @@ class CustomerListTile extends ConsumerWidget {
                 ),
               ),
             ],
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 3,
-              ),
-              decoration: BoxDecoration(
-                color: verificationBadge.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: verificationBadge.color.withValues(alpha: 0.35),
+            if (verificationBadge != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: verificationBadge.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: verificationBadge.color.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Text(
+                  verificationBadge.label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: verificationBadge.color,
+                  ),
                 ),
               ),
-              child: Text(
-                verificationBadge.label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: verificationBadge.color,
-                ),
-              ),
-            ),
+            ],
           ],
         ),
         subtitle: Column(

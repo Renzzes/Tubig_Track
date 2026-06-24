@@ -152,6 +152,7 @@ class UpdateService {
       );
       await _updateRepository.setRecordedBuild(currentBuild);
       await _updateRepository.clearPendingReleaseNotes();
+      await _updateRepository.setDismissedUpdateVersion('');
     }
   }
 
