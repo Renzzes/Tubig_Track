@@ -74,6 +74,7 @@ import '../../features/settings/presentation/screens/factory_reset_screen.dart';
 import '../../features/settings/presentation/screens/about_screen.dart';
 
 import '../../features/overdue/presentation/screens/overdue_payments_screen.dart';
+import '../../features/dashboard/presentation/screens/unpaid_receivables_screen.dart';
 
 import '../../features/update/presentation/screens/recovery_center_screen.dart';
 
@@ -429,6 +430,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/overdue',
 
         builder: (context, state) => const OverduePaymentsScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/receivables/unpaid',
+
+        builder: (context, state) => const UnpaidReceivablesScreen(),
 
       ),
 

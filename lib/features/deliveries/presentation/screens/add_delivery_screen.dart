@@ -313,6 +313,82 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     return _selectedCustomer;
   }
 
+  bool _hasBottleCountMismatch(
+    CustomerStats stats,
+    int businessOwnedToDeliver,
+    int customerOwnedToDeliver,
+  ) {
+    final businessMismatch = businessOwnedToDeliver > stats.bottlesHeld;
+    final customerMismatch = customerOwnedToDeliver > 0 &&
+        customerOwnedToDeliver > stats.customerOwnedBottlesHeld;
+    return businessMismatch || customerMismatch;
+  }
+
+  Future<bool> _confirmBottleCountReminder({
+    required CustomerStats stats,
+    required int businessOwnedToDeliver,
+    required int customerOwnedToDeliver,
+  }) async {
+    if (!_hasBottleCountMismatch(
+      stats,
+      businessOwnedToDeliver,
+      customerOwnedToDeliver,
+    )) {
+      return false;
+    }
+
+    final sectionTitleStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Bottle Count Reminder'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Current recorded bottle count', style: sectionTitleStyle),
+              const SizedBox(height: 8),
+              Text('Business-Owned Bottles: ${stats.bottlesHeld}'),
+              Text('Customer-Owned Bottles: ${stats.customerOwnedBottlesHeld}'),
+              const SizedBox(height: 16),
+              Text('This delivery', style: sectionTitleStyle),
+              const SizedBox(height: 8),
+              Text('Business-Owned Bottles: $businessOwnedToDeliver'),
+              Text('Customer-Owned Bottles: $customerOwnedToDeliver'),
+              const SizedBox(height: 16),
+              const Text(
+                'This delivery exceeds the customer\'s currently '
+                'recorded bottle count.',
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'If the recorded bottle count is outdated, you can update it '
+                'later using Check Bottle Count after visiting the customer.',
+              ),
+              const SizedBox(height: 12),
+              const Text('Do you want to proceed with this delivery?'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCustomer == null) {
@@ -325,57 +401,24 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     final qty = int.parse(_quantityCtrl.text.trim());
     final customerOwnedFilled =
         int.tryParse(_customerOwnedFilledCtrl.text.trim()) ?? 0;
-    if (_deliveryStatus == DeliveryStatus.completed) {
-      final stats = await ref
-          .read(customerRepositoryProvider)
-          .getCustomerStats(_selectedCustomer!.id);
-      if (!mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Confirm Delivery'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ConfirmRow(label: 'Customer', value: _selectedCustomer!.name),
-              _ConfirmRow(
-                label: 'Business-Owned Delivered',
-                value: '$qty Bottles',
-              ),
-              if (customerOwnedFilled > 0)
-                _ConfirmRow(
-                  label: 'Customer-Owned Filled',
-                  value: '$customerOwnedFilled Bottles',
-                ),
-              _ConfirmRow(
-                label: 'Business-Owned Held',
-                value: '${stats.bottlesHeld} → ${stats.bottlesHeld + qty}',
-              ),
-              if (customerOwnedFilled > 0)
-                _ConfirmRow(
-                  label: 'Customer-Owned Held',
-                  value:
-                      '${stats.customerOwnedBottlesHeld} → '
-                      '${stats.customerOwnedBottlesHeld + customerOwnedFilled}',
-                ),
-              const SizedBox(height: 12),
-              const Text('Confirm Delivery?'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Confirm'),
-            ),
-          ],
-        ),
+
+    final stats = await ref
+        .read(customerRepositoryProvider)
+        .getCustomerStats(_selectedCustomer!.id);
+    if (!mounted) return;
+
+    final showBottleCountReminder = _hasBottleCountMismatch(
+      stats,
+      qty,
+      customerOwnedFilled,
+    );
+    if (showBottleCountReminder) {
+      final proceed = await _confirmBottleCountReminder(
+        stats: stats,
+        businessOwnedToDeliver: qty,
+        customerOwnedToDeliver: customerOwnedFilled,
       );
-      if (confirmed != true) return;
+      if (!proceed || !mounted) return;
     }
 
     setState(() => _isLoading = true);
@@ -445,8 +488,17 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              _isEditMode ? 'Delivery updated!' : 'Delivery scheduled!',
+              showBottleCountReminder
+                  ? 'Delivery saved successfully.\n\n'
+                      'If needed, update the customer\'s bottle count '
+                      'later using Check Bottle Count.'
+                  : (_isEditMode
+                      ? 'Delivery updated!'
+                      : 'Delivery scheduled!'),
             ),
+            duration: showBottleCountReminder
+                ? const Duration(seconds: 5)
+                : const Duration(seconds: 3),
           ),
         );
         context.pop();
@@ -1039,29 +1091,6 @@ class _PickerButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ConfirmRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _ConfirmRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Expanded(child: Text(label)),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ],
       ),
     );
   }

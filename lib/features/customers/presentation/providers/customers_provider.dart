@@ -114,3 +114,20 @@ final customerStatsProvider = FutureProvider.family(
     return ref.read(customerRepositoryProvider).getCustomerStats(customerId);
   },
 );
+
+/// Customers with outstanding delivery balance (unpaid or partial).
+final customersWithUnpaidReceivablesProvider =
+    FutureProvider<List<({Customer customer, CustomerStats stats})>>((ref) async {
+  ref.watch(deliveriesStreamProvider);
+  final repo = ref.read(customerRepositoryProvider);
+  final customers = await repo.getAll();
+  final results = <({Customer customer, CustomerStats stats})>[];
+  for (final customer in customers) {
+    final stats = await repo.getCustomerStats(customer.id);
+    if (stats.unpaidBalance > 0.001) {
+      results.add((customer: customer, stats: stats));
+    }
+  }
+  results.sort((a, b) => b.stats.unpaidBalance.compareTo(a.stats.unpaidBalance));
+  return results;
+});

@@ -83,10 +83,10 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
     }
   }
 
-  /// Syncs the filled-bottle delivery (borrow) transaction for a delivery.
+  /// Removes legacy delivery-linked borrow transactions only.
   ///
-  /// A borrow transaction is created ONLY when status == completed.
-  /// This increases the customer's bottle balance and decreases filled stock.
+  /// Completed deliveries no longer create borrow transactions; business-owned
+  /// held counts are updated only through Check Bottle Count.
   Future<void> _syncBorrowTransaction(Delivery delivery) async {
     final borrowId = '${delivery.id}_borrow';
     final effects = InventoryStateEffects(InventoryStateService(_db));
@@ -99,23 +99,6 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
         reverse: true,
       );
       await _db.bottleTransactionsDao.deleteTransaction(borrowId);
-    }
-
-    if (delivery.deliveryStatus == DeliveryStatus.completed) {
-      await _db.bottleTransactionsDao.insertTransaction(
-        BottleTransactionsTableCompanion.insert(
-          id: borrowId,
-          customerId: Value(delivery.customerId),
-          transactionType: 'borrow',
-          quantity: delivery.quantity,
-          date: Value(delivery.deliveryDate),
-          notes: Value('Delivery #${delivery.id.substring(0, 8)}'),
-        ),
-      );
-      await effects.applyTransaction(
-        TransactionType.borrow,
-        delivery.quantity,
-      );
     }
   }
 

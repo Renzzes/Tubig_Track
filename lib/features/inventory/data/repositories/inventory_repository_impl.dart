@@ -985,36 +985,8 @@ class InventoryRepositoryImpl implements InventoryRepository {
     required bool isCompleted,
     String? notes,
   }) async {
+    // Reverse legacy delivery-linked owned-bottle updates when editing/deleting.
+    // New deliveries do not change customer-owned held; use Check Bottle Count.
     await reverseDeliveryCustomerOwnedFilled(deliveryId);
-
-    if (!isCompleted ||
-        (businessOwnedDelivered == 0 && customerOwnedFilled == 0)) {
-      return;
-    }
-
-    await _db.transaction(() async {
-      final customerOwnedHeld = await getCustomerOwnedBottlesHeld(customerId);
-      final newCustomerOwned = customerOwnedHeld + customerOwnedFilled;
-      if (customerOwnedFilled > 0) {
-        await _db.customersDao.updateCustomerOwnedBottlesHeld(
-          customerId,
-          newCustomerOwned,
-        );
-      }
-      final businessHeld = await _businessOwnedHeld(customerId);
-
-      await _insertOwnedLog(
-        customerId: customerId,
-        eventType: CustomerOwnedBottleEventType.deliveryFilled,
-        businessOwnedDelta: businessOwnedDelivered,
-        customerOwnedDelta: customerOwnedFilled,
-        businessOwnedAfter: businessHeld,
-        customerOwnedAfter: newCustomerOwned,
-        date: date,
-        notes: notes,
-        deliveryId: deliveryId,
-        bottleTransactionId: '${deliveryId}_borrow',
-      );
-    });
   }
 }

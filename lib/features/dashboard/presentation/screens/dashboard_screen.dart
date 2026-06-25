@@ -266,7 +266,7 @@ class DashboardScreen extends ConsumerWidget {
                 subtitle: summary.unpaidReceivables > 0
                     ? 'Tap to view customers'
                     : 'All payments received!',
-                onTap: () => context.go('/customers'),
+                onTap: () => context.push('/receivables/unpaid'),
               ),
               const SizedBox(height: 12),
 
