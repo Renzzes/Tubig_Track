@@ -50,6 +50,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   bool _isEditMode = false;
   bool _applyDeposit = false;
   double _availableDeposit = 0;
+  double _depositAvailableCache = 0;
   String? _editDeliveryId;
 
   double get _quantity => double.tryParse(_quantityCtrl.text) ?? 0;
@@ -57,7 +58,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   double get _total => _quantity * _price;
   double get _cashReceived => double.tryParse(_amountPaidCtrl.text) ?? 0;
   double get _depositApplied => DepositCalculator.depositToApply(
-        availableDeposit: _availableDeposit,
+        availableDeposit: _depositAvailableCache,
         totalAmount: _total,
         applyDeposit: _applyDeposit,
       );
@@ -70,7 +71,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         amountDue: _amountDue,
       );
   double get _remainingDeposit => DepositCalculator.remainingDepositAfterUse(
-        availableDeposit: _availableDeposit,
+        availableDeposit: _depositAvailableCache,
         depositApplied: _depositApplied,
       );
   double get _remainingBalance => DepositCalculator.remainingBalance(
@@ -88,6 +89,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     super.initState();
     _quantityCtrl.addListener(_recalculate);
     _priceCtrl.addListener(_recalculate);
+    _amountPaidCtrl.addListener(_recalculate);
     if (widget.deliveryId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _loadDelivery(widget.deliveryId!);
@@ -186,7 +188,48 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
 
   void _recalculate() => setState(() {});
 
+  void _syncDepositAvailable(WidgetRef ref) {
+    if (_selectedCustomer == null) {
+      _depositAvailableCache = 0;
+      return;
+    }
+    if (_isEditMode) {
+      _depositAvailableCache = _availableDeposit;
+      return;
+    }
+    ref.watch(customerDepositsStreamProvider(_selectedCustomer!.id));
+    _depositAvailableCache = ref
+            .watch(customerDepositBalanceProvider(_selectedCustomer!.id))
+            .value ??
+        0;
+  }
+
+  bool get _canApplyDeposit => _depositAvailableCache > 0.001;
+
+  String get _paymentStatusLabel => switch (_paymentStatus) {
+        PaymentStatus.paid => 'Paid',
+        PaymentStatus.unpaid => 'Unpaid',
+        PaymentStatus.partial => 'Partial',
+      };
+
+  String? get _suggestedPaymentStatusLabel {
+    final suggested = PaymentStatusUtils.computeStatus(
+      totalAmount: _total,
+      amountPaid: _cashApplied,
+      depositApplied: _depositApplied,
+    );
+    final suggestedLabel = switch (suggested) {
+      'paid' => 'Paid',
+      'unpaid' => 'Unpaid',
+      'partial' => 'Partial',
+      _ => suggested,
+    };
+    if (suggestedLabel == _paymentStatusLabel) return null;
+    return suggestedLabel;
+  }
+
   Future<void> _loadDepositForCustomer(Customer customer) async {
+    if (!_isEditMode) return;
     final available = await ref
         .read(customerDepositRepositoryProvider)
         .getAvailableForDelivery(
@@ -205,7 +248,8 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   void _onPaymentModeChanged(PaymentStatus status) {
     setState(() {
       _paymentStatus = status;
-      if (status == PaymentStatus.paid) {
+      if (status == PaymentStatus.paid &&
+          _amountPaidCtrl.text.trim().isEmpty) {
         _amountPaidCtrl.text = _amountDue.toStringAsFixed(2);
       } else if (status == PaymentStatus.unpaid) {
         _amountPaidCtrl.clear();
@@ -218,8 +262,9 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
       _selectedCustomer = customer;
       _applyDeposit = false;
       _availableDeposit = 0;
+      _depositAvailableCache = 0;
     });
-    if (customer != null) {
+    if (customer != null && _isEditMode) {
       _loadDepositForCustomer(customer);
     }
   }
@@ -258,6 +303,14 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
     if (picked != null) {
       setState(() => _selectedTime = picked);
     }
+  }
+
+  Customer? _resolveDropdownCustomer(List<Customer> customers) {
+    if (_selectedCustomer == null) return null;
+    for (final c in customers) {
+      if (c.id == _selectedCustomer!.id) return c;
+    }
+    return _selectedCustomer;
   }
 
   Future<void> _save() async {
@@ -331,7 +384,9 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
       final price = double.parse(_priceCtrl.text.trim());
       final total = qty * price;
       final depositApplied = DepositCalculator.depositToApply(
-        availableDeposit: _availableDeposit,
+        availableDeposit: _isEditMode
+            ? _availableDeposit
+            : _depositAvailableCache,
         totalAmount: total,
         applyDeposit: _applyDeposit,
       );
@@ -356,12 +411,6 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         amountPaid: cashApplied,
         depositApplied: depositApplied,
       );
-      final statusStr = PaymentStatusUtils.computeStatus(
-        totalAmount: total,
-        amountPaid: cashApplied,
-        depositApplied: depositApplied,
-      );
-      final status = Delivery.paymentStatusFromString(statusStr);
 
       final delivery = Delivery(
         id: _editDeliveryId ?? const Uuid().v4(),
@@ -369,7 +418,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         quantity: qty,
         pricePerBottle: price,
         totalAmount: total,
-        paymentStatus: status,
+        paymentStatus: _paymentStatus,
         amountPaid: cashApplied,
         depositApplied: depositApplied,
         remainingBalance: balance,
@@ -415,6 +464,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   @override
   Widget build(BuildContext context) {
     final customersAsync = ref.watch(customersStreamProvider);
+    _syncDepositAvailable(ref);
 
     // Preselect customer
     if (_selectedCustomer == null && widget.preselectedCustomerId != null) {
@@ -457,7 +507,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                     customersAsync.when(
                       data: (customers) => DropdownButtonFormField<Customer>(
                         // ignore: deprecated_member_use
-                        value: _selectedCustomer,
+                        value: _resolveDropdownCustomer(customers),
                         decoration: const InputDecoration(
                           hintText: 'Select a customer',
                           prefixIcon: Icon(Icons.person_outline),
@@ -720,7 +770,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                             ),
                           ),
                           Text(
-                            CurrencyFormatter.format(_availableDeposit),
+                            CurrencyFormatter.format(_depositAvailableCache),
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF1976D2),
@@ -735,13 +785,16 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                             ? Text(
                                 'Using ${CurrencyFormatter.format(_depositApplied)}',
                               )
-                            : null,
+                            : _canApplyDeposit
+                                ? null
+                                : const Text('No deposit available'),
                         value: _applyDeposit,
-                        onChanged: _availableDeposit > 0
+                        onChanged: _canApplyDeposit
                             ? (v) {
                                 setState(() {
                                   _applyDeposit = v;
-                                  if (_paymentStatus == PaymentStatus.paid) {
+                                  if (_paymentStatus == PaymentStatus.paid &&
+                                      _amountPaidCtrl.text.trim().isEmpty) {
                                     _amountPaidCtrl.text =
                                         _amountDue.toStringAsFixed(2);
                                   }
@@ -750,32 +803,30 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                             : null,
                       ),
                     ],
-                    if (_paymentStatus != PaymentStatus.unpaid) ...[
-                      const SizedBox(height: 8),
-                      AppTextField(
-                        label: 'Amount Paid',
-                        controller: _amountPaidCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d+\.?\d{0,2}'),
-                          ),
-                        ],
-                        prefixIcon: const Icon(Icons.payments_outlined),
-                        onChanged: (_) => setState(() {}),
-                        validator: (v) {
-                          if (_paymentStatus == PaymentStatus.unpaid) {
-                            return null;
-                          }
-                          if (v == null || v.isEmpty) return 'Required';
-                          final n = double.tryParse(v);
-                          if (n == null || n < 0) return 'Invalid amount';
-                          return null;
-                        },
+                    const SizedBox(height: 8),
+                    AppTextField(
+                      label: 'Amount Paid',
+                      controller: _amountPaidCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
-                    ],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}'),
+                        ),
+                      ],
+                      prefixIcon: const Icon(Icons.payments_outlined),
+                      onChanged: (_) => setState(() {}),
+                      validator: (v) {
+                        if (_paymentStatus == PaymentStatus.unpaid) {
+                          return null;
+                        }
+                        if (v == null || v.isEmpty) return 'Required';
+                        final n = double.tryParse(v);
+                        if (n == null || n < 0) return 'Invalid amount';
+                        return null;
+                      },
+                    ),
                     if (_total > 0) ...[
                       const SizedBox(height: 12),
                       Container(
@@ -786,43 +837,80 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              'Payment Summary',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             _SummaryRow(
                               label: 'Delivery Total',
                               value: CurrencyFormatter.format(_total),
                             ),
-                            if (_depositApplied > 0)
+                            if (_applyDeposit && _depositApplied > 0) ...[
+                              _SummaryRow(
+                                label: 'Customer Deposit',
+                                value: CurrencyFormatter.format(
+                                  _depositAvailableCache,
+                                ),
+                              ),
                               _SummaryRow(
                                 label: 'Deposit Applied',
                                 value: CurrencyFormatter.format(_depositApplied),
                                 valueColor: const Color(0xFF2E7D32),
                               ),
-                            _SummaryRow(
-                              label: 'Amount Due',
-                              value: CurrencyFormatter.format(_amountDue),
-                            ),
-                            if (_paymentStatus != PaymentStatus.unpaid)
                               _SummaryRow(
-                                label: 'Amount Paid',
+                                label: 'Remaining Deposit',
+                                value: CurrencyFormatter.format(
+                                  _remainingDeposit,
+                                ),
+                              ),
+                              _SummaryRow(
+                                label: 'Customer Pays',
                                 value: CurrencyFormatter.format(_cashApplied),
                               ),
-                            if (_excessDeposit > 0)
-                              _SummaryRow(
-                                label: 'New Deposit (Pundo)',
-                                value: CurrencyFormatter.format(_excessDeposit),
-                                valueColor: const Color(0xFF1565C0),
-                              ),
+                            ] else ...[
+                              if (_paymentStatus != PaymentStatus.unpaid)
+                                _SummaryRow(
+                                  label: 'Amount Paid',
+                                  value: CurrencyFormatter.format(
+                                    _cashReceived,
+                                  ),
+                                ),
+                              if (_excessDeposit > 0)
+                                _SummaryRow(
+                                  label: 'Advance Deposit',
+                                  value: CurrencyFormatter.format(
+                                    _excessDeposit,
+                                  ),
+                                  valueColor: const Color(0xFF1565C0),
+                                ),
+                            ],
                             _SummaryRow(
-                              label: 'Remaining Balance',
+                              label: 'Outstanding Balance',
                               value: CurrencyFormatter.format(_remainingBalance),
                               valueColor: _remainingBalance > 0
                                   ? const Color(0xFFF57F17)
                                   : const Color(0xFF2E7D32),
                             ),
                             _SummaryRow(
-                              label: 'Remaining Deposit',
-                              value: CurrencyFormatter.format(_remainingDeposit),
+                              label: 'Payment Status',
+                              value: _paymentStatusLabel,
                             ),
+                            if (_suggestedPaymentStatusLabel != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  'Suggested: ${_suggestedPaymentStatusLabel!}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
