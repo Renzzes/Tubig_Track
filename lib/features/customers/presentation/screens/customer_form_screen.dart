@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/customer_duplicate_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../providers/customers_provider.dart';
 import '../widgets/customer_bottle_reconcile_dialog.dart';
+import '../widgets/duplicate_customer_dialog.dart';
 import '../../domain/entities/customer.dart';
 
 class CustomerFormScreen extends ConsumerStatefulWidget {
@@ -47,12 +49,102 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
     _initialized = true;
   }
 
+  Future<bool> _checkDuplicatesBeforeSave() async {
+    final repo = ref.read(customerRepositoryProvider);
+    final allCustomers = await repo.getAll();
+    if (!mounted) return false;
+
+    final excludeId = isEditing ? widget.customerId : null;
+    final normalizedName = CustomerDuplicateUtils.normalizeName(_nameCtrl.text);
+    final phoneText = _phoneCtrl.text.trim();
+    final addressText = _addressCtrl.text.trim();
+    final formPhone = phoneText.isEmpty ? null : phoneText;
+    final formAddress = addressText.isEmpty ? null : addressText;
+
+    final nameDuplicate = CustomerDuplicateUtils.findDuplicateByName(
+      allCustomers,
+      normalizedName,
+      excludeCustomerId: excludeId,
+    );
+    if (nameDuplicate != null) {
+      if (!mounted) return false;
+      final action = await showDuplicateCustomerNameDialog(
+        context,
+        existingName: nameDuplicate.name,
+        existingPhone: nameDuplicate.phone,
+        existingAddress: nameDuplicate.address,
+        newPhone: formPhone,
+        newAddress: formAddress,
+        isEditing: isEditing,
+      );
+      if (!mounted) return false;
+      switch (action) {
+        case DuplicateCustomerDialogAction.viewExisting:
+          if (mounted) {
+            context.push('/customers/${nameDuplicate.id}');
+          }
+          return false;
+        case DuplicateCustomerDialogAction.proceedAnyway:
+          break;
+        case DuplicateCustomerDialogAction.cancel:
+        case null:
+          return false;
+      }
+    }
+
+    if (phoneText.isNotEmpty) {
+      final phoneDuplicate = CustomerDuplicateUtils.findDuplicateByPhone(
+        allCustomers,
+        phoneText,
+        excludeCustomerId: excludeId,
+      );
+      if (phoneDuplicate != null) {
+        if (!mounted) return false;
+        final action = await showDuplicateCustomerPhoneDialog(
+          context,
+          existingName: phoneDuplicate.name,
+          existingPhone: phoneDuplicate.phone,
+          existingAddress: phoneDuplicate.address,
+          newName: normalizedName,
+          newPhone: phoneText,
+          newAddress: formAddress,
+          isEditing: isEditing,
+        );
+        if (!mounted) return false;
+        switch (action) {
+          case DuplicateCustomerDialogAction.viewExisting:
+            if (mounted) {
+              context.push('/customers/${phoneDuplicate.id}');
+            }
+            return false;
+          case DuplicateCustomerDialogAction.proceedAnyway:
+            break;
+          case DuplicateCustomerDialogAction.cancel:
+          case null:
+            return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final canSave = await _checkDuplicatesBeforeSave();
+    if (!canSave || !mounted) return;
+
     setState(() => _isLoading = true);
 
     try {
       final repo = ref.read(customerRepositoryProvider);
+      final normalizedName = CustomerDuplicateUtils.normalizeName(_nameCtrl.text);
+      final phone = _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim();
+      final address =
+          _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim();
+      final notes =
+          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
 
       if (isEditing) {
         final existing =
@@ -60,32 +152,20 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
         if (existing == null) return;
         await repo.updateCustomer(
           existing.copyWith(
-            name: _nameCtrl.text.trim(),
-            phone: _phoneCtrl.text.trim().isEmpty
-                ? null
-                : _phoneCtrl.text.trim(),
-            address: _addressCtrl.text.trim().isEmpty
-                ? null
-                : _addressCtrl.text.trim(),
-            notes: _notesCtrl.text.trim().isEmpty
-                ? null
-                : _notesCtrl.text.trim(),
+            name: normalizedName,
+            phone: phone,
+            address: address,
+            notes: notes,
           ),
         );
       } else {
         await repo.addCustomer(
           Customer(
             id: const Uuid().v4(),
-            name: _nameCtrl.text.trim(),
-            phone: _phoneCtrl.text.trim().isEmpty
-                ? null
-                : _phoneCtrl.text.trim(),
-            address: _addressCtrl.text.trim().isEmpty
-                ? null
-                : _addressCtrl.text.trim(),
-            notes: _notesCtrl.text.trim().isEmpty
-                ? null
-                : _notesCtrl.text.trim(),
+            name: normalizedName,
+            phone: phone,
+            address: address,
+            notes: notes,
             createdAt: DateTime.now(),
           ),
         );

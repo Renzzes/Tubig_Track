@@ -613,11 +613,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
     required String customerId,
     int? actualCount,
   }) async {
-    await _db.customersDao.updateCustomer(
-      CustomersTableCompanion(
-        id: Value(customerId),
-        pendingPhysicalBottleCount: Value(actualCount),
-      ),
+    await _db.customersDao.updatePendingPhysicalBottleCount(
+      customerId,
+      actualCount,
     );
   }
 

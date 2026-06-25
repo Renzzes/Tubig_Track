@@ -65,6 +65,16 @@ class CustomersDao extends DatabaseAccessor<AppDatabase>
     ));
   }
 
+  Future<void> updatePendingPhysicalBottleCount(
+    String customerId,
+    int? actualCount,
+  ) {
+    return (update(customersTable)..where((t) => t.id.equals(customerId)))
+        .write(CustomersTableCompanion(
+      pendingPhysicalBottleCount: Value(actualCount),
+    ));
+  }
+
   Future<void> updatePhysicalCountVerification(
     String customerId,
     DateTime date,
