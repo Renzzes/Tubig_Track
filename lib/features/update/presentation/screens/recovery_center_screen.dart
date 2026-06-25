@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/services/data_storage_service.dart';
-import '../../../../core/services/pdf_export_actions.dart';
+import '../../../../core/services/storage_folder_opener.dart';
 import '../../../settings/presentation/widgets/backup_restore_flow.dart';
 import '../../domain/entities/recovery_file_info.dart';
 import '../providers/update_provider.dart';
@@ -185,15 +185,13 @@ class _RecoveryFileTile extends ConsumerWidget {
         await Share.shareXFiles([XFile(file.path)], text: file.fileName);
       case 'open':
         try {
-          await openStoragePath(file.path);
+          await openStoragePath(p.dirname(file.path));
         } catch (_) {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  DataStorageService.instance.displayPath(
-                    p.dirname(file.path),
-                  ),
+                  DataStorageService.instance.displayPath(p.dirname(file.path)),
                 ),
               ),
             );

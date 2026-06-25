@@ -1,39 +1,199 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
+import 'tubig_track_storage_channel.dart';
 
-/// Manages TubigTrack folder layout under app internal storage.
+enum StorageLocationKind {
+  /// Internal Storage/TubigTrack (user-visible).
+  publicPrimary,
+
+  /// User-granted folder via Storage Access Framework.
+  publicSaf,
+
+  /// App-private documents/TubigTrack fallback.
+  privateFallback,
+}
+
+/// Manages TubigTrack folder layout under public or private storage.
 class DataStorageService {
   DataStorageService._();
 
   static final DataStorageService instance = DataStorageService._();
 
   Directory? _rootCache;
+  StorageLocationKind _kind = StorageLocationKind.privateFallback;
+  String? _persistedRootPath;
+  bool _initialized = false;
 
-  /// Ensures TubigTrack/Backups, Archives, CSV, Reports, Recovery exist.
+  StorageLocationKind get storageKind => _kind;
+
+  bool get isPublicStorage =>
+      _kind == StorageLocationKind.publicPrimary ||
+      _kind == StorageLocationKind.publicSaf;
+
+  bool get isInitialized => _initialized;
+
+  /// Initializes storage on first launch: public TubigTrack when possible, else private.
+  Future<StorageInitResult> initialize() async {
+    final prefs = await SharedPreferences.getInstance();
+    _persistedRootPath = prefs.getString(AppConstants.prefStorageRootPath);
+    final savedKindName = prefs.getString(AppConstants.prefStorageKind);
+
+    if (_persistedRootPath != null) {
+      final savedRoot = Directory(_persistedRootPath!);
+      if (await _verifyWritableRoot(savedRoot)) {
+        _applyRoot(savedRoot, _kindFromName(savedKindName));
+        await ensureFolderStructure();
+        _initialized = true;
+        return StorageInitResult(
+          kind: _kind,
+          rootPath: savedRoot.path,
+          isNewSetup: false,
+        );
+      }
+    }
+
+    if (Platform.isAndroid) {
+      await _requestAndroidStoragePermissions();
+      final publicPath = await TubigTrackStorageChannel.initPublicStorage();
+      if (publicPath != null) {
+        final root = Directory(publicPath);
+        if (await _verifyWritableRoot(root)) {
+          await _applyAndPersist(root, StorageLocationKind.publicPrimary);
+          _initialized = true;
+          return StorageInitResult(
+            kind: _kind,
+            rootPath: root.path,
+            isNewSetup: true,
+          );
+        }
+      }
+    }
+
+    final privateRoot = await _privateRootDirectory();
+    await _applyAndPersist(privateRoot, StorageLocationKind.privateFallback);
+    _initialized = true;
+    return StorageInitResult(
+      kind: _kind,
+      rootPath: privateRoot.path,
+      isNewSetup: true,
+      usedFallback: true,
+    );
+  }
+
+  /// Lets the owner pick a public TubigTrack folder via SAF (Android 11+).
+  Future<bool> requestPublicFolderViaSaf() async {
+    if (!Platform.isAndroid) return false;
+
+    final picked = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Select or create TubigTrack folder',
+    );
+    if (picked == null || picked.isEmpty) return false;
+
+    final root = Directory(picked);
+    if (!await root.exists()) {
+      await root.create(recursive: true);
+    }
+    if (!await _verifyWritableRoot(root)) return false;
+
+    await ensureFolderStructureAt(root);
+    await _applyAndPersist(root, StorageLocationKind.publicSaf);
+    return true;
+  }
+
+  Future<void> _applyAndPersist(
+    Directory root,
+    StorageLocationKind kind,
+  ) async {
+    _applyRoot(root, kind);
+    await ensureFolderStructure();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.prefStorageRootPath, root.path);
+    await prefs.setString(AppConstants.prefStorageKind, kind.name);
+  }
+
+  void _applyRoot(Directory root, StorageLocationKind kind) {
+    _rootCache = root;
+    _kind = kind;
+    _persistedRootPath = root.path;
+  }
+
+  StorageLocationKind _kindFromName(String? name) {
+    return StorageLocationKind.values.firstWhere(
+      (k) => k.name == name,
+      orElse: () => StorageLocationKind.privateFallback,
+    );
+  }
+
+  Future<void> _requestAndroidStoragePermissions() async {
+    if (!Platform.isAndroid) return;
+    await Permission.storage.request();
+  }
+
+  Future<Directory> _privateRootDirectory() async {
+    final docs = await getApplicationDocumentsDirectory();
+    final root = Directory(p.join(docs.path, AppConstants.tubigTrackRoot));
+    if (!await root.exists()) {
+      await root.create(recursive: true);
+    }
+    return root;
+  }
+
+  Future<bool> _verifyWritableRoot(Directory root) async {
+    try {
+      if (!await root.exists()) {
+        await root.create(recursive: true);
+      }
+      final probe = File(p.join(root.path, '.tubigtrack_probe'));
+      await probe.writeAsString('ok');
+      await probe.delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Ensures TubigTrack/Backups, Archives, CSV, Reports, Recovery, Recovery/RestoreLogs.
   Future<Directory> ensureFolderStructure() async {
     final root = await rootDirectory();
+    return ensureFolderStructureAt(root);
+  }
+
+  Future<Directory> ensureFolderStructureAt(Directory root) async {
     for (final sub in AppConstants.tubigTrackSubfolders) {
       final dir = Directory(p.join(root.path, sub));
       if (!await dir.exists()) {
         await dir.create(recursive: true);
       }
     }
+    final restoreLogs = Directory(
+      p.join(
+        root.path,
+        AppConstants.recoverySubfolder,
+        AppConstants.restoreLogsSubfolder,
+      ),
+    );
+    if (!await restoreLogs.exists()) {
+      await restoreLogs.create(recursive: true);
+    }
     return root;
   }
 
   Future<Directory> rootDirectory() async {
-    if (_rootCache != null) return _rootCache!;
-    final docs = await getApplicationDocumentsDirectory();
-    _rootCache = Directory(p.join(docs.path, AppConstants.tubigTrackRoot));
-    if (!await _rootCache!.exists()) {
-      await _rootCache!.create(recursive: true);
+    if (!_initialized) {
+      await initialize();
     }
-    return _rootCache!;
+    if (_rootCache != null) return _rootCache!;
+    final privateRoot = await _privateRootDirectory();
+    _rootCache = privateRoot;
+    return privateRoot;
   }
 
   Future<Directory> backupsDirectory() =>
@@ -60,7 +220,7 @@ class DataStorageService {
     return dir;
   }
 
-  /// Resolves the live SQLite database file (`.sqlite` or extensionless).
+  /// Live SQLite database always lives in app-private documents (not moved).
   Future<File> resolveDatabaseFile() async {
     final docs = await getApplicationDocumentsDirectory();
     final candidates = [
@@ -73,6 +233,22 @@ class DataStorageService {
     return candidates.first;
   }
 
+  /// Relative TubigTrack subfolder for [absoluteFolderPath], e.g. `Backups`.
+  String? relativeSubfolderPath(String absoluteFolderPath) {
+    final normalized = absoluteFolderPath.replaceAll('\\', '/');
+    final root = _persistedRootPath?.replaceAll('\\', '/');
+    if (root != null && normalized.startsWith(root)) {
+      return normalized.substring(root.length).replaceFirst(RegExp('^/'), '');
+    }
+    final idx = normalized.indexOf(AppConstants.tubigTrackRoot);
+    if (idx >= 0) {
+      return normalized
+          .substring(idx + AppConstants.tubigTrackRoot.length)
+          .replaceFirst(RegExp('^/'), '');
+    }
+    return null;
+  }
+
   String timestampForFilename() {
     final now = DateTime.now();
     final y = now.year.toString().padLeft(4, '0');
@@ -83,7 +259,6 @@ class DataStorageService {
     return '${y}_${m}_${d}_$h-$min';
   }
 
-  /// Format used for manual database backups: 2026-06-25_10-30
   String backupTimestampForFilename() {
     final now = DateTime.now();
     final y = now.year.toString().padLeft(4, '0');
@@ -108,7 +283,6 @@ class DataStorageService {
   String emergencyBackupFileName() =>
       'Emergency_${timestampForFilename()}.db';
 
-  /// Writes a JSON sidecar next to [filePath] with backup metadata.
   Future<void> writeMetadataSidecar(
     String filePath, {
     required String appVersion,
@@ -185,6 +359,8 @@ class DataStorageService {
       ),
       recoveryCount: await fileCountIn(recovery, extensions: ['.db']),
       totalBytes: await directorySizeBytes(root),
+      isPublicStorage: isPublicStorage,
+      locationLabel: displayRootPath(),
     );
   }
 
@@ -196,14 +372,40 @@ class DataStorageService {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
+  /// User-facing location label.
+  String displayRootPath() {
+    if (isPublicStorage) {
+      return 'Internal Storage/TubigTrack';
+    }
+    return 'App private storage/TubigTrack';
+  }
+
   /// User-facing relative path shown in dialogs.
   String displayPath(String absolutePath) {
+    final relative = relativeSubfolderPath(absolutePath);
+    if (relative != null && relative.isNotEmpty) {
+      return '${displayRootPath()}/$relative'.replaceAll('\\', '/');
+    }
     final idx = absolutePath.indexOf(AppConstants.tubigTrackRoot);
     if (idx >= 0) {
       return absolutePath.substring(idx).replaceAll('\\', '/');
     }
-    return 'TubigTrack/${p.basename(absolutePath)}';
+    return '${displayRootPath()}/${p.basename(absolutePath)}';
   }
+}
+
+class StorageInitResult {
+  final StorageLocationKind kind;
+  final String rootPath;
+  final bool isNewSetup;
+  final bool usedFallback;
+
+  const StorageInitResult({
+    required this.kind,
+    required this.rootPath,
+    this.isNewSetup = false,
+    this.usedFallback = false,
+  });
 }
 
 class StorageSummary {
@@ -219,6 +421,8 @@ class StorageSummary {
   final int reportCount;
   final int recoveryCount;
   final int totalBytes;
+  final bool isPublicStorage;
+  final String locationLabel;
 
   const StorageSummary({
     required this.rootPath,
@@ -233,5 +437,7 @@ class StorageSummary {
     required this.reportCount,
     required this.recoveryCount,
     required this.totalBytes,
+    this.isPublicStorage = false,
+    this.locationLabel = 'Internal Storage/TubigTrack',
   });
 }

@@ -9,6 +9,9 @@ class AppConstants {
   static const String githubReleasesUrl =
       'https://api.github.com/repos/Renzzes/Tubig_Track/releases';
 
+  static const String prefStorageRootPath = 'tubigtrack_storage_root_path';
+  static const String prefStorageKind = 'tubigtrack_storage_kind';
+
   static const String tubigTrackRoot = 'TubigTrack';
   static const String backupsSubfolder = 'Backups';
   static const String archivesSubfolder = 'Archives';

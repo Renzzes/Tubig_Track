@@ -8,7 +8,7 @@ import 'core/services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('en_PH', null);
-  await DataStorageService.instance.ensureFolderStructure();
+  await DataStorageService.instance.initialize();
   await NotificationService.initialize();
   runApp(
     const ProviderScope(

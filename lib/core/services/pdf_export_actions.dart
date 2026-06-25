@@ -2,12 +2,11 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../services/data_storage_service.dart';
+import 'data_storage_service.dart';
 
 /// Save, share, and print PDF documents to TubigTrack/Reports/.
 class PdfExportActions {
@@ -52,7 +51,7 @@ class PdfExportActions {
             ListTile(
               leading: const Icon(Icons.save_outlined),
               title: const Text('Save PDF'),
-              subtitle: const Text('TubigTrack/Reports'),
+              subtitle: Text(DataStorageService.instance.displayRootPath()),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _savePdf(context, bytes, fileName);
@@ -137,13 +136,5 @@ class PdfExportActions {
         );
       }
     }
-  }
-}
-
-/// Opens a file or folder path on device.
-Future<void> openStoragePath(String path) async {
-  final result = await OpenFilex.open(path);
-  if (result.type != ResultType.done) {
-    throw Exception(result.message);
   }
 }

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/services/data_storage_service.dart';
-import '../../../../core/services/pdf_export_actions.dart';
+import '../../../../core/services/storage_folder_opener.dart';
 
 /// Shows success dialog after CSV export with Open Folder / Share / Done actions.
 Future<void> showCsvExportSuccessDialog(
@@ -24,12 +24,9 @@ Future<void> showCsvExportSuccessDialog(
       actions: [
         TextButton(
           onPressed: () async {
+            final csvDir = await DataStorageService.instance.csvDirectory();
             try {
-              if (exportedPaths.isNotEmpty) {
-                await openStoragePath(exportedPaths.first);
-              } else {
-                await openStoragePath(csvDir.path);
-              }
+              await openStoragePath(csvDir.path);
             } catch (_) {
               if (ctx.mounted) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
@@ -64,7 +61,9 @@ Future<void> showBackupSuccessDialog(BuildContext context, String backupPath) {
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Database Backed Up Successfully'),
-      content: Text('Saved to:\n\nTubigTrack/Backups'),
+      content: Text(
+        'Saved to:\n\n${DataStorageService.instance.displayRootPath()}/Backups',
+      ),
       actions: [
         TextButton(
           onPressed: () => Share.shareXFiles(

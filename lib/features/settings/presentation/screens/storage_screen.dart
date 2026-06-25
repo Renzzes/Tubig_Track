@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/services/data_storage_service.dart';
-import '../../../../core/services/pdf_export_actions.dart';
+import '../../../../core/services/storage_folder_opener.dart';
 import '../../../update/presentation/providers/update_provider.dart';
 
 class StorageScreen extends ConsumerWidget {
@@ -32,11 +32,34 @@ class StorageScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             _SummaryCard(
+              locationLabel: summary.locationLabel,
+              isPublicStorage: summary.isPublicStorage,
               totalBytes: storage.formatBytes(summary.totalBytes),
               backupCount: summary.backupCount,
               archiveCount: summary.archiveCount,
               csvCount: summary.csvCount,
               reportCount: summary.reportCount,
+              onChoosePublicFolder: () async {
+                final ok = await storage.requestPublicFolderViaSaf();
+                if (context.mounted) {
+                  if (ok) {
+                    ref.invalidate(storageSummaryProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Public TubigTrack folder configured successfully.',
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not configure public folder.'),
+                      ),
+                    );
+                  }
+                }
+              },
             ),
             const SizedBox(height: 16),
             _FolderTile(
@@ -44,7 +67,7 @@ class StorageScreen extends ConsumerWidget {
               title: 'Backups',
               path: summary.backupsPath,
               count: summary.backupCount,
-              onOpen: () => _openFolder(summary.backupsPath),
+              onOpen: () => _openFolder(context, summary.backupsPath),
               onShare: () => _shareFolder(summary.backupsPath),
               onBrowse: () => context.push('/recovery-center'),
             ),
@@ -53,7 +76,7 @@ class StorageScreen extends ConsumerWidget {
               title: 'Archives',
               path: summary.archivesPath,
               count: summary.archiveCount,
-              onOpen: () => _openFolder(summary.archivesPath),
+              onOpen: () => _openFolder(context, summary.archivesPath),
               onShare: () => _shareFolder(summary.archivesPath),
               onBrowse: () => context.push('/recovery-center'),
             ),
@@ -62,7 +85,7 @@ class StorageScreen extends ConsumerWidget {
               title: 'CSV Exports',
               path: summary.csvPath,
               count: summary.csvCount,
-              onOpen: () => _openFolder(summary.csvPath),
+              onOpen: () => _openFolder(context, summary.csvPath),
               onShare: () => _shareFolder(summary.csvPath),
               onBrowse: () => context.push('/recovery-center'),
             ),
@@ -71,7 +94,7 @@ class StorageScreen extends ConsumerWidget {
               title: 'Reports',
               path: summary.reportsPath,
               count: summary.reportCount,
-              onOpen: () => _openFolder(summary.reportsPath),
+              onOpen: () => _openFolder(context, summary.reportsPath),
               onShare: () => _shareFolder(summary.reportsPath),
               onBrowse: () => context.push('/recovery-center'),
             ),
@@ -80,7 +103,7 @@ class StorageScreen extends ConsumerWidget {
               title: 'Recovery',
               path: summary.recoveryPath,
               count: summary.recoveryCount,
-              onOpen: () => _openFolder(summary.recoveryPath),
+              onOpen: () => _openFolder(context, summary.recoveryPath),
               onShare: () => _shareFolder(summary.recoveryPath),
               onBrowse: () => context.push('/recovery-center'),
             ),
@@ -92,11 +115,15 @@ class StorageScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openFolder(String path) async {
+  Future<void> _openFolder(BuildContext context, String path) async {
     try {
       await openStoragePath(path);
-    } catch (_) {
-      // Folder open may not be supported on all devices.
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e')),
+        );
+      }
     }
   }
 
@@ -127,18 +154,24 @@ class StorageScreen extends ConsumerWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
+  final String locationLabel;
+  final bool isPublicStorage;
   final String totalBytes;
   final int backupCount;
   final int archiveCount;
   final int csvCount;
   final int reportCount;
+  final VoidCallback onChoosePublicFolder;
 
   const _SummaryCard({
+    required this.locationLabel,
+    required this.isPublicStorage,
     required this.totalBytes,
     required this.backupCount,
     required this.archiveCount,
     required this.csvCount,
     required this.reportCount,
+    required this.onChoosePublicFolder,
   });
 
   @override
@@ -156,6 +189,7 @@ class _SummaryCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
+            Text('Location: $locationLabel'),
             Text('Total used: $totalBytes'),
             const SizedBox(height: 12),
             Wrap(
@@ -168,11 +202,32 @@ class _SummaryCard extends StatelessWidget {
                 _Chip(label: '$reportCount reports'),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'All data is stored in your app\'s private internal storage under TubigTrack/.',
-              style: TextStyle(fontSize: 13, color: Colors.grey[600], height: 1.4),
-            ),
+            const SizedBox(height: 12),
+            if (!isPublicStorage) ...[
+              MaterialBanner(
+                content: const Text(
+                  'TubigTrack is using app-private storage because public '
+                  'Internal Storage/TubigTrack could not be created on this device. '
+                  'Your files are still safe, but they will not appear in the Files app.',
+                ),
+                leading: const Icon(Icons.info_outline),
+                actions: [
+                  TextButton(
+                    onPressed: onChoosePublicFolder,
+                    child: const Text('Choose Public Folder'),
+                  ),
+                ],
+              ),
+            ] else
+              Text(
+                'Files are saved under Internal Storage/TubigTrack and are '
+                'visible in your device Files app.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
+              ),
           ],
         ),
       ),
@@ -239,7 +294,7 @@ class _FolderTile extends StatelessWidget {
             }
           },
           itemBuilder: (_) => const [
-            PopupMenuItem(value: 'open', child: Text('Open')),
+            PopupMenuItem(value: 'open', child: Text('Open in Files')),
             PopupMenuItem(value: 'share', child: Text('Share Files')),
             PopupMenuItem(value: 'browse', child: Text('Recovery Center')),
           ],

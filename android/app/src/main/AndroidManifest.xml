@@ -63,5 +63,9 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:mimeType="application/vnd.ms-excel"/>
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="vnd.android.document/directory"/>
+        </intent>
     </queries>
 </manifest>

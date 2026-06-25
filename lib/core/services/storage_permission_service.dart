@@ -27,8 +27,8 @@ class StoragePermissionService {
       builder: (ctx) => AlertDialog(
         title: const Text('Storage Permission'),
         content: const Text(
-          'TubigTrack needs storage access to share and open your backup files. '
-          'Your data is stored in the app\'s private TubigTrack folder.',
+          'TubigTrack needs storage access to save and open your TubigTrack '
+          'folder in Internal Storage.',
         ),
         actions: [
           TextButton(
