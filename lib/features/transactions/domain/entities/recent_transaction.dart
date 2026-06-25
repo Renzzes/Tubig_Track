@@ -12,6 +12,8 @@ enum RecentTransactionType {
   bottleAudit,
   dispenserSale,
   savingsAddition,
+  savingsTransfer,
+  savingsWithdraw,
   supplyPurchase,
   depositAdded,
   depositUsed,
@@ -98,7 +100,11 @@ class RecentTransaction {
       case RecentTransactionType.dispenserSale:
         return 'Dispenser Sale';
       case RecentTransactionType.savingsAddition:
-        return 'Savings Addition';
+        return 'Owner Capital';
+      case RecentTransactionType.savingsTransfer:
+        return 'Transfer to Savings';
+      case RecentTransactionType.savingsWithdraw:
+        return 'Withdraw from Savings';
       case RecentTransactionType.supplyPurchase:
         return 'Supplier Delivery';
       case RecentTransactionType.depositAdded:

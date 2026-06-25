@@ -217,13 +217,41 @@ class DashboardScreen extends ConsumerWidget {
 
               savingsAsync.when(
                 data: (savings) => SummaryCard(
-                  title: 'Savings',
-                  value: CurrencyFormatter.format(savings.currentSavings),
+                  title: 'Savings Account',
+                  value: CurrencyFormatter.format(savings.savingsAccountBalance),
                   icon: Icons.savings_outlined,
                   color: AppColors.success,
-                  subtitle: savings.manualAdditions > 0
-                      ? 'Manual Additions: ${CurrencyFormatter.format(savings.manualAdditions)}'
-                      : 'Tap for details',
+                  subtitle: savings.savingsAccountBalance > 0
+                      ? 'Tap to transfer or withdraw'
+                      : 'Tap to set money aside',
+                  onTap: () => context.push('/savings/account'),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 12),
+
+              savingsAsync.when(
+                data: (savings) => SummaryCard(
+                  title: 'Business Cash',
+                  value: CurrencyFormatter.format(savings.businessCash),
+                  icon: Icons.account_balance_wallet_outlined,
+                  color: AppColors.primary,
+                  subtitle: 'Operating cash — tap for breakdown',
+                  onTap: () => context.push('/cash/breakdown'),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 12),
+
+              savingsAsync.when(
+                data: (savings) => SummaryCard(
+                  title: 'Accumulated Profit',
+                  value: CurrencyFormatter.format(savings.accumulatedProfit),
+                  icon: Icons.trending_up,
+                  color: AppColors.success,
+                  subtitle: 'Profit earned — not money in savings',
                   onTap: () => context.push('/savings'),
                 ),
                 loading: () => const SizedBox.shrink(),
@@ -234,7 +262,7 @@ class DashboardScreen extends ConsumerWidget {
               activeGoalAsync.when(
                 data: (goal) {
                   if (goal == null) return const SizedBox.shrink();
-                  final current = savingsAsync.value?.currentSavings ?? 0;
+                  final current = savingsAsync.value?.accumulatedProfit ?? 0;
                   final pct = goal.progressPercent(current);
                   return Column(
                     children: [
@@ -275,7 +303,10 @@ class DashboardScreen extends ConsumerWidget {
                 value: CurrencyFormatter.format(summary.customerDepositsHeld),
                 icon: Icons.savings_outlined,
                 color: AppColors.primary,
-                subtitle: 'Current deposits held (Pundo)',
+                subtitle: summary.customerDepositsHeld > 0
+                    ? 'Tap to view customers'
+                    : 'No deposits held',
+                onTap: () => context.push('/deposits/customers'),
               ),
               const SizedBox(height: 12),
 

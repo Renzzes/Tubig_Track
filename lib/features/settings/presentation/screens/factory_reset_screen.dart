@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
@@ -8,13 +7,14 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/database_refresh.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../update/presentation/providers/update_provider.dart';
 import '../providers/settings_provider.dart';
 
 /// Confirmation screen — user must type CONFIRM to enable Reset.
 class FactoryResetConfirmScreen extends ConsumerStatefulWidget {
   const FactoryResetConfirmScreen({super.key});
 
-  static const confirmPhrase = 'CONFIRM';
+  static const confirmPhrase = 'RESET';
 
   @override
   ConsumerState<FactoryResetConfirmScreen> createState() =>
@@ -53,10 +53,11 @@ class _FactoryResetConfirmScreenState
     if (!_canReset || _isResetting) return;
     setState(() => _isResetting = true);
     try {
+      await ref.read(settingsRepositoryProvider).createEmergencyBackup();
       await ref.read(settingsRepositoryProvider).factoryReset();
       invalidateAllDataProviders(ref);
       if (mounted) {
-        context.go('/settings/factory-reset/complete');
+        context.go('/');
       }
     } catch (e) {
       if (mounted) {
@@ -116,7 +117,7 @@ class _FactoryResetConfirmScreenState
               const SizedBox(height: 16),
             ],
             Text(
-              'Type CONFIRM to permanently erase all data.',
+              'Type RESET to permanently erase all data.',
               style: TextStyle(color: Colors.grey[700], height: 1.4),
               textAlign: TextAlign.center,
             ),
@@ -125,7 +126,7 @@ class _FactoryResetConfirmScreenState
               controller: _confirmCtrl,
               autofocus: true,
               decoration: const InputDecoration(
-                labelText: 'Type CONFIRM',
+                labelText: 'Type RESET',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.edit_outlined),
               ),
@@ -194,7 +195,7 @@ class FactoryResetCompleteScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Text(
                   'All TubigTrack business data has been permanently erased.\n\n'
-                  'Please reopen TubigTrack to start with a fresh database.',
+                  'An emergency backup was saved to TubigTrack/Recovery/.',
                   style: TextStyle(
                     fontSize: 15,
                     color: Colors.grey[700],
@@ -204,11 +205,11 @@ class FactoryResetCompleteScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 40),
                 FilledButton(
-                  onPressed: () => SystemNavigator.pop(),
+                  onPressed: () => context.go('/'),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                   ),
-                  child: const Text('Exit App'),
+                  child: const Text('Go to Dashboard'),
                 ),
               ],
             ),
@@ -531,7 +532,7 @@ Future<void> _proceedToResetConfirmation(
     if (backupAction == FactoryResetBackupPromptAction.backupAndReset) {
       try {
         final path =
-            await ref.read(settingsRepositoryProvider).backupDatabase();
+            await ref.read(backupRepositoryProvider).createManualBackup();
         if (!context.mounted) return;
         final continueReset =
             await showBackupCreatedSuccessDialog(context, path);
@@ -563,7 +564,7 @@ Future<void> startFactoryResetFlow(BuildContext context, WidgetRef ref) async {
   if (warningAction == FactoryResetWarningAction.createBackup) {
     try {
       final path =
-          await ref.read(settingsRepositoryProvider).backupDatabase();
+          await ref.read(backupRepositoryProvider).createManualBackup();
       if (!context.mounted) return;
       final continueReset =
           await showBackupCreatedSuccessDialog(context, path);

@@ -205,10 +205,28 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           sourceId: c.id,
           type: RecentTransactionType.savingsAddition,
           date: c.date,
-          title: 'Manual Savings',
+          title: 'Owner Capital',
           subtitle: c.notes,
           amount: c.amount,
           isCredit: true,
+        ),
+      );
+    }
+
+    for (final t in await _db.savingsTransfersDao.getAll()) {
+      final isTransfer = t.transferType == 'transfer';
+      items.add(
+        RecentTransaction(
+          id: 'savings_transfer_${t.id}',
+          sourceId: t.id,
+          type: isTransfer
+              ? RecentTransactionType.savingsTransfer
+              : RecentTransactionType.savingsWithdraw,
+          date: t.date,
+          title: isTransfer ? 'Transfer to Savings' : 'Withdraw from Savings',
+          subtitle: t.notes,
+          amount: t.amount,
+          isCredit: !isTransfer,
         ),
       );
     }

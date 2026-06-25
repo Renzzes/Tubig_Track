@@ -120,10 +120,16 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
           );
 
       if (mounted) {
-        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Supplier delivery recorded!')),
+          const SnackBar(
+            duration: Duration(seconds: 6),
+            content: Text(
+              'Supplier delivery recorded successfully.\n\n'
+              'Remember to use Inventory → Add Filled Bottles after physically unloading and counting your bottles.',
+            ),
+          ),
         );
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -302,8 +308,8 @@ class _PurchaseStockScreenState extends ConsumerState<PurchaseStockScreen> {
                       ),
                 const SizedBox(height: 16),
                 Text(
-                  'Quantity is counted as filled bottles received. '
-                  'Filled Bottles Available updates automatically when you save.',
+                  'Quantity is counted as filled bottles received from the supplier. '
+                  'Use Add Filled Bottles in Inventory to update your physical count.',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),

@@ -57,7 +57,11 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
       case RecentTransactionType.walkInOperation:
         return 'Walk-In Operation';
       case RecentTransactionType.savingsAddition:
-        return 'Savings Addition';
+        return 'Owner Capital';
+      case RecentTransactionType.savingsTransfer:
+        return 'Transfer to Savings';
+      case RecentTransactionType.savingsWithdraw:
+        return 'Withdraw from Savings';
       case RecentTransactionType.supplyPurchase:
         return 'Supplier Delivery';
       case RecentTransactionType.depositAdded:

@@ -26,6 +26,9 @@ class TransactionActivityHandler {
         context.push('/walk-in-operations');
       case RecentTransactionType.savingsAddition:
         context.push('/savings');
+      case RecentTransactionType.savingsTransfer:
+      case RecentTransactionType.savingsWithdraw:
+        context.push('/savings/account');
       case RecentTransactionType.supplyPurchase:
         context.push('/inventory/supply-purchases/${tx.sourceId}');
       case RecentTransactionType.bottleBorrow:

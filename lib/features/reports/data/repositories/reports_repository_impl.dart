@@ -118,12 +118,8 @@ class ReportsRepositoryImpl implements ReportsRepository {
 
     final savingsRepo = SavingsRepositoryImpl(_db);
     final savingsSummary = await savingsRepo.getSummary();
-    final manualInPeriod =
+    final ownerCapitalInPeriod =
         await _db.savingsDao.getTotalContributionsForDateRange(start, end);
-
-    final businessSavings =
-        savingsSummary.currentSavings - savingsSummary.manualAdditions;
-    final netSavings = savingsSummary.currentSavings;
 
     final inventory = await InventoryRepositoryImpl(_db).getSummary();
     final auditSummary = await InventoryRepositoryImpl(_db).getAuditSummary();
@@ -182,6 +178,7 @@ class ReportsRepositoryImpl implements ReportsRepository {
         await _db.customerDepositsDao.getCustomersWithDepositsCount();
     final depositAdded = await _db.customerDepositsDao.getTotalAdded();
     final depositUsed = await _db.customerDepositsDao.getTotalUsed();
+    final unpaidReceivables = await _db.deliveriesDao.getTotalReceivables();
 
     final allCustomers = await CustomerRepositoryImpl(_db).getAll();
 
@@ -248,10 +245,12 @@ class ReportsRepositoryImpl implements ReportsRepository {
       totalDeliveries: deliveries.length,
       totalBottlesDelivered: totalBottles,
       totalPaymentsReceived: paymentsReceived,
-      currentSavings: businessSavings,
-      manualSavingsInPeriod: manualInPeriod,
-      totalManualSavings: savingsSummary.manualAdditions,
-      netSavings: netSavings,
+      currentSavings: savingsSummary.currentSavings,
+      ownerCapitalInPeriod: ownerCapitalInPeriod,
+      totalOwnerCapital: savingsSummary.ownerCapital,
+      unpaidReceivables: unpaidReceivables,
+      emptyBottlesReadyForRefill: inventory.emptyBottlesReadyForRefill,
+      savingsAccountBalance: savingsSummary.savingsAccountBalance,
       totalBottlesOwned: inventory.totalBottlesOwned,
       availableBottles: inventory.availableBottles,
       bottlesWithCustomers: inventory.bottlesWithCustomers,

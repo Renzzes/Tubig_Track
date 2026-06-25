@@ -2,13 +2,38 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as p;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
-/// Save, share, and print PDF documents (native Android print via [Printing]).
+import '../services/data_storage_service.dart';
+
+/// Save, share, and print PDF documents to TubigTrack/Reports/.
 class PdfExportActions {
   PdfExportActions._();
+
+  static Future<File> writeReportFile(
+    Uint8List bytes,
+    String fileName,
+  ) async {
+    final storage = DataStorageService.instance;
+    await storage.ensureFolderStructure();
+    final reportsDir = await storage.reportsDirectory();
+    final file = File(p.join(reportsDir.path, fileName));
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  }
+
+  static Future<File> writeReportFileWithTimestamp(
+    Uint8List bytes,
+    String baseName,
+  ) async {
+    final stamp = DataStorageService.instance.timestampForFilename();
+    final ext = p.extension(baseName);
+    final name = p.basenameWithoutExtension(baseName);
+    return writeReportFile(bytes, '${name}_$stamp$ext');
+  }
 
   static Future<void> showOptions(
     BuildContext context, {
@@ -27,6 +52,7 @@ class PdfExportActions {
             ListTile(
               leading: const Icon(Icons.save_outlined),
               title: const Text('Save PDF'),
+              subtitle: const Text('TubigTrack/Reports'),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _savePdf(context, bytes, fileName);
@@ -35,7 +61,6 @@ class PdfExportActions {
             ListTile(
               leading: const Icon(Icons.share_outlined),
               title: const Text('Share PDF'),
-              subtitle: const Text('Requires internet for some apps'),
               onTap: () async {
                 Navigator.pop(ctx);
                 await _sharePdf(context, bytes, fileName, shareText);
@@ -55,23 +80,17 @@ class PdfExportActions {
     );
   }
 
-  static Future<File> _writeTempFile(Uint8List bytes, String fileName) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes, flush: true);
-    return file;
-  }
-
   static Future<void> _savePdf(
     BuildContext context,
     Uint8List bytes,
     String fileName,
   ) async {
     try {
-      final file = await _writeTempFile(bytes, fileName);
+      final file = await writeReportFileWithTimestamp(bytes, fileName);
       if (context.mounted) {
+        final display = DataStorageService.instance.displayPath(file.path);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('PDF saved to ${file.path}')),
+          SnackBar(content: Text('PDF saved to $display')),
         );
       }
     } catch (e) {
@@ -90,7 +109,7 @@ class PdfExportActions {
     String shareText,
   ) async {
     try {
-      final file = await _writeTempFile(bytes, fileName);
+      final file = await writeReportFileWithTimestamp(bytes, fileName);
       await Share.shareXFiles([XFile(file.path)], text: shareText);
     } catch (e) {
       if (context.mounted) {
@@ -118,5 +137,13 @@ class PdfExportActions {
         );
       }
     }
+  }
+}
+
+/// Opens a file or folder path on device.
+Future<void> openStoragePath(String path) async {
+  final result = await OpenFilex.open(path);
+  if (result.type != ResultType.done) {
+    throw Exception(result.message);
   }
 }

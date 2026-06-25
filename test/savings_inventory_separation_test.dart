@@ -27,23 +27,37 @@ void main() {
       expect(InventoryCalculator.totalBottlesOwned(afterPurchase), 187);
     });
 
-    test('savings formula excludes bottle purchase cost', () {
+    test('savings formula excludes bottle purchase cost and owner capital', () {
       const deliveryProfit = 5000.0;
       const dispenserProfit = 800.0;
       const totalExpenses = 1200.0;
-      const manualAdditions = 300.0;
+      const ownerCapital = 300.0;
       const bottlePurchaseCost = 3510.0;
 
-      final savings = deliveryProfit +
-          dispenserProfit -
-          totalExpenses +
-          manualAdditions;
+      final accumulatedProfit =
+          deliveryProfit + dispenserProfit - totalExpenses;
+      final totalBusinessMoney = accumulatedProfit + ownerCapital;
       final legacySavingsWithPurchaseDeduction =
-          savings - bottlePurchaseCost;
+          accumulatedProfit - bottlePurchaseCost;
 
-      expect(savings, 4900.0);
-      expect(legacySavingsWithPurchaseDeduction, 1390.0);
-      expect(savings, greaterThan(legacySavingsWithPurchaseDeduction));
+      expect(accumulatedProfit, 4600.0);
+      expect(totalBusinessMoney, 4900.0);
+      expect(legacySavingsWithPurchaseDeduction, 1090.0);
+      expect(accumulatedProfit, greaterThan(legacySavingsWithPurchaseDeduction));
+    });
+
+    test('savings transfer moves cash without changing accumulated profit', () {
+      const accumulatedProfit = 50000.0;
+      const ownerCapital = 0.0;
+      const transferAmount = 5000.0;
+
+      final totalBefore = accumulatedProfit + ownerCapital;
+      final savingsAfter = transferAmount;
+      final businessCashAfter = totalBefore - savingsAfter;
+
+      expect(businessCashAfter, 45000.0);
+      expect(savingsAfter, 5000.0);
+      expect(accumulatedProfit, 50000.0);
     });
   });
 }

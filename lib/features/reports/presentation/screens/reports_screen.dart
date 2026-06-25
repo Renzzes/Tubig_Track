@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:excel/excel.dart' as xl;
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../../../../core/services/business_report_pdf_builder.dart';
+import '../../../../core/services/data_storage_service.dart';
 import '../../../../core/services/pdf_export_actions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -179,18 +179,21 @@ class ReportsScreen extends ConsumerWidget {
         xl.TextCellValue('Total Expenses'),
         xl.DoubleCellValue(report.totalExpenses),
       ]);
-      sheet.appendRow([xl.TextCellValue('Savings Summary')]);
+      sheet.appendRow([xl.TextCellValue('Owner Capital')]);
       sheet.appendRow([
-        xl.TextCellValue('Current Savings'),
-        xl.DoubleCellValue(report.currentSavings),
+        xl.TextCellValue('Total Owner Capital'),
+        xl.DoubleCellValue(report.totalOwnerCapital),
       ]);
+      if (report.ownerCapitalInPeriod > 0) {
+        sheet.appendRow([
+          xl.TextCellValue('Owner Capital (This Period)'),
+          xl.DoubleCellValue(report.ownerCapitalInPeriod),
+        ]);
+      }
+      sheet.appendRow([xl.TextCellValue('Accumulated Profit')]);
       sheet.appendRow([
-        xl.TextCellValue('Manual Savings Additions'),
-        xl.DoubleCellValue(report.totalManualSavings),
-      ]);
-      sheet.appendRow([
-        xl.TextCellValue('Net Savings'),
-        xl.DoubleCellValue(report.netSavings),
+        xl.TextCellValue('Accumulated Profit'),
+        xl.DoubleCellValue(report.accumulatedProfit),
       ]);
       sheet.appendRow([
         xl.TextCellValue('Net Profit'),
@@ -356,11 +359,23 @@ class ReportsScreen extends ConsumerWidget {
         ]);
       }
 
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/tubigtrack_report.xlsx');
+      final storage = DataStorageService.instance;
+      await storage.ensureFolderStructure();
+      final reportsDir = await storage.reportsDirectory();
+      final stamp = storage.timestampForFilename();
+      final file = File('${reportsDir.path}/TubigTrack_Report_$stamp.xlsx');
       final bytes = excel.encode();
       if (bytes != null) {
         await file.writeAsBytes(bytes);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Report saved to ${storage.displayPath(file.path)}',
+              ),
+            ),
+          );
+        }
         await Share.shareXFiles(
           [XFile(file.path)],
           text: 'TubigTrack Report',
@@ -556,37 +571,9 @@ class _ReportContent extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
 
-        _ReportExpansionSection(
-          title: 'Savings Summary',
-          icon: Icons.savings_outlined,
-          color: AppColors.success,
-          summary: CurrencyFormatter.format(report.netSavings),
-          children: [
-            _MetricRow(
-              label: 'Current Savings',
-              value: CurrencyFormatter.format(report.currentSavings),
-            ),
-            _MetricRow(
-              label: 'Manual Savings Additions',
-              value: CurrencyFormatter.format(report.totalManualSavings),
-            ),
-            if (report.manualSavingsInPeriod > 0)
-              _MetricRow(
-                label: 'Manual Additions (This Period)',
-                value: CurrencyFormatter.format(report.manualSavingsInPeriod),
-              ),
-            const Divider(),
-            _MetricRow(
-              label: 'Net Savings',
-              value: CurrencyFormatter.format(report.netSavings),
-              isTotal: true,
-              color: AppColors.success,
-            ),
-          ],
-        ),
         const SizedBox(height: 16),
 
-        // Profit section
+        // Net Profit
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -631,6 +618,137 @@ class _ReportContent extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 8),
+
+        _ReportExpansionSection(
+          title: 'Owner Capital',
+          icon: Icons.account_balance_outlined,
+          color: AppColors.warning,
+          summary: CurrencyFormatter.format(report.totalOwnerCapital),
+          children: [
+            _MetricRow(
+              label: 'Total Owner Capital',
+              value: CurrencyFormatter.format(report.totalOwnerCapital),
+            ),
+            if (report.ownerCapitalInPeriod > 0)
+              _MetricRow(
+                label: 'Owner Capital (This Period)',
+                value: CurrencyFormatter.format(report.ownerCapitalInPeriod),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Owner investments are not revenue, profit, or savings.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        _ReportExpansionSection(
+          title: 'Accumulated Profit',
+          icon: Icons.trending_up,
+          color: AppColors.success,
+          summary: CurrencyFormatter.format(report.accumulatedProfit),
+          children: [
+            _MetricRow(
+              label: 'Accumulated Profit',
+              value: CurrencyFormatter.format(report.accumulatedProfit),
+              isTotal: true,
+              color: AppColors.success,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Profit earned from operations (not money set aside in savings).',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        _ReportExpansionSection(
+          title: 'Business Position',
+          icon: Icons.account_balance_outlined,
+          color: AppColors.primary,
+          summary: CurrencyFormatter.format(report.cashAvailable),
+          children: [
+            const Text(
+              'Assets',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            _MetricRow(
+              label: 'Business Cash',
+              value: CurrencyFormatter.format(report.businessCash),
+            ),
+            _MetricRow(
+              label: 'Savings Account',
+              value: CurrencyFormatter.format(report.savingsAccountBalance),
+            ),
+            _MetricRow(
+              label: 'Outstanding Receivables',
+              value: CurrencyFormatter.format(report.unpaidReceivables),
+            ),
+            _MetricRow(
+              label: 'Filled Bottles Available',
+              value: '${report.availableBottles}',
+            ),
+            _MetricRow(
+              label: 'Empty Bottles Ready',
+              value: '${report.emptyBottlesReadyForRefill}',
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Liabilities',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            _MetricRow(
+              label: 'Customer Deposits',
+              value: CurrencyFormatter.format(report.currentDepositLiability),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Owner Equity',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            _MetricRow(
+              label: 'Owner Capital',
+              value: CurrencyFormatter.format(report.totalOwnerCapital),
+            ),
+            _MetricRow(
+              label: 'Accumulated Profit',
+              value: CurrencyFormatter.format(report.accumulatedProfit),
+            ),
+            const Divider(),
+            _MetricRow(
+              label: 'Cash Available',
+              value: CurrencyFormatter.format(report.cashAvailable),
+              isTotal: true,
+              color: AppColors.success,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Cash available after setting aside customer deposits.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
 

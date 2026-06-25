@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import '../constants/app_constants.dart';
@@ -11,6 +14,7 @@ import 'tables/expenses_table.dart';
 import 'tables/dispenser_sales_table.dart';
 import 'tables/settings_table.dart';
 import 'tables/savings_contributions_table.dart';
+import 'tables/savings_transfers_table.dart';
 import 'tables/supply_purchases_table.dart';
 import 'tables/inventory_stock_table.dart';
 import 'tables/suppliers_table.dart';
@@ -31,6 +35,7 @@ import 'daos/expenses_dao.dart';
 import 'daos/dispenser_sales_dao.dart';
 import 'daos/settings_dao.dart';
 import 'daos/savings_dao.dart';
+import 'daos/savings_transfers_dao.dart';
 import 'daos/supply_purchases_dao.dart';
 import 'daos/inventory_stock_dao.dart';
 import 'daos/suppliers_dao.dart';
@@ -56,6 +61,7 @@ part 'app_database.g.dart';
     DispenserSalesTable,
     SettingsTable,
     SavingsContributionsTable,
+    SavingsTransfersTable,
     SupplyPurchasesTable,
     InventoryStockTable,
     SuppliersTable,
@@ -77,6 +83,7 @@ part 'app_database.g.dart';
     DispenserSalesDao,
     SettingsDao,
     SavingsDao,
+    SavingsTransfersDao,
     SupplyPurchasesDao,
     InventoryStockDao,
     SuppliersDao,
@@ -94,8 +101,30 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? _openConnection());
 
+  /// Current Drift schema version (keep in sync with [schemaVersion]).
+  static const int currentSchemaVersion = 20;
+
+  /// Oldest schema version that can be migrated forward.
+  static const int minRestorableSchema = 1;
+
+  /// Opens a database at [file]. When [readOnly] is true, writes are blocked.
+  static AppDatabase openAt(File file, {bool readOnly = false}) {
+    return AppDatabase(
+      LazyDatabase(
+        () async => NativeDatabase(
+          file,
+          setup: (rawDb) {
+            if (readOnly) {
+              rawDb.execute('PRAGMA query_only = ON');
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => currentSchemaVersion;
 
   @override
   MigrationStrategy get migration {
@@ -208,6 +237,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 19) {
           await m.createTable(walkInSalesTable);
         }
+        if (from < 20) {
+          await m.createTable(savingsTransfersTable);
+        }
       },
     );
   }
@@ -313,6 +345,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(dispenserSalesTable).go();
       await delete(walkInSalesTable).go();
       await delete(savingsContributionsTable).go();
+      await delete(savingsTransfersTable).go();
       await delete(supplyPurchasesTable).go();
       await delete(inventoryStockTable).go();
       await delete(suppliersTable).go();

@@ -206,7 +206,7 @@ class CopilotQueryService implements BusinessQueryHandler {
     final deliveries = await db.deliveriesDao.getAll();
     final expenses = await db.expensesDao.getAll();
     final dispenserSales = await db.dispenserSalesDao.getAll();
-    final manualAdditions = await db.savingsDao.getTotalContributions();
+    final ownerCapital = await db.savingsDao.getTotalContributions();
 
     var deliveryProfit = 0.0;
     for (final d in deliveries) {
@@ -229,9 +229,12 @@ class CopilotQueryService implements BusinessQueryHandler {
     final current = deliveryProfit +
         walkInProfit +
         dispenserProfit -
-        totalExpenses +
-        manualAdditions;
-    return 'Your current savings is ${_fmt(current)}.';
+        totalExpenses;
+    if (ownerCapital > 0) {
+      return 'Your accumulated profit is ${_fmt(current)} '
+          '(owner capital: ${_fmt(ownerCapital)} — tracked separately).';
+    }
+    return 'Your accumulated profit is ${_fmt(current)}.';
   }
 
   // ── PROFIT (THIS MONTH) ──────────────────────────────────────────────────
@@ -1335,7 +1338,7 @@ class CopilotQueryService implements BusinessQueryHandler {
     final allExpenses = await db.expensesDao.getAll();
     final allDisp = await db.dispenserSalesDao.getAll();
     final allTxs = await db.bottleTransactionsDao.getAll();
-    final manualSavings = await db.savingsDao.getTotalContributions();
+    final ownerCapital = await db.savingsDao.getTotalContributions();
     final linkedIds = await db.supplyPurchasesDao.getLinkedBottleTransactionIds();
 
     var dProfit = 0.0;
@@ -1351,7 +1354,7 @@ class CopilotQueryService implements BusinessQueryHandler {
         bPurchases += t.quantity * costPerBottle;
       }
     }
-    final savings = dProfit + dispProfit - totalExp - bPurchases + manualSavings;
+    final savings = dProfit + dispProfit - totalExp - bPurchases;
 
     // Overdue
     final overdueDeliveries = await db.deliveriesDao.getOverdueDeliveries();
@@ -1387,7 +1390,10 @@ class CopilotQueryService implements BusinessQueryHandler {
     buf.writeln('─────────────────────\n');
     buf.writeln('Revenue ($monthName): ${_fmt(revenue)}');
     buf.writeln('Profit ($monthName): ${_fmt(profit)}');
-    buf.writeln('Total Savings: ${_fmt(savings)}');
+    buf.writeln('Accumulated Profit: ${_fmt(savings)}');
+    if (ownerCapital > 0) {
+      buf.writeln('Owner Capital: ${_fmt(ownerCapital)}');
+    }
     buf.writeln('Overdue Customers: $overdueCount${overdueCount > 0 ? ' (${_fmt(overdueTotal)})' : ''}');
     buf.writeln('Missing Bottles: $missing');
     buf.writeln('Deposits Held: ${_fmt(depositTotal)}');

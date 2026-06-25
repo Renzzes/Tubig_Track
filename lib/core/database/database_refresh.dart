@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'database_provider.dart';
 import '../../features/customers/presentation/providers/customers_provider.dart';
+import '../../features/dashboard/presentation/providers/business_cash_provider.dart';
 import '../../features/dashboard/presentation/providers/dashboard_provider.dart';
 import '../../features/deliveries/presentation/providers/deliveries_provider.dart';
 import '../../features/dispenser_sales/presentation/providers/dispenser_sales_provider.dart';
@@ -17,6 +18,7 @@ import '../../features/suppliers/presentation/providers/suppliers_provider.dart'
 import '../../features/deposits/presentation/providers/deposits_provider.dart';
 import '../../features/copilot/presentation/providers/copilot_provider.dart';
 import '../../features/walk_in_operations/presentation/providers/walk_in_provider.dart';
+import '../../features/payments/presentation/providers/payments_provider.dart';
 
 /// Invalidates all data providers after a database restore or reset.
 void invalidateAllDataProviders(WidgetRef ref) {
@@ -45,6 +47,10 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(allTransactionsProvider);
   ref.invalidate(savingsSummaryProvider);
   ref.invalidate(savingsLedgerProvider);
+  ref.invalidate(savingsTransferLedgerProvider);
+  ref.invalidate(savingsTransfersStreamProvider);
+  ref.invalidate(savingsContributionsStreamProvider);
+  ref.invalidate(businessCashBreakdownProvider);
   ref.invalidate(supplyPurchasesStreamProvider);
   ref.invalidate(suppliersStreamProvider);
   ref.invalidate(savingsGoalsStreamProvider);
@@ -55,4 +61,5 @@ void invalidateAllDataProviders(WidgetRef ref) {
   ref.invalidate(allCustomerDepositsStreamProvider);
   ref.invalidate(copilotHistoryProvider);
   ref.invalidate(copilotInsightsProvider);
+  ref.invalidate(paymentsStreamProvider);
 }

@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
-import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/utils/expense_category_utils.dart';
 import '../../domain/entities/supply_purchase.dart';
 import '../../domain/repositories/supply_purchase_repository.dart';
@@ -103,9 +102,8 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
         ),
       );
 
-      // Supplier delivery = incoming filled water stock (v1.6.2).
-      await InventoryStateService(_db)
-          .applySupplierFilledDelivery(purchase.quantity);
+      // Supplier delivery records purchase history and expenses only (v1.6.9).
+      // Filled Bottles Available is updated separately via Add Filled Bottles.
 
       if (!SupplyPurchase.affectsBottleInventory(purchase.itemType)) {
         final stockKey = SupplyPurchase.stockKeyForItemType(purchase.itemType);
@@ -136,9 +134,6 @@ class SupplyPurchaseRepositoryImpl implements SupplyPurchaseRepository {
       if (row == null) return;
 
       await _db.expensesDao.deleteExpense(row.expenseId);
-
-      await InventoryStateService(_db)
-          .reverseSupplierFilledDelivery(row.quantity);
 
       if (row.bottleTransactionId != null) {
         await _db.bottleTransactionsDao.deleteTransaction(

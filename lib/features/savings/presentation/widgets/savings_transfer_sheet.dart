@@ -3,18 +3,29 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../domain/entities/savings_entities.dart';
+import '../../domain/repositories/savings_repository.dart';
 import '../providers/savings_provider.dart';
+import '../../../dashboard/presentation/providers/business_cash_provider.dart';
 
-class AddCapitalSheet extends ConsumerStatefulWidget {
-  const AddCapitalSheet({super.key});
+class SavingsTransferSheet extends ConsumerStatefulWidget {
+  final SavingsTransferType type;
+  final double maxAmount;
+
+  const SavingsTransferSheet({
+    super.key,
+    required this.type,
+    required this.maxAmount,
+  });
 
   @override
-  ConsumerState<AddCapitalSheet> createState() => _AddCapitalSheetState();
+  ConsumerState<SavingsTransferSheet> createState() =>
+      _SavingsTransferSheetState();
 }
 
-class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
+class _SavingsTransferSheetState extends ConsumerState<SavingsTransferSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
@@ -32,10 +43,11 @@ class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await ref.read(savingsRepositoryProvider).addContribution(
-            SavingsContribution(
+      await ref.read(savingsRepositoryProvider).recordTransfer(
+            SavingsTransfer(
               id: const Uuid().v4(),
               amount: double.parse(_amountCtrl.text.trim()),
+              type: widget.type,
               date: _date,
               notes: _notesCtrl.text.trim().isEmpty
                   ? null
@@ -43,11 +55,21 @@ class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
             ),
           );
       ref.invalidate(savingsSummaryProvider);
-      ref.invalidate(savingsLedgerProvider);
+      ref.invalidate(savingsTransferLedgerProvider);
+      ref.invalidate(businessCashBreakdownProvider);
       if (mounted) {
         Navigator.pop(context, true);
+        final message = widget.type == SavingsTransferType.transfer
+            ? 'Transferred to savings account'
+            : 'Withdrawn from savings account';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Owner capital recorded successfully')),
+          SnackBar(content: Text(message)),
+        );
+      }
+    } on SavingsTransferException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
         );
       }
     } catch (e) {
@@ -63,6 +85,7 @@ class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isTransfer = widget.type == SavingsTransferType.transfer;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -92,13 +115,23 @@ class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Add Capital',
+                  widget.type.label,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Record owner investment or startup capital. This is not savings or profit.',
+                  isTransfer
+                      ? 'Move money from business cash to your savings account. Accumulated profit does not change.'
+                      : 'Move money from your savings account back to business cash.',
                   style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Available: ${CurrencyFormatter.format(widget.maxAmount)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 AppTextField(
@@ -112,12 +145,19 @@ class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
                       RegExp(r'^\d+\.?\d{0,2}'),
                     ),
                   ],
-                  prefixIcon: const Icon(Icons.account_balance_outlined),
+                  prefixIcon: Icon(
+                    isTransfer
+                        ? Icons.savings_outlined
+                        : Icons.account_balance_wallet_outlined,
+                  ),
                   autofocus: true,
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Required';
                     final n = double.tryParse(v);
                     if (n == null || n <= 0) return 'Invalid amount';
+                    if (n > widget.maxAmount + 0.001) {
+                      return 'Exceeds available amount';
+                    }
                     return null;
                   },
                 ),
@@ -144,13 +184,15 @@ class _AddCapitalSheetState extends ConsumerState<AddCapitalSheet> {
                   label: 'Notes (Optional)',
                   controller: _notesCtrl,
                   maxLines: 2,
-                  hint: 'e.g. Startup investment, additional capital',
+                  hint: isTransfer
+                      ? 'e.g. Monthly savings allocation'
+                      : 'e.g. Needed for supplies purchase',
                 ),
                 const SizedBox(height: 24),
                 ResponsivePrimaryButton(
                   onPressed: _loading ? null : _save,
                   isLoading: _loading,
-                  child: const Text('Add Capital'),
+                  child: Text(widget.type.label),
                 ),
               ],
             ),

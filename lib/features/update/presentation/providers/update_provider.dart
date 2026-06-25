@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/data_storage_service.dart';
 import '../../data/repositories/backup_repository_impl.dart';
 import '../../data/repositories/update_repository_impl.dart';
 import '../../domain/entities/backup_file_info.dart';
+import '../../domain/entities/recovery_file_info.dart';
 import '../../domain/entities/update_channel.dart';
 import '../../domain/entities/update_history_entry.dart';
 import '../../domain/repositories/backup_repository.dart';
@@ -48,6 +50,15 @@ final packageInfoProvider = FutureProvider<PackageInfo>((ref) async {
 final availableBackupsProvider =
     FutureProvider<List<BackupFileInfo>>((ref) async {
   return ref.watch(backupRepositoryProvider).listBackups();
+});
+
+final recoveryFilesProvider =
+    FutureProvider<List<RecoveryFileInfo>>((ref) async {
+  return ref.watch(backupRepositoryProvider).listRecoveryFiles();
+});
+
+final storageSummaryProvider = FutureProvider<StorageSummary>((ref) async {
+  return DataStorageService.instance.getStorageSummary();
 });
 
 final updateDiagnosticsProvider =

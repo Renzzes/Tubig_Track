@@ -58,11 +58,15 @@ class ReportSummary {
   final int totalBottlesDelivered;
   final double totalPaymentsReceived;
 
-  // Savings snapshot
+  // Savings snapshot (accumulated profit)
   final double currentSavings;
-  final double manualSavingsInPeriod;
-  final double totalManualSavings;
-  final double netSavings;
+  final double ownerCapitalInPeriod;
+  final double totalOwnerCapital;
+
+  /// Business position snapshot (v1.7.0).
+  final double unpaidReceivables;
+  final int emptyBottlesReadyForRefill;
+  final double savingsAccountBalance;
 
   // Inventory snapshot
   final int totalBottlesOwned;
@@ -137,9 +141,11 @@ class ReportSummary {
     required this.totalBottlesDelivered,
     required this.totalPaymentsReceived,
     required this.currentSavings,
-    required this.manualSavingsInPeriod,
-    required this.totalManualSavings,
-    required this.netSavings,
+    required this.ownerCapitalInPeriod,
+    required this.totalOwnerCapital,
+    required this.unpaidReceivables,
+    required this.emptyBottlesReadyForRefill,
+    required this.savingsAccountBalance,
     required this.totalBottlesOwned,
     required this.availableBottles,
     required this.bottlesWithCustomers,
@@ -179,4 +185,13 @@ class ReportSummary {
     required this.walkInExchangeRevenue,
     required this.walkInDetails,
   });
+
+  /// Alias for [currentSavings].
+  double get accumulatedProfit => currentSavings;
+
+  double get totalBusinessMoney => currentSavings + totalOwnerCapital;
+
+  double get businessCash => totalBusinessMoney - savingsAccountBalance;
+
+  double get cashAvailable => businessCash - currentDepositLiability;
 }

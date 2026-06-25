@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/database_refresh.dart';
+import '../../../../core/services/data_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/settings_provider.dart';
 
@@ -17,14 +18,14 @@ class ArchiveResetScreen extends ConsumerStatefulWidget {
 class _ArchiveResetScreenState extends ConsumerState<ArchiveResetScreen> {
   bool _working = false;
 
-  Future<void> _archiveAndReset() async {
+  Future<void> _createArchive() async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Archive & Reset'),
         content: const Text(
-          'This will create a full archive backup in TubigTrack/Archives/, '
-          'then reset all operational data. Continue?',
+          'This will create a full archive package (database, CSV exports, '
+          'reports, and metadata) in TubigTrack/Archives/.\n\nContinue?',
         ),
         actions: [
           TextButton(
@@ -33,7 +34,7 @@ class _ArchiveResetScreenState extends ConsumerState<ArchiveResetScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Continue'),
+            child: const Text('Create Archive'),
           ),
         ],
       ),
@@ -42,27 +43,37 @@ class _ArchiveResetScreenState extends ConsumerState<ArchiveResetScreen> {
 
     setState(() => _working = true);
     try {
+      // Export fresh CSVs before archiving so the zip includes current data.
+      await ref.read(settingsRepositoryProvider).exportCSV();
       final path = await ref.read(settingsRepositoryProvider).createArchive();
-      await ref.read(settingsRepositoryProvider).factoryReset();
-      invalidateAllDataProviders(ref);
       if (!mounted) return;
-      await showDialog<void>(
+
+      final reset = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Archive Complete'),
+          title: const Text('Archive Completed'),
           content: Text(
-            'Archive saved:\n${path.split('/').last}\n\n'
-            'Operational data has been reset.',
+            'Archive saved:\n${DataStorageService.instance.displayPath(path)}\n\n'
+            'Would you like to reset the business?',
           ),
           actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('OK'),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Reset'),
             ),
           ],
         ),
       );
-      if (mounted) context.go('/');
+
+      if (reset == true) {
+        await ref.read(settingsRepositoryProvider).factoryReset();
+        invalidateAllDataProviders(ref);
+        if (mounted) context.go('/');
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -92,15 +103,15 @@ class _ArchiveResetScreenState extends ConsumerState<ArchiveResetScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              '1. Creates TubigTrack_Archive_YYYY.db in TubigTrack/Archives/\n'
-              '2. Preserves your full business history in the archive\n'
-              '3. Resets operational data for a fresh start\n\n'
+              '1. Creates BusinessArchive_YYYY-MM-DD.zip in TubigTrack/Archives/\n'
+              '2. Includes database, CSV exports, reports, and metadata\n'
+              '3. Optionally resets operational data for a fresh start\n\n'
               'App settings, cost per bottle, and notification preferences are preserved.',
               style: TextStyle(color: Colors.grey[700], height: 1.5),
             ),
             const Spacer(),
             FilledButton(
-              onPressed: _working ? null : _archiveAndReset,
+              onPressed: _working ? null : _createArchive,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 minimumSize: const Size.fromHeight(48),

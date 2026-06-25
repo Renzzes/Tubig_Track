@@ -50,7 +50,9 @@ class SavingsRepositoryImpl implements SavingsRepository {
     final walkIns = await _db.walkInSalesDao.getAll();
     final expenses = await _db.expensesDao.getAll();
     final dispenserSales = await _db.dispenserSalesDao.getAll();
-    final manualAdditions = await _db.savingsDao.getTotalContributions();
+    final ownerCapital = await _db.savingsDao.getTotalContributions();
+    final savingsAccountBalance =
+        await _db.savingsTransfersDao.getSavingsAccountBalance();
 
     var deliveryProfit = 0.0;
     for (final d in deliveries) {
@@ -82,8 +84,7 @@ class SavingsRepositoryImpl implements SavingsRepository {
     final currentSavings = deliveryProfit +
         walkInProfit +
         dispenserProfit -
-        totalExpenses +
-        manualAdditions;
+        totalExpenses;
 
     return SavingsSummary(
       currentSavings: currentSavings,
@@ -93,7 +94,8 @@ class SavingsRepositoryImpl implements SavingsRepository {
       totalExpenses: totalExpenses,
       maintenanceCosts: maintenanceCosts,
       otherOperationalCosts: otherOperational,
-      manualAdditions: manualAdditions,
+      ownerCapital: ownerCapital,
+      savingsAccountBalance: savingsAccountBalance,
     );
   }
 
@@ -177,6 +179,22 @@ class SavingsRepositoryImpl implements SavingsRepository {
   }
 
   @override
+  Future<List<SavingsTransfer>> getTransferHistory() async {
+    final rows = await _db.savingsTransfersDao.getAll();
+    return rows
+        .map(
+          (r) => SavingsTransfer(
+            id: r.id,
+            amount: r.amount,
+            type: SavingsTransferTypeX.fromStorage(r.transferType),
+            date: r.date,
+            notes: r.notes,
+          ),
+        )
+        .toList();
+  }
+
+  @override
   Future<void> addContribution(SavingsContribution contribution) async {
     await _db.savingsDao.insertContribution(
       SavingsContributionsTableCompanion.insert(
@@ -184,6 +202,42 @@ class SavingsRepositoryImpl implements SavingsRepository {
         amount: contribution.amount,
         date: Value(contribution.date),
         notes: Value(contribution.notes),
+      ),
+    );
+  }
+
+  @override
+  Future<void> recordTransfer(SavingsTransfer transfer) async {
+    if (transfer.amount <= 0) {
+      throw const SavingsTransferException('Amount must be greater than zero');
+    }
+
+    final summary = await getSummary();
+
+    switch (transfer.type) {
+      case SavingsTransferType.transfer:
+        if (transfer.amount > summary.businessCash + 0.001) {
+          throw SavingsTransferException(
+            'Cannot transfer ${transfer.amount.toStringAsFixed(2)} — only '
+            '${summary.businessCash.toStringAsFixed(2)} available in business cash',
+          );
+        }
+      case SavingsTransferType.withdraw:
+        if (transfer.amount > summary.savingsAccountBalance + 0.001) {
+          throw SavingsTransferException(
+            'Cannot withdraw ${transfer.amount.toStringAsFixed(2)} — savings account balance is '
+            '${summary.savingsAccountBalance.toStringAsFixed(2)}',
+          );
+        }
+    }
+
+    await _db.savingsTransfersDao.insertTransfer(
+      SavingsTransfersTableCompanion.insert(
+        id: transfer.id,
+        amount: transfer.amount,
+        transferType: transfer.type.storage,
+        date: Value(transfer.date),
+        notes: Value(transfer.notes),
       ),
     );
   }

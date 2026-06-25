@@ -23,6 +23,7 @@ import '../../features/customers/presentation/screens/adjust_customer_owned_bott
 import '../../features/customers/presentation/screens/customer_visit_screen.dart';
 
 import '../../features/savings/presentation/screens/savings_detail_screen.dart';
+import '../../features/savings/presentation/screens/savings_account_screen.dart';
 
 import '../../features/savings/presentation/screens/savings_history_screen.dart';
 
@@ -41,6 +42,8 @@ import '../../features/inventory/presentation/screens/inventory_tools_screen.dar
 import '../../features/inventory/presentation/screens/business_timeline_screen.dart';
 
 import '../../features/settings/presentation/screens/archive_reset_screen.dart';
+
+import '../../features/settings/presentation/screens/storage_screen.dart';
 
 import '../../features/settings/presentation/screens/inventory_settings_screen.dart';
 
@@ -75,8 +78,11 @@ import '../../features/settings/presentation/screens/about_screen.dart';
 
 import '../../features/overdue/presentation/screens/overdue_payments_screen.dart';
 import '../../features/dashboard/presentation/screens/unpaid_receivables_screen.dart';
+import '../../features/dashboard/presentation/screens/customer_deposits_screen.dart';
+import '../../features/dashboard/presentation/screens/business_cash_breakdown_screen.dart';
 
 import '../../features/update/presentation/screens/recovery_center_screen.dart';
+import '../../features/update/presentation/screens/read_only_recovery_screen.dart';
 
 import '../../features/update/presentation/screens/update_history_screen.dart';
 
@@ -419,6 +425,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/settings/storage',
+
+        builder: (context, state) => const StorageScreen(),
+
+      ),
+
+      GoRoute(
+
         path: '/about',
 
         builder: (context, state) => const AboutScreen(),
@@ -443,9 +457,36 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       GoRoute(
 
+        path: '/deposits/customers',
+
+        builder: (context, state) => const CustomerDepositsScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/cash/breakdown',
+
+        builder: (context, state) => const BusinessCashBreakdownScreen(),
+
+      ),
+
+      GoRoute(
+
         path: '/recovery-center',
 
         builder: (context, state) => const RecoveryCenterScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/read-only-recovery',
+
+        builder: (context, state) {
+          final path = state.extra as String? ?? '';
+          return ReadOnlyRecoveryScreen(backupPath: path);
+        },
 
       ),
 
@@ -599,6 +640,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/savings/history',
 
         builder: (context, state) => const SavingsHistoryScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/savings/account',
+
+        builder: (context, state) => const SavingsAccountScreen(),
 
       ),
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/database/database_refresh.dart';
+import '../../../../core/database/database_restore_service.dart';
 import '../providers/update_provider.dart';
 
 /// Checks for missing database on startup and offers restore from pre-update backup.
@@ -53,8 +53,7 @@ class _PostUpdateRecoveryGateState extends ConsumerState<PostUpdateRecoveryGate>
             onPressed: () async {
               Navigator.pop(ctx);
               try {
-                await backupRepo.restoreBackup(backup.path);
-                invalidateAllDataProviders(ref);
+                await restoreDatabaseFromBackup(ref, backup.path);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Backup restored successfully')),

@@ -19,6 +19,11 @@ final savingsContributionsStreamProvider = StreamProvider((ref) {
   return db.savingsDao.watchAll();
 });
 
+final savingsTransfersStreamProvider = StreamProvider((ref) {
+  final db = ref.watch(databaseProvider);
+  return db.savingsTransfersDao.watchAll();
+});
+
 final savingsSummaryProvider = FutureProvider<SavingsSummary>((ref) async {
   ref.watch(deliveriesStreamProvider);
   ref.watch(expensesStreamProvider);
@@ -26,6 +31,7 @@ final savingsSummaryProvider = FutureProvider<SavingsSummary>((ref) async {
   ref.watch(walkInSalesStreamProvider);
   ref.watch(bottleTransactionsStreamProvider);
   ref.watch(savingsContributionsStreamProvider);
+  ref.watch(savingsTransfersStreamProvider);
   return ref.watch(savingsRepositoryProvider).getSummary();
 });
 
@@ -38,4 +44,10 @@ final savingsLedgerProvider =
   ref.watch(bottleTransactionsStreamProvider);
   ref.watch(savingsContributionsStreamProvider);
   return ref.watch(savingsRepositoryProvider).getLedgerHistory();
+});
+
+final savingsTransferLedgerProvider =
+    FutureProvider<List<SavingsTransfer>>((ref) async {
+  ref.watch(savingsTransfersStreamProvider);
+  return ref.watch(savingsRepositoryProvider).getTransferHistory();
 });

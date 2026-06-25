@@ -2,17 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:file_picker/file_picker.dart';
-
 import 'package:go_router/go_router.dart';
 
 import 'package:intl/intl.dart';
 
-import 'package:share_plus/share_plus.dart';
-
 import '../../../../core/constants/app_constants.dart';
 
-import '../../../../core/database/database_refresh.dart';
+import '../widgets/backup_restore_flow.dart';
 
 import '../../../../shared/widgets/loading_overlay.dart';
 
@@ -21,6 +17,8 @@ import '../../../inventory/presentation/providers/inventory_provider.dart';
 import '../../../update/domain/entities/update_channel.dart';
 
 import '../../../update/presentation/providers/update_provider.dart';
+
+import '../widgets/data_management_dialogs.dart';
 
 import '../../../update/presentation/widgets/update_coordinator.dart';
 
@@ -252,7 +250,19 @@ class SettingsScreen extends ConsumerWidget {
 
             ListTile(
 
-              leading: const Icon(Icons.download_outlined),
+              leading: const Icon(Icons.folder_outlined),
+
+              title: const Text('Storage'),
+
+              subtitle: const Text('View TubigTrack folders and usage'),
+
+              trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+
+              onTap: () => context.push('/settings/storage'),
+
+            ),
+
+            ListTile(
 
               title: const Text('Export CSV'),
 
@@ -655,9 +665,13 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
 
-      final path = await ref.read(settingsRepositoryProvider).exportCSV();
+      final paths = await ref.read(settingsRepositoryProvider).exportCSV();
 
-      await Share.shareXFiles([XFile(path)], text: 'TubigTrack Data Export');
+      if (context.mounted) {
+
+        await showCsvExportSuccessDialog(context, paths);
+
+      }
 
     } catch (e) {
 
@@ -681,9 +695,19 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
 
-      final path = await ref.read(settingsRepositoryProvider).backupDatabase();
+      final path = await ref.read(backupRepositoryProvider).createManualBackup();
 
-      await Share.shareXFiles([XFile(path)], text: 'TubigTrack Database Backup');
+      ref.invalidate(recoveryFilesProvider);
+
+      ref.invalidate(availableBackupsProvider);
+
+      ref.invalidate(storageSummaryProvider);
+
+      if (context.mounted) {
+
+        await showBackupSuccessDialog(context, path);
+
+      }
 
     } catch (e) {
 
@@ -705,95 +729,107 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _restoreDB(BuildContext context, WidgetRef ref) async {
 
-    final confirmed = await showDialog<bool>(
+    final backups = await ref.read(backupRepositoryProvider).listBackups();
+
+    if (backups.isEmpty) {
+
+      if (context.mounted) {
+
+        ScaffoldMessenger.of(context).showSnackBar(
+
+          const SnackBar(
+
+            content: Text('No backups found in TubigTrack/Backups'),
+
+          ),
+
+        );
+
+      }
+
+      return;
+
+    }
+
+
+
+    if (!context.mounted) return;
+
+    final selected = await showModalBottomSheet<String>(
 
       context: context,
 
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => SafeArea(
 
-        title: const Text('Restore Database'),
+        child: Column(
 
-        content: const Text(
+          mainAxisSize: MainAxisSize.min,
 
-          'Restore database? This will overwrite current data.',
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+
+          children: [
+
+            const Padding(
+
+              padding: EdgeInsets.all(16),
+
+              child: Text(
+
+                'Select a backup',
+
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+
+              ),
+
+            ),
+
+            Flexible(
+
+              child: ListView.builder(
+
+                shrinkWrap: true,
+
+                itemCount: backups.length,
+
+                itemBuilder: (_, i) {
+
+                  final b = backups[i];
+
+                  return ListTile(
+
+                    leading: const Icon(Icons.backup_outlined),
+
+                    title: Text(b.fileName),
+
+                    subtitle: Text(
+
+                      '${DateFormat('MMM d, yyyy h:mm a').format(b.modifiedAt)}'
+
+                      '${b.appVersion != null ? ' · v${b.appVersion}' : ''}',
+
+                    ),
+
+                    onTap: () => Navigator.pop(ctx, b.path),
+
+                  );
+
+                },
+
+              ),
+
+            ),
+
+          ],
 
         ),
-
-        actions: [
-
-          TextButton(
-
-            onPressed: () => Navigator.pop(ctx, false),
-
-            child: const Text('Cancel'),
-
-          ),
-
-          TextButton(
-
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-
-            onPressed: () => Navigator.pop(ctx, true),
-
-            child: const Text('Restore'),
-
-          ),
-
-        ],
 
       ),
 
     );
 
-    if (confirmed != true) return;
+    if (selected == null || !context.mounted) return;
 
-
-
-    final result = await FilePicker.platform.pickFiles(
-
-      type: FileType.custom,
-
-      allowedExtensions: ['db'],
-
-    );
-
-    if (result == null || result.files.single.path == null) return;
-
-
-
-    try {
-
-      await ref
-
-          .read(settingsRepositoryProvider)
-
-          .restoreDatabase(result.files.single.path!);
-
-      invalidateAllDataProviders(ref);
-
-      if (context.mounted) {
-
-        ScaffoldMessenger.of(context).showSnackBar(
-
-          const SnackBar(content: Text('Database restored successfully')),
-
-        );
-
-      }
-
-    } catch (e) {
-
-      if (context.mounted) {
-
-        ScaffoldMessenger.of(context).showSnackBar(
-
-          SnackBar(content: Text('Restore failed: $e')),
-
-        );
-
-      }
-
-    }
+    await runBackupRestoreFlow(context, ref, selected);
 
   }
 

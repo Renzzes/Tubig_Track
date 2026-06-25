@@ -30,7 +30,7 @@ class SavingsGoalsScreen extends ConsumerWidget {
           if (goals.isEmpty) {
             return const Center(child: Text('No savings goals yet'));
           }
-          final current = savingsAsync.value?.currentSavings ?? 0;
+          final current = savingsAsync.value?.accumulatedProfit ?? 0;
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: goals.length,
