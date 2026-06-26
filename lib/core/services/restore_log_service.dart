@@ -36,6 +36,9 @@ class RestoreLogService {
     required bool success,
     String? errorMessage,
     DateTime? restoreTime,
+    List<String> events = const [],
+    bool rollbackFailed = false,
+    String? safetyCopyPath,
   }) async {
     final dir = await restoreLogsDirectory();
     final time = restoreTime ?? DateTime.now();
@@ -52,6 +55,9 @@ class RestoreLogService {
       'migrationStepsExecuted': migrationStepsExecuted,
       'success': success,
       if (errorMessage != null) 'errorMessage': errorMessage,
+      if (events.isNotEmpty) 'events': events,
+      if (rollbackFailed) 'rollbackFailed': true,
+      if (safetyCopyPath != null) 'safetyCopyPath': safetyCopyPath,
     };
 
     await File(logPath).writeAsString(

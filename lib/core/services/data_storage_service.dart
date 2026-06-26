@@ -89,24 +89,60 @@ class DataStorageService {
   }
 
   /// Lets the owner pick a public TubigTrack folder via SAF (Android 11+).
-  Future<bool> requestPublicFolderViaSaf() async {
-    if (!Platform.isAndroid) return false;
+  Future<bool> requestPublicFolderViaSaf() => changeStorageLocation();
 
+  /// Pick a new storage root (Internal Storage, SD card, Documents, synced folders, etc.).
+  Future<bool> changeStorageLocation() async {
     final picked = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: 'Select or create TubigTrack folder',
+      dialogTitle: 'Choose folder for TubigTrack data',
     );
     if (picked == null || picked.isEmpty) return false;
 
-    final root = Directory(picked);
+    final root = await _resolveTubigTrackRoot(picked);
+    if (!await _verifyWritableRoot(root)) return false;
+
+    final kind = await _kindForRoot(root);
+    await _applyAndPersist(root, kind);
+    return true;
+  }
+
+  Future<Directory> _resolveTubigTrackRoot(String pickedPath) async {
+    final normalized = pickedPath.replaceAll('\\', '/');
+    final baseName = p.basename(normalized);
+    if (baseName.toLowerCase() == AppConstants.tubigTrackRoot.toLowerCase()) {
+      final root = Directory(pickedPath);
+      if (!await root.exists()) {
+        await root.create(recursive: true);
+      }
+      return root;
+    }
+
+    final root = Directory(p.join(pickedPath, AppConstants.tubigTrackRoot));
     if (!await root.exists()) {
       await root.create(recursive: true);
     }
-    if (!await _verifyWritableRoot(root)) return false;
-
-    await ensureFolderStructureAt(root);
-    await _applyAndPersist(root, StorageLocationKind.publicSaf);
-    return true;
+    return root;
   }
+
+  Future<StorageLocationKind> _kindForRoot(Directory root) async {
+    if (Platform.isAndroid) {
+      final primaryPath = await TubigTrackStorageChannel.initPublicStorage();
+      if (primaryPath != null &&
+          _normalizePath(root.path) == _normalizePath(primaryPath)) {
+        return StorageLocationKind.publicPrimary;
+      }
+    }
+
+    final docs = await getApplicationDocumentsDirectory();
+    if (_normalizePath(root.path).startsWith(_normalizePath(docs.path))) {
+      return StorageLocationKind.privateFallback;
+    }
+
+    return StorageLocationKind.publicSaf;
+  }
+
+  String _normalizePath(String path) =>
+      path.replaceAll('\\', '/').replaceAll(RegExp(r'/+$'), '');
 
   Future<void> _applyAndPersist(
     Directory root,
@@ -360,7 +396,7 @@ class DataStorageService {
       recoveryCount: await fileCountIn(recovery, extensions: ['.db']),
       totalBytes: await directorySizeBytes(root),
       isPublicStorage: isPublicStorage,
-      locationLabel: displayRootPath(),
+      locationLabel: friendlyLocationLabel(),
     );
   }
 
@@ -372,13 +408,67 @@ class DataStorageService {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  /// User-facing location label.
-  String displayRootPath() {
-    if (isPublicStorage) {
-      return 'Internal Storage/TubigTrack';
+  /// User-facing location label for the TubigTrack root folder.
+  String friendlyLocationLabel() {
+    if (_kind == StorageLocationKind.privateFallback) {
+      return 'App private storage/${AppConstants.tubigTrackRoot}';
     }
-    return 'App private storage/TubigTrack';
+
+    final path = _normalizePath(_persistedRootPath ?? '');
+    if (path.isEmpty) {
+      return '${AppConstants.tubigTrackRoot}';
+    }
+
+    if (path.endsWith('/storage/emulated/0/${AppConstants.tubigTrackRoot}') ||
+        path == '/storage/emulated/0/${AppConstants.tubigTrackRoot}') {
+      return 'Internal Storage/${AppConstants.tubigTrackRoot}';
+    }
+
+    final segments =
+        path.split('/').where((segment) => segment.isNotEmpty).toList();
+    final tubigIndex = segments.lastIndexWhere(
+      (segment) =>
+          segment.toLowerCase() == AppConstants.tubigTrackRoot.toLowerCase(),
+    );
+    if (tubigIndex >= 0) {
+      var start = tubigIndex;
+      if (start > 0) {
+        final parent = segments[start - 1].toLowerCase();
+        if (parent == '0' && start > 1 && segments[start - 2] == 'emulated') {
+          start -= 2;
+          if (start > 0 && segments[start - 1] == 'storage') {
+            start -= 1;
+          }
+        } else if (parent == 'emulated') {
+          start -= 1;
+          if (start > 0 && segments[start - 1] == 'storage') {
+            start -= 1;
+          }
+        } else if (RegExp(r'^[0-9A-Fa-f-]{8,}$').hasMatch(segments[start - 1])) {
+          return 'SD Card/${segments.sublist(start).join('/')}';
+        }
+      }
+
+      final labelSegments = segments.sublist(start);
+      if (labelSegments.isNotEmpty &&
+          labelSegments.first.toLowerCase() == 'storage' &&
+          labelSegments.length > 1) {
+        if (labelSegments.length >= 3 &&
+            labelSegments[1] == 'emulated' &&
+            labelSegments[2] == '0') {
+          return 'Internal Storage/${labelSegments.sublist(3).join('/')}';
+        }
+        return 'SD Card/${labelSegments.sublist(1).join('/')}';
+      }
+
+      return labelSegments.join('/');
+    }
+
+    return path;
   }
+
+  /// User-facing location label (alias for dialogs and paths).
+  String displayRootPath() => friendlyLocationLabel();
 
   /// User-facing relative path shown in dialogs.
   String displayPath(String absolutePath) {

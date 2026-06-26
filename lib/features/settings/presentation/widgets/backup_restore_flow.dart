@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../core/database/backup_metadata.dart';
 import '../../../../core/database/database_restore_service.dart';
+import '../../../../core/services/backup_event_log_service.dart';
+import '../../../update/presentation/providers/backup_monitoring_provider.dart';
 import '../../../update/presentation/providers/update_provider.dart';
+import '../../../update/presentation/widgets/backup_details_dialog.dart';
 
 /// Shared restore flow with compatibility checks, migration prompts, and logging.
 Future<void> runBackupRestoreFlow(
@@ -72,24 +74,51 @@ Future<void> _runRestoreWithProgress(
     Navigator.of(context, rootNavigator: true).pop();
   }
 
-  ref.invalidate(recoveryFilesProvider);
-  ref.invalidate(availableBackupsProvider);
-  ref.invalidate(storageSummaryProvider);
-
   if (!context.mounted) return;
 
   if (result.success) {
+    invalidateBackupMonitoring(ref);
+
+    await BackupEventLogService.instance.record(
+      type: BackupEventType.restore,
+      title: 'Database Restored',
+      success: true,
+      detail: p.basename(backupPath),
+      relatedPath: backupPath,
+    );
+
+    if (result.migration != null && result.migration!.success) {
+      await BackupEventLogService.instance.record(
+        type: BackupEventType.migration,
+        title: 'Backup Migrated',
+        detail:
+            'Steps: ${result.migration!.migrationStepsExecuted.join(', ')}',
+        relatedPath: backupPath,
+      );
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Database restored successfully')),
     );
     context.go('/');
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(result.errorMessage ?? 'Restore failed'),
-      ),
-    );
+    return;
   }
+
+  if (result.rollbackFailed && result.safetyCopyPath != null) {
+    await showCriticalRestoreErrorDialog(
+      context,
+      safetyCopyPath: result.safetyCopyPath!,
+    );
+    return;
+  }
+
+  await showRestoreFailedDialog(
+    context,
+    ref,
+    backupPath: backupPath,
+    errorMessage: result.errorMessage ?? 'Restore failed',
+    onRetry: () => _runRestoreWithProgress(context, ref, backupPath),
+  );
 }
 
 Future<bool?> _showStandardRestoreDialog(BuildContext context) {
@@ -218,73 +247,73 @@ Future<bool?> _showUnknownSchemaDialog(BuildContext context) {
   );
 }
 
-Future<void> showBackupDetailsDialog(
+Future<void> showRestoreFailedDialog(
   BuildContext context,
   WidgetRef ref, {
   required String backupPath,
-}) async {
-  final file =
-      await ref.read(backupRepositoryProvider).getFileMetadata(backupPath);
-  if (file == null || !context.mounted) return;
-
-  final dateFormat = DateFormat('MMMM d, yyyy');
-
-  await showDialog<void>(
+  required String errorMessage,
+  required VoidCallback onRetry,
+}) {
+  return showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(p.basenameWithoutExtension(file.fileName)),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _DetailRow('Created', dateFormat.format(file.modifiedAt)),
-            if (file.appVersion != null)
-              _DetailRow('App Version', file.appVersion!),
-            if (file.databaseVersion != null)
-              _DetailRow('Schema', file.databaseVersion.toString()),
-            if (file.customers != null)
-              _DetailRow('Customers', file.customers.toString()),
-            if (file.deliveries != null)
-              _DetailRow('Deliveries', file.deliveries.toString()),
-            if (file.databaseSize != null)
-              _DetailRow('Database Size', file.databaseSize!),
-          ],
-        ),
+      title: const Text('Restore Failed'),
+      content: Text(
+        'The backup could not be restored.\n\n'
+        'Reason:\n\n$errorMessage\n\n'
+        'Your existing database has not been modified.',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(ctx),
           child: const Text('Close'),
         ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            context.push('/recovery-center');
+          },
+          child: const Text('Open Recovery Center'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            onRetry();
+          },
+          child: const Text('Retry'),
+        ),
       ],
     ),
   );
 }
 
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DetailRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
+Future<void> showCriticalRestoreErrorDialog(
+  BuildContext context, {
+  required String safetyCopyPath,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Critical Restore Error'),
+      content: Text(
+        'TubigTrack could not automatically restore your previous database.\n\n'
+        'Your safety backup has been preserved.\n\n'
+        'Location:\n\n$safetyCopyPath\n\n'
+        'Please restore it manually from Recovery Center.',
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Close'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            context.push('/recovery-center');
+          },
+          child: const Text('Open Recovery Center'),
+        ),
+      ],
+    ),
+  );
 }

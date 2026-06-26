@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/database_restore_service.dart';
+import '../../../../core/services/backup_event_log_service.dart';
+import '../../../settings/presentation/widgets/backup_restore_flow.dart';
+import '../providers/backup_monitoring_provider.dart';
 import '../providers/update_provider.dart';
 
 /// Checks for missing database on startup and offers restore from pre-update backup.
@@ -35,7 +39,13 @@ class _PostUpdateRecoveryGateState extends ConsumerState<PostUpdateRecoveryGate>
     final backup = await backupRepo.findLatestPreUpdateBackup();
     if (backup == null || !mounted) return;
 
-    await showDialog<void>(
+    await _offerRestore(backup.path);
+  }
+
+  Future<void> _offerRestore(String backupPath) async {
+    if (!mounted) return;
+
+    final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
@@ -46,31 +56,84 @@ class _PostUpdateRecoveryGateState extends ConsumerState<PostUpdateRecoveryGate>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Skip'),
           ),
           FilledButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await restoreDatabaseFromBackup(ref, backup.path);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Backup restored successfully')),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Restore failed: $e')),
-                  );
-                }
-              }
-            },
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Restore'),
           ),
         ],
       ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    await _performRestore(backupPath);
+  }
+
+  Future<void> _performRestore(String backupPath) async {
+    if (!mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Restoring backup…'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final result = await restoreDatabaseFromBackup(ref, backupPath);
+
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    if (!mounted) return;
+
+    if (result.success) {
+      invalidateBackupMonitoring(ref);
+      await BackupEventLogService.instance.record(
+        type: BackupEventType.restore,
+        title: 'Database Restored',
+        success: true,
+        relatedPath: backupPath,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Backup restored successfully')),
+      );
+      context.go('/');
+      return;
+    }
+
+    if (result.rollbackFailed && result.safetyCopyPath != null) {
+      await showCriticalRestoreErrorDialog(
+        context,
+        safetyCopyPath: result.safetyCopyPath!,
+      );
+      return;
+    }
+
+    await showRestoreFailedDialog(
+      context,
+      ref,
+      backupPath: backupPath,
+      errorMessage: result.errorMessage ?? 'Restore failed',
+      onRetry: () => _performRestore(backupPath),
     );
   }
 

@@ -43,6 +43,7 @@ import '../../features/inventory/presentation/screens/business_timeline_screen.d
 
 import '../../features/settings/presentation/screens/archive_reset_screen.dart';
 
+import '../../features/update/presentation/screens/disaster_recovery_wizard_screen.dart';
 import '../../features/settings/presentation/screens/storage_screen.dart';
 
 import '../../features/settings/presentation/screens/inventory_settings_screen.dart';
@@ -476,6 +477,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/recovery-center',
 
         builder: (context, state) => const RecoveryCenterScreen(),
+
+      ),
+
+      GoRoute(
+
+        path: '/disaster-recovery',
+
+        builder: (context, state) => const DisasterRecoveryWizard(),
 
       ),
 

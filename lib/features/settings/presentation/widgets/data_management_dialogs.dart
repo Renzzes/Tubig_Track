@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/services/backup_verification_service.dart';
 import '../../../../core/services/data_storage_service.dart';
 import '../../../../core/services/storage_folder_opener.dart';
 
@@ -55,19 +56,70 @@ Future<void> showCsvExportSuccessDialog(
   );
 }
 
-/// Shows success dialog after database backup.
-Future<void> showBackupSuccessDialog(BuildContext context, String backupPath) {
+/// Shows success dialog after database backup with integrity check results.
+Future<void> showBackupSuccessDialog(
+  BuildContext context,
+  VerifiedBackupResult result,
+) {
+  final verification = result.verification;
+  final passed = verification.passed;
+
   return showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Database Backed Up Successfully'),
-      content: Text(
-        'Saved to:\n\n${DataStorageService.instance.displayRootPath()}/Backups',
+      title: Row(
+        children: [
+          Icon(
+            passed ? Icons.check_circle : Icons.warning_amber_rounded,
+            color: passed ? Colors.green.shade700 : Colors.orange.shade800,
+          ),
+          const SizedBox(width: 8),
+          const Expanded(child: Text('Backup Created')),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Saved to:\n\n${DataStorageService.instance.displayRootPath()}/Backups',
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Integrity Check:',
+            style: Theme.of(ctx).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            passed ? 'Passed' : 'Failed',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: passed ? Colors.green.shade700 : Colors.red.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (verification.databaseOpened)
+            const Text('Database opened successfully.')
+          else
+            Text(
+              verification.failureReason ?? 'Could not open backup database.',
+            ),
+          if (passed) ...[
+            const SizedBox(height: 4),
+            const Text('Ready for restore.'),
+          ] else if (verification.failureReason != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              verification.failureReason!,
+              style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+            ),
+          ],
+        ],
       ),
       actions: [
         TextButton(
           onPressed: () => Share.shareXFiles(
-            [XFile(backupPath)],
+            [XFile(result.path)],
             text: 'TubigTrack Database Backup',
           ),
           child: const Text('Share'),

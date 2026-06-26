@@ -1,6 +1,6 @@
 class AppConstants {
   static const String appName = 'TubigTrack';
-  static const String appVersion = '1.8.2';
+  static const String appVersion = '1.8.3.1';
   static const String applicationId = 'com.tubigtrack.tubig_track';
 
   /// GitHub Releases API for self-update.
@@ -11,6 +11,13 @@ class AppConstants {
 
   static const String prefStorageRootPath = 'tubigtrack_storage_root_path';
   static const String prefStorageKind = 'tubigtrack_storage_kind';
+  static const String prefStorageLastTestAt = 'tubigtrack_storage_last_test_at';
+  static const String prefBackupKeepCount = 'tubigtrack_backup_keep_count';
+  static const String prefBackupMaxAge = 'tubigtrack_backup_max_age';
+  static const String prefAutomaticBackupSchedule =
+      'tubigtrack_automatic_backup_schedule';
+  static const String prefAutomaticBackupLastRunAt =
+      'tubigtrack_automatic_backup_last_run_at';
 
   static const String tubigTrackRoot = 'TubigTrack';
   static const String backupsSubfolder = 'Backups';
@@ -19,6 +26,7 @@ class AppConstants {
   static const String reportsSubfolder = 'Reports';
   static const String recoverySubfolder = 'Recovery';
   static const String restoreLogsSubfolder = 'RestoreLogs';
+  static const String backupEventsSubfolder = 'BackupEvents';
 
   /// Legacy path segments kept for migration checks.
   static const String backupsFolderName = 'TubigTrack/Backups';
@@ -34,6 +42,7 @@ class AppConstants {
 
   static const String preUpdateBackupPrefix = 'tubigtrack_preupdate_';
   static const String manualBackupPrefix = 'TubigTrack_Backup_';
+  static const String autoBackupPrefix = 'TubigTrack_AutoBackup_';
 
   static const String settingTotalBottleInventory = 'total_bottle_inventory';
   static const String settingFilledBottlesAvailable = 'filled_bottles_available';

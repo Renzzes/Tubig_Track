@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/backup_event_log_service.dart';
 import '../../../../core/database/database_refresh.dart';
 import '../../../../core/services/data_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -46,6 +47,12 @@ class _ArchiveResetScreenState extends ConsumerState<ArchiveResetScreen> {
       // Export fresh CSVs before archiving so the zip includes current data.
       await ref.read(settingsRepositoryProvider).exportCSV();
       final path = await ref.read(settingsRepositoryProvider).createArchive();
+      await BackupEventLogService.instance.record(
+        type: BackupEventType.archive,
+        title: 'Archive Created',
+        detail: DataStorageService.instance.displayPath(path),
+        relatedPath: path,
+      );
       if (!mounted) return;
 
       final reset = await showDialog<bool>(
@@ -71,6 +78,10 @@ class _ArchiveResetScreenState extends ConsumerState<ArchiveResetScreen> {
 
       if (reset == true) {
         await ref.read(settingsRepositoryProvider).factoryReset();
+        await BackupEventLogService.instance.record(
+          type: BackupEventType.reset,
+          title: 'Business Reset After Archive',
+        );
         invalidateAllDataProviders(ref);
         if (mounted) context.go('/');
       }

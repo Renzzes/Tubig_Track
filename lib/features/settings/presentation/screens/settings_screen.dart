@@ -16,7 +16,12 @@ import '../../../inventory/presentation/providers/inventory_provider.dart';
 
 import '../../../update/domain/entities/update_channel.dart';
 
+import '../../../update/presentation/providers/backup_monitoring_provider.dart';
 import '../../../update/presentation/providers/update_provider.dart';
+
+import '../widgets/backup_notification_presenter.dart';
+
+import '../../../../core/services/backup_event_log_service.dart';
 
 import '../widgets/data_management_dialogs.dart';
 
@@ -695,18 +700,40 @@ class SettingsScreen extends ConsumerWidget {
 
     try {
 
-      final path = await ref.read(backupRepositoryProvider).createManualBackup();
+      final result =
+          await ref.read(backupRepositoryProvider).createVerifiedManualBackup();
 
-      ref.invalidate(recoveryFilesProvider);
+      await BackupEventLogService.instance.record(
+        type: BackupEventType.manualBackup,
+        title: result.verification.passed
+            ? 'Manual Backup'
+            : 'Manual Backup (Verification Failed)',
+        success: result.verification.passed,
+        relatedPath: result.path,
+      );
+      if (!result.verification.passed) {
+        await BackupEventLogService.instance.record(
+          type: BackupEventType.verification,
+          title: 'Backup Verification Failed',
+          success: false,
+          relatedPath: result.path,
+        );
+      }
 
-      ref.invalidate(availableBackupsProvider);
-
-      ref.invalidate(storageSummaryProvider);
+      invalidateBackupMonitoring(ref);
 
       if (context.mounted) {
-
-        await showBackupSuccessDialog(context, path);
-
+        if (result.verification.passed) {
+          await BackupNotificationPresenter.showManualBackupSuccess(
+            context,
+            result,
+          );
+        } else {
+          await BackupNotificationPresenter.showVerificationFailed(
+            context,
+            backupPath: result.path,
+          );
+        }
       }
 
     } catch (e) {

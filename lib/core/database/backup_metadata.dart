@@ -126,6 +126,8 @@ class RestoreOperationResult {
   final BackupCompatibilityResult? compatibility;
   final BackupMigrationResult? migration;
   final String? logPath;
+  final bool rollbackFailed;
+  final String? safetyCopyPath;
 
   const RestoreOperationResult({
     required this.success,
@@ -133,5 +135,7 @@ class RestoreOperationResult {
     this.compatibility,
     this.migration,
     this.logPath,
+    this.rollbackFailed = false,
+    this.safetyCopyPath,
   });
 }

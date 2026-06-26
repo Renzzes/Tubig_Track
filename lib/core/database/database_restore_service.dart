@@ -13,6 +13,41 @@ import 'database_refresh.dart';
 /// Tracks whether the live DB was already closed before provider disposal.
 bool skipDatabaseDisposeClose = false;
 
+Future<RestoreOperationResult> _writeFailure({
+  required RestoreLogService logService,
+  required String backupFileName,
+  required BackupCompatibilityResult compatibility,
+  required List<int> migrationSteps,
+  required List<String> events,
+  required String errorMessage,
+  bool rollbackFailed = false,
+  String? safetyCopyPath,
+  BackupMigrationResult? migration,
+}) async {
+  events.add('restore failed');
+  final logPath = await logService.writeLog(
+    backupFileName: backupFileName,
+    backupAppVersion: compatibility.backupAppVersion,
+    backupSchema: compatibility.backupSchema,
+    currentSchema: compatibility.currentSchema,
+    migrationStepsExecuted: migrationSteps,
+    success: false,
+    errorMessage: errorMessage,
+    events: events,
+    rollbackFailed: rollbackFailed,
+    safetyCopyPath: safetyCopyPath,
+  );
+  return RestoreOperationResult(
+    success: false,
+    errorMessage: errorMessage,
+    compatibility: compatibility,
+    migration: migration,
+    logPath: logPath,
+    rollbackFailed: rollbackFailed,
+    safetyCopyPath: safetyCopyPath,
+  );
+}
+
 /// Safely restores a backup with migration, validation, rollback, and logging.
 /// The original backup file is never modified.
 Future<RestoreOperationResult> restoreDatabaseFromBackup(
@@ -24,6 +59,7 @@ Future<RestoreOperationResult> restoreDatabaseFromBackup(
   final storage = DataStorageService.instance;
   final backupFile = File(backupPath);
   final backupFileName = p.basename(backupPath);
+  final events = <String>['restore started'];
 
   if (!await backupFile.exists()) {
     return RestoreOperationResult(
@@ -36,42 +72,31 @@ Future<RestoreOperationResult> restoreDatabaseFromBackup(
 
   if (compatibility.status == BackupCompatibilityStatus.unsupported ||
       compatibility.status == BackupCompatibilityStatus.newerThanApp) {
-    final logPath = await logService.writeLog(
+    return _writeFailure(
+      logService: logService,
       backupFileName: backupFileName,
-      backupAppVersion: compatibility.backupAppVersion,
-      backupSchema: compatibility.backupSchema,
-      currentSchema: compatibility.currentSchema,
-      migrationStepsExecuted: [],
-      success: false,
-      errorMessage: compatibility.reason,
-    );
-    return RestoreOperationResult(
-      success: false,
-      errorMessage: compatibility.reason,
       compatibility: compatibility,
-      logPath: logPath,
+      migrationSteps: const [],
+      events: events,
+      errorMessage: compatibility.reason ?? 'Unsupported backup',
     );
   }
 
+  events.add('migration started');
   final migration = await migrationService.prepareRestoreCopy(backupPath);
   if (!migration.success || migration.migratedFilePath == null) {
-    final logPath = await logService.writeLog(
+    return _writeFailure(
+      logService: logService,
       backupFileName: backupFileName,
-      backupAppVersion: compatibility.backupAppVersion,
-      backupSchema: compatibility.backupSchema,
-      currentSchema: compatibility.currentSchema,
-      migrationStepsExecuted: migration.migrationStepsExecuted,
-      success: false,
-      errorMessage: migration.errorMessage,
-    );
-    return RestoreOperationResult(
-      success: false,
-      errorMessage: migration.errorMessage ?? 'Migration failed',
       compatibility: compatibility,
+      migrationSteps: migration.migrationStepsExecuted,
+      events: events,
+      errorMessage: migration.errorMessage ?? 'Migration failed',
       migration: migration,
-      logPath: logPath,
     );
   }
+  events.add('migration completed');
+  events.add('validation passed');
 
   final migratedFile = File(migration.migratedFilePath!);
   final liveTarget = await storage.resolveDatabaseFile();
@@ -104,6 +129,7 @@ Future<RestoreOperationResult> restoreDatabaseFromBackup(
       await migratedFile.delete();
     }
 
+    events.add('restore completed');
     final logPath = await logService.writeLog(
       backupFileName: backupFileName,
       backupAppVersion: compatibility.backupAppVersion,
@@ -111,6 +137,7 @@ Future<RestoreOperationResult> restoreDatabaseFromBackup(
       currentSchema: compatibility.currentSchema,
       migrationStepsExecuted: migration.migrationStepsExecuted,
       success: true,
+      events: events,
     );
 
     return RestoreOperationResult(
@@ -122,13 +149,22 @@ Future<RestoreOperationResult> restoreDatabaseFromBackup(
   } catch (e) {
     skipDatabaseDisposeClose = false;
 
+    var rollbackFailed = false;
+    String? preservedSafetyPath;
+    final restoreError = e.toString();
+
     if (safetyCopy != null && await safetyCopy.exists()) {
+      events.add('rollback started');
       try {
         await safetyCopy.copy(liveTarget.path);
-      } catch (_) {
-        // Best-effort rollback.
+        events.add('rollback completed');
+        await safetyCopy.delete();
+      } catch (rollbackError) {
+        events.add('rollback failed');
+        events.add('safety copy preserved');
+        rollbackFailed = true;
+        preservedSafetyPath = safetyCopy.path;
       }
-      await safetyCopy.delete();
     }
 
     ref.invalidate(databaseProvider);
@@ -138,22 +174,21 @@ Future<RestoreOperationResult> restoreDatabaseFromBackup(
       await migratedFile.delete();
     }
 
-    final logPath = await logService.writeLog(
-      backupFileName: backupFileName,
-      backupAppVersion: compatibility.backupAppVersion,
-      backupSchema: compatibility.backupSchema,
-      currentSchema: compatibility.currentSchema,
-      migrationStepsExecuted: migration.migrationStepsExecuted,
-      success: false,
-      errorMessage: e.toString(),
-    );
+    final errorMessage = rollbackFailed
+        ? 'Restore failed and automatic rollback could not complete. '
+            'Safety backup preserved at: $preservedSafetyPath'
+        : restoreError;
 
-    return RestoreOperationResult(
-      success: false,
-      errorMessage: e.toString(),
+    return _writeFailure(
+      logService: logService,
+      backupFileName: backupFileName,
       compatibility: compatibility,
+      migrationSteps: migration.migrationStepsExecuted,
+      events: events,
+      errorMessage: errorMessage,
+      rollbackFailed: rollbackFailed,
+      safetyCopyPath: preservedSafetyPath,
       migration: migration,
-      logPath: logPath,
     );
   }
 }

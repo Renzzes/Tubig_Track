@@ -1,79 +1,182 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/database/database_provider.dart';
+import '../../../../core/services/backup_event_log_service.dart';
+import '../../../../core/services/backup_health_service.dart';
+import '../../../../core/services/business_package_export_service.dart';
 import '../../../../core/services/data_storage_service.dart';
 import '../../../../core/services/storage_folder_opener.dart';
 import '../../../settings/presentation/widgets/backup_restore_flow.dart';
 import '../../domain/entities/recovery_file_info.dart';
+import '../providers/backup_monitoring_provider.dart';
 import '../providers/update_provider.dart';
+import '../widgets/backup_details_dialog.dart';
+import '../widgets/backup_health_badge.dart';
+import '../widgets/backup_history_tab.dart';
 
-class RecoveryCenterScreen extends ConsumerWidget {
+class RecoveryCenterScreen extends ConsumerStatefulWidget {
   const RecoveryCenterScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RecoveryCenterScreen> createState() =>
+      _RecoveryCenterScreenState();
+}
+
+class _RecoveryCenterScreenState extends ConsumerState<RecoveryCenterScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  bool _exporting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exportBusinessPackage() async {
+    setState(() => _exporting = true);
+    try {
+      final db = ref.read(databaseProvider);
+      final path = await BusinessPackageExportService.instance
+          .exportBusinessPackage(db: db);
+      await BackupEventLogService.instance.record(
+        type: BackupEventType.archive,
+        title: 'Business Package Exported',
+        detail: p.basename(path),
+        relatedPath: path,
+      );
+      invalidateBackupMonitoring(ref);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Exported ${DataStorageService.instance.displayPath(path)}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final filesAsync = ref.watch(recoveryFilesProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recovery Center'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Files'),
+            Tab(text: 'History'),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.invalidate(recoveryFilesProvider);
-              ref.invalidate(availableBackupsProvider);
+              invalidateBackupMonitoring(ref);
             },
           ),
         ],
       ),
-      body: filesAsync.when(
-        data: (files) {
-          if (files.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No files found.\n\nBackups, archives, CSV exports, and reports '
-                  'appear here after you create them.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          final grouped = _groupByCategory(files);
-
-          return ListView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            children: [
-              for (final entry in grouped.entries) ...[
-                _SectionTitle(_sectionLabel(entry.key)),
-                ...entry.value.map(
-                  (file) => _RecoveryFileTile(file: file),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          filesAsync.when(
+            data: (files) => _FilesTab(files: files),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+          const BackupHistoryTab(),
+        ],
       ),
+      floatingActionButton: _tabController.index == 0
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'recover',
+                  onPressed: () => context.push('/disaster-recovery'),
+                  icon: const Icon(Icons.medical_services_outlined),
+                  label: const Text('Recover My Business'),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'export',
+                  onPressed: _exporting ? null : _exportBusinessPackage,
+                  icon: _exporting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.inventory_2_outlined),
+                  label: const Text('Export Business Package'),
+                ),
+              ],
+            )
+          : null,
     );
   }
+}
 
-  Map<RecoveryFileCategory, List<RecoveryFileInfo>> _groupByCategory(
-    List<RecoveryFileInfo> files,
-  ) {
-    final map = <RecoveryFileCategory, List<RecoveryFileInfo>>{};
-    for (final file in files) {
-      map.putIfAbsent(file.category, () => []).add(file);
+class _FilesTab extends StatelessWidget {
+  final List<RecoveryFileInfo> files;
+
+  const _FilesTab({required this.files});
+
+  @override
+  Widget build(BuildContext context) {
+    if (files.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'No files found.\n\nBackups, archives, CSV exports, and reports '
+            'appear here after you create them.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
     }
-    return map;
+
+    final grouped = <RecoveryFileCategory, List<RecoveryFileInfo>>{};
+    for (final file in files) {
+      grouped.putIfAbsent(file.category, () => []).add(file);
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 120),
+      children: [
+        for (final entry in grouped.entries) ...[
+          _SectionTitle(_sectionLabel(entry.key)),
+          ...entry.value.map((file) => _RecoveryFileTile(file: file)),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
   }
 
   String _sectionLabel(RecoveryFileCategory category) {
@@ -94,7 +197,6 @@ class RecoveryCenterScreen extends ConsumerWidget {
 
 class _SectionTitle extends StatelessWidget {
   final String title;
-
   const _SectionTitle(this.title);
 
   @override
@@ -114,43 +216,94 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _RecoveryFileTile extends ConsumerWidget {
+class _RecoveryFileTile extends ConsumerStatefulWidget {
   final RecoveryFileInfo file;
 
   const _RecoveryFileTile({required this.file});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_RecoveryFileTile> createState() => _RecoveryFileTileState();
+}
+
+class _RecoveryFileTileState extends ConsumerState<_RecoveryFileTile> {
+  BackupHealthInfo? _health;
+  bool _expanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHealth();
+  }
+
+  Future<void> _loadHealth() async {
+    if (!widget.file.path.toLowerCase().endsWith('.db')) return;
+    final health = await BackupHealthService.instance.evaluate(
+      backupPath: widget.file.path,
+      repository: ref.read(backupRepositoryProvider),
+    );
+    if (mounted) setState(() => _health = health);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final storage = DataStorageService.instance;
     final dateFormat = DateFormat('MMM d, yyyy');
+    final file = widget.file;
 
-    final subtitleLines = <String>[
-      file.databaseSize ?? storage.formatBytes(file.sizeBytes),
-      dateFormat.format(file.modifiedAt),
-    ];
-    if (file.appVersion != null) {
-      subtitleLines.add('v${file.appVersion} · Schema ${file.databaseVersion ?? '?'}');
-    }
-    if (file.customers != null && file.deliveries != null) {
-      subtitleLines.add('${file.customers} customers · ${file.deliveries} deliveries');
-    }
-
-    return ListTile(
-      leading: Icon(_iconFor(file)),
-      title: Text(file.fileName, maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: Text(subtitleLines.join('\n')),
-      isThreeLine: true,
-      onTap: () => _showMetadata(context, ref),
-      trailing: PopupMenuButton<String>(
-        onSelected: (action) => _handleAction(context, ref, action),
-        itemBuilder: (_) => [
-          if (file.canRestore)
-            const PopupMenuItem(value: 'restore', child: Text('Restore')),
-          const PopupMenuItem(value: 'share', child: Text('Share')),
-          const PopupMenuItem(value: 'open', child: Text('Open Folder')),
-          const PopupMenuItem(value: 'rename', child: Text('Rename')),
-          const PopupMenuItem(value: 'delete', child: Text('Delete')),
-          const PopupMenuItem(value: 'metadata', child: Text('View Details')),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: ExpansionTile(
+        initiallyExpanded: _expanded,
+        onExpansionChanged: (value) => setState(() => _expanded = value),
+        leading: Icon(_iconFor(file)),
+        title: Text(file.fileName, maxLines: 2, overflow: TextOverflow.ellipsis),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              [
+                file.databaseSize ?? storage.formatBytes(file.sizeBytes),
+                dateFormat.format(file.modifiedAt),
+              ].join(' · '),
+            ),
+            if (_health != null) ...[
+              const SizedBox(height: 4),
+              BackupHealthBadge(health: _health!, compact: true),
+            ],
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (action) => _handleAction(context, ref, action),
+          itemBuilder: (_) => [
+            if (file.canRestore)
+              const PopupMenuItem(value: 'restore', child: Text('Restore')),
+            const PopupMenuItem(value: 'share', child: Text('Share')),
+            const PopupMenuItem(value: 'open', child: Text('Open Folder')),
+            const PopupMenuItem(value: 'rename', child: Text('Rename')),
+            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+            const PopupMenuItem(value: 'metadata', child: Text('View Details')),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (file.appVersion != null)
+                  Text('App Version: ${file.appVersion}'),
+                if (file.databaseVersion != null)
+                  Text('Schema: ${file.databaseVersion}'),
+                if (file.customers != null && file.deliveries != null)
+                  Text('${file.customers} customers · ${file.deliveries} deliveries'),
+                if (_health != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: BackupHealthBadge(health: _health!),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -178,9 +331,10 @@ class _RecoveryFileTile extends ConsumerWidget {
     WidgetRef ref,
     String action,
   ) async {
+    final file = widget.file;
     switch (action) {
       case 'restore':
-        await _restore(context, ref);
+        await runBackupRestoreFlow(context, ref, file.path);
       case 'share':
         await Share.shareXFiles([XFile(file.path)], text: file.fileName);
       case 'open':
@@ -202,63 +356,12 @@ class _RecoveryFileTile extends ConsumerWidget {
       case 'delete':
         await _delete(context, ref);
       case 'metadata':
-        await showBackupDetailsDialog(
-          context,
-          ref,
-          backupPath: file.path,
-        );
+        await showBackupDetailsDialog(context, ref, backupPath: file.path);
     }
   }
 
-  Future<void> _showMetadata(BuildContext context, WidgetRef ref) async {
-    final storage = DataStorageService.instance;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(file.categoryLabel),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _MetaRow('File', file.fileName),
-            _MetaRow('Size', storage.formatBytes(file.sizeBytes)),
-            _MetaRow(
-              'Created',
-              DateFormat('MMMM d, yyyy h:mm a').format(file.modifiedAt),
-            ),
-            if (file.appVersion != null)
-              _MetaRow('App Version', file.appVersion!),
-            if (file.customers != null)
-              _MetaRow('Customers', file.customers.toString()),
-            if (file.deliveries != null)
-              _MetaRow('Deliveries', file.deliveries.toString()),
-            if (file.inventoryTransactions != null)
-              _MetaRow(
-                'Inventory Transactions',
-                file.inventoryTransactions.toString(),
-              ),
-            _MetaRow(
-              'Database Size',
-              file.databaseSize ?? storage.formatBytes(file.sizeBytes),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _restore(BuildContext context, WidgetRef ref) async {
-    await runBackupRestoreFlow(context, ref, file.path);
-  }
-
   Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: file.fileName);
+    final controller = TextEditingController(text: widget.file.fileName);
     final newName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -269,10 +372,7 @@ class _RecoveryFileTile extends ConsumerWidget {
           decoration: const InputDecoration(labelText: 'File name'),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('Save'),
@@ -281,12 +381,12 @@ class _RecoveryFileTile extends ConsumerWidget {
       ),
     );
     controller.dispose();
-
-    if (newName == null || newName.isEmpty || newName == file.fileName) return;
-
+    if (newName == null || newName.isEmpty || newName == widget.file.fileName) {
+      return;
+    }
     try {
-      await ref.read(backupRepositoryProvider).renameBackup(file.path, newName);
-      ref.invalidate(recoveryFilesProvider);
+      await ref.read(backupRepositoryProvider).renameBackup(widget.file.path, newName);
+      invalidateBackupMonitoring(ref);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('File renamed')),
@@ -306,12 +406,9 @@ class _RecoveryFileTile extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete File'),
-        content: Text('Delete ${file.fileName} permanently?'),
+        content: Text('Delete ${widget.file.fileName} permanently?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -320,13 +417,10 @@ class _RecoveryFileTile extends ConsumerWidget {
         ],
       ),
     );
-
     if (confirmed != true) return;
-
     try {
-      await ref.read(backupRepositoryProvider).deleteBackup(file.path);
-      ref.invalidate(recoveryFilesProvider);
-      ref.invalidate(storageSummaryProvider);
+      await ref.read(backupRepositoryProvider).deleteBackup(widget.file.path);
+      invalidateBackupMonitoring(ref);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('File deleted')),
@@ -339,32 +433,5 @@ class _RecoveryFileTile extends ConsumerWidget {
         );
       }
     }
-  }
-}
-
-class _MetaRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _MetaRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
   }
 }

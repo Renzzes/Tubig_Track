@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/services/automatic_backup_service.dart';
 import '../../../core/utils/version_utils.dart';
 import '../domain/entities/update_channel.dart';
 import '../domain/entities/update_fetch_result.dart';
@@ -173,7 +174,16 @@ class UpdateService {
 
     debugPrint('[Update] Downloading APK from: ${updateInfo.apkUrl}');
 
-    await _backupRepository.createPreUpdateBackup();
+    final preUpdateBackup =
+        await AutomaticBackupService.instance.runBeforeUpdateBackup(
+      _backupRepository,
+    );
+    if (preUpdateBackup != null) {
+      debugPrint(
+        '[Update] Pre-update backup created: ${preUpdateBackup.path} '
+        '(verified=${preUpdateBackup.verification.passed})',
+      );
+    }
     onProgress(0.1);
 
     final tempDir = await getTemporaryDirectory();

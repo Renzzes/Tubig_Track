@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'dart:io';
 
-import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../../core/constants/app_constants.dart';
@@ -10,6 +9,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/backup_metadata.dart';
 import '../../../../core/services/backup_metadata_service.dart';
 import '../../../../core/services/backup_migration_service.dart';
+import '../../../../core/services/backup_verification_service.dart';
 import '../../../../core/services/data_storage_service.dart';
 import '../../domain/entities/backup_file_info.dart';
 import '../../domain/entities/recovery_file_info.dart';
@@ -89,12 +89,44 @@ class BackupRepositoryImpl implements BackupRepository {
   }
 
   @override
+  Future<String> createAutomaticBackup() async {
+    final backupDir = await _storage.backupsDirectory();
+    return _copyDatabaseTo(
+      backupDir,
+      '${AppConstants.autoBackupPrefix}${_storage.backupTimestampForFilename()}.db',
+    );
+  }
+
+  @override
   Future<String> createManualBackup() async {
     final backupDir = await _storage.backupsDirectory();
     return _copyDatabaseTo(
       backupDir,
       _storage.backupFileName(),
     );
+  }
+
+  @override
+  Future<VerifiedBackupResult> createVerifiedManualBackup() async {
+    return _verifyAfterCreate(createManualBackup);
+  }
+
+  @override
+  Future<VerifiedBackupResult> createVerifiedAutomaticBackup() async {
+    return _verifyAfterCreate(createAutomaticBackup);
+  }
+
+  @override
+  Future<VerifiedBackupResult> createVerifiedPreUpdateBackup() async {
+    return _verifyAfterCreate(createPreUpdateBackup);
+  }
+
+  Future<VerifiedBackupResult> _verifyAfterCreate(
+    Future<String> Function() create,
+  ) async {
+    final path = await create();
+    final verification = await BackupVerificationService.instance.verify(path);
+    return VerifiedBackupResult(path: path, verification: verification);
   }
 
   @override
@@ -301,61 +333,4 @@ class BackupRepositoryImpl implements BackupRepository {
   Future<BackupMetadata?> readBackupMetadata(String backupPath) {
     return _metadataService.readMetadata(backupPath);
   }
-}
-
-/// Creates a zip archive with database, CSV exports, reports, and metadata.
-Future<String> createBusinessArchiveZip({
-  required AppDatabase db,
-  required String appVersion,
-}) async {
-  final storage = DataStorageService.instance;
-  final metadataService = BackupMetadataService.instance;
-  await storage.ensureFolderStructure();
-
-  final archiveDir = await storage.archivesDirectory();
-  var zipPath = p.join(archiveDir.path, storage.archiveZipFileName());
-  if (await File(zipPath).exists()) {
-    final stamp = storage.timestampForFilename();
-    zipPath = p.join(
-      archiveDir.path,
-      'BusinessArchive_${storage.backupTimestampForFilename()}_$stamp.zip',
-    );
-  }
-  final encoder = ZipFileEncoder()..create(zipPath);
-
-  final dbFile = await storage.resolveDatabaseFile();
-  if (await dbFile.exists()) {
-    encoder.addFile(dbFile, 'database/${p.basename(dbFile.path)}');
-    final meta = await metadataService.buildFromDatabase(db, dbFile.path);
-    final metaFile = File('${p.withoutExtension(zipPath)}_metadata.json');
-    await metaFile.writeAsString(
-      JsonEncoder.withIndent('  ').convert(meta.toJson()),
-    );
-    encoder.addFile(metaFile, 'metadata.json');
-    await metaFile.delete();
-  }
-
-  final csvDir = await storage.csvDirectory();
-  if (await csvDir.exists()) {
-    for (final entity in csvDir.listSync()) {
-      if (entity is File && entity.path.endsWith('.csv')) {
-        encoder.addFile(entity, 'csv/${p.basename(entity.path)}');
-      }
-    }
-  }
-
-  final reportsDir = await storage.reportsDirectory();
-  if (await reportsDir.exists()) {
-    for (final entity in reportsDir.listSync()) {
-      if (entity is File) {
-        final ext = p.extension(entity.path).toLowerCase();
-        if (ext == '.pdf' || ext == '.xlsx' || ext == '.csv') {
-          encoder.addFile(entity, 'reports/${p.basename(entity.path)}');
-        }
-      }
-    }
-  }
-
-  encoder.close();
-  return zipPath;
 }
