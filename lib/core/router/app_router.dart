@@ -91,6 +91,7 @@ import '../../features/update/presentation/screens/update_diagnostics_screen.dar
 import '../../features/copilot/presentation/screens/copilot_screen.dart';
 
 import '../../shared/widgets/main_scaffold.dart';
+import '../../features/splash/presentation/widgets/startup_background_coordinator.dart';
 
 
 
@@ -114,7 +115,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         builder: (context, state, child) {
 
-          return MainScaffold(child: child);
+          return StartupBackgroundCoordinator(
+            child: MainScaffold(child: child),
+          );
 
         },
 

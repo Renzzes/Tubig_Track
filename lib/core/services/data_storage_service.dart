@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
+import 'startup_logger.dart';
 import 'tubig_track_storage_channel.dart';
 
 enum StorageLocationKind {
@@ -62,7 +64,17 @@ class DataStorageService {
 
     if (Platform.isAndroid) {
       await _requestAndroidStoragePermissions();
-      final publicPath = await TubigTrackStorageChannel.initPublicStorage();
+      final publicPath = await TubigTrackStorageChannel.initPublicStorage()
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              StartupLogger.skipped(
+                'Public storage channel',
+                'timed out after 5 seconds',
+              );
+              return null;
+            },
+          );
       if (publicPath != null) {
         final root = Directory(publicPath);
         if (await _verifyWritableRoot(root)) {

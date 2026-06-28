@@ -22,15 +22,11 @@ class AutomaticBackupCoordinator extends ConsumerStatefulWidget {
 class _AutomaticBackupCoordinatorState
     extends ConsumerState<AutomaticBackupCoordinator>
     with WidgetsBindingObserver {
-  static bool _startupScheduled = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scheduleRun(fromStartup: true);
-    });
   }
 
   @override
@@ -47,19 +43,9 @@ class _AutomaticBackupCoordinatorState
   }
 
   Future<void> _scheduleRun({
-    bool fromStartup = false,
     bool fromResume = false,
   }) async {
-    if (!mounted) return;
-
-    if (fromStartup) {
-      if (_startupScheduled) return;
-      _startupScheduled = true;
-      await Future.delayed(const Duration(seconds: 4));
-      if (!mounted) return;
-    } else if (!fromResume) {
-      return;
-    }
+    if (!mounted || !fromResume) return;
 
     try {
       final repository = ref.read(backupRepositoryProvider);

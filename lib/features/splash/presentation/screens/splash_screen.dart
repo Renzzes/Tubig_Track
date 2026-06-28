@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/services/app_startup_service.dart';
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -9,16 +11,85 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  String _status = 'Starting TubigTrack…';
+  bool _starting = false;
+
   @override
   void initState() {
     super.initState();
-    _navigate();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _launch());
   }
 
-  Future<void> _navigate() async {
-    await Future.delayed(const Duration(milliseconds: 2500));
-    if (mounted) {
-      context.go('/');
+  Future<void> _launch() async {
+    if (_starting) return;
+    _starting = true;
+
+    setState(() => _status = 'Initializing…');
+
+    final result = await AppStartupService.instance.runEssentialStartup();
+
+    if (!mounted) return;
+
+    if (result.success) {
+      await _enterApp();
+      return;
+    }
+
+    await _showStartupFailureDialog(result);
+  }
+
+  Future<void> _enterApp() async {
+    if (!mounted) return;
+    context.go('/');
+  }
+
+  Future<void> _showStartupFailureDialog(StartupResult result) async {
+    if (!mounted) return;
+
+    final failure = result.failures.isNotEmpty
+        ? result.failures.last
+        : null;
+    final step = result.blockingStep ?? failure?.step ?? 'Unknown step';
+    final detail = failure?.error.toString() ?? 'Startup did not complete.';
+
+    final action = await showDialog<_StartupFailureAction>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Startup Problem'),
+        content: Text(
+          'TubigTrack could not finish starting within '
+          '${AppStartupService.startupTimeout.inSeconds} seconds.\n\n'
+          'Step: $step\n\n'
+          'Error: $detail\n\n'
+          'You can retry or continue in Safe Mode. Safe Mode opens the app '
+          'without backup, storage, or notification setup until you restart.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, _StartupFailureAction.retry),
+            child: const Text('Retry'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, _StartupFailureAction.safeMode),
+            child: const Text('Continue in Safe Mode'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    switch (action) {
+      case _StartupFailureAction.retry:
+        _starting = false;
+        await _launch();
+      case _StartupFailureAction.safeMode:
+        await AppStartupService.instance.enterSafeModeAndCompleteEssential();
+        await _enterApp();
+      case null:
+        await AppStartupService.instance.enterSafeModeAndCompleteEssential();
+        await _enterApp();
     }
   }
 
@@ -65,7 +136,8 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Loading...',
+                        _status,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.blue[700],
@@ -93,3 +165,5 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+
+enum _StartupFailureAction { retry, safeMode }
