@@ -43,4 +43,11 @@ class DepositCalculator {
     required double depositApplied,
   }) =>
       (availableDeposit - depositApplied).clamp(0.0, double.infinity);
+
+  /// Customer deposit after this delivery: leftover pundo + excess cash.
+  static double newDepositBalance({
+    required double remainingDepositAfterUse,
+    required double excessPayment,
+  }) =>
+      (remainingDepositAfterUse + excessPayment).clamp(0.0, double.infinity);
 }

@@ -83,6 +83,12 @@ class ReportSummary {
   final int periodDonatedBottles;
   final int periodDamagedBottles;
   final int periodMissingBottles;
+  final int periodEmptyBottleIntake;
+  final Map<String, int> periodEmptyBottleIntakeBySource;
+  final Map<String, int> periodFilledBottlesAddedBySource;
+  final int periodTotalFilledAdded;
+  final int periodNetFilledBottlesAdded;
+  final int periodWalkInBottlesSold;
 
   /// Customer-owned bottle activity in period (informational only).
   final int periodCustomerOwnedCollected;
@@ -158,6 +164,12 @@ class ReportSummary {
     required this.periodDonatedBottles,
     required this.periodDamagedBottles,
     required this.periodMissingBottles,
+    required this.periodEmptyBottleIntake,
+    required this.periodEmptyBottleIntakeBySource,
+    required this.periodFilledBottlesAddedBySource,
+    required this.periodTotalFilledAdded,
+    required this.periodNetFilledBottlesAdded,
+    required this.periodWalkInBottlesSold,
     required this.periodCustomerOwnedCollected,
     required this.periodCustomerOwnedDelivered,
     required this.totalAudits,

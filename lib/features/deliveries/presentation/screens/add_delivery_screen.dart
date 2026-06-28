@@ -15,6 +15,7 @@ import '../../../deposits/domain/entities/customer_deposit.dart';
 import '../../../deposits/presentation/providers/deposits_provider.dart';
 import '../../domain/entities/delivery.dart';
 import '../providers/deliveries_provider.dart';
+import '../widgets/excess_payment_dialog.dart';
 import '../widgets/payment_mode_selector.dart';
 
 class AddDeliveryScreen extends ConsumerStatefulWidget {
@@ -52,7 +53,20 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
   double _availableDeposit = 0;
   double _depositAvailableCache = 0;
   String? _editDeliveryId;
+  ExcessPaymentChoice _excessPreview = ExcessPaymentChoice.returnChange;
 
+  double get _excessPayment => DepositCalculator.excessPayment(
+        cashPaid: _cashReceived,
+        amountDue: _amountDue,
+      );
+  double get _depositAddedFromExcess =>
+      _excessPreview == ExcessPaymentChoice.addToDeposit ? _excessPayment : 0;
+  double get _changeGiven =>
+      _excessPreview == ExcessPaymentChoice.returnChange ? _excessPayment : 0;
+  double get _newDepositBalance => DepositCalculator.newDepositBalance(
+        remainingDepositAfterUse: _remainingDeposit,
+        excessPayment: _depositAddedFromExcess,
+      );
   double get _quantity => double.tryParse(_quantityCtrl.text) ?? 0;
   double get _price => double.tryParse(_priceCtrl.text) ?? 0;
   double get _total => _quantity * _price;
@@ -78,10 +92,6 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         totalAmount: _total,
         depositApplied: _depositApplied,
         cashPaid: _cashApplied,
-      );
-  double get _excessDeposit => DepositCalculator.excessPayment(
-        cashPaid: _cashReceived,
-        amountDue: _amountDue,
       );
 
   @override
@@ -133,16 +143,23 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
       final depositRows = await ref
           .read(customerDepositRepositoryProvider)
           .getByCustomer(delivery.customerId);
-      var excess = 0.0;
+      var depositAdded = 0.0;
+      var changeGiven = 0.0;
       for (final row in depositRows) {
-        if (row.deliveryId == id &&
-            row.transactionType == DepositTransactionType.depositAdded) {
-          excess += row.amount;
+        if (row.deliveryId != id) continue;
+        if (row.transactionType == DepositTransactionType.depositAdded) {
+          depositAdded += row.amount;
+        } else if (row.transactionType == DepositTransactionType.changeGiven) {
+          changeGiven += row.amount;
         }
       }
-      if (excess > 0 || delivery.amountPaid > 0) {
-        _amountPaidCtrl.text = (delivery.amountPaid + excess).toStringAsFixed(2);
+      final totalCash = delivery.amountPaid + depositAdded + changeGiven;
+      if (totalCash > 0) {
+        _amountPaidCtrl.text = totalCash.toStringAsFixed(2);
       }
+      _excessPreview = depositAdded > 0.001
+          ? ExcessPaymentChoice.addToDeposit
+          : ExcessPaymentChoice.returnChange;
       _applyDeposit = delivery.depositApplied > 0;
       _availableDeposit = await ref
           .read(customerDepositRepositoryProvider)
@@ -433,7 +450,13 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         totalAmount: total,
         applyDeposit: _applyDeposit,
       );
-      final amountDue = total - depositApplied;
+      if (depositApplied > (_isEditMode ? _availableDeposit : _depositAvailableCache) + 0.001) {
+        throw StateError('Deposit applied exceeds available deposit.');
+      }
+      final amountDue = DepositCalculator.amountDue(
+        totalAmount: total,
+        depositApplied: depositApplied,
+      );
 
       double cashReceived = 0;
       switch (_paymentStatus) {
@@ -449,6 +472,30 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         cashPaid: cashReceived,
         amountDue: amountDue,
       );
+      final excess = DepositCalculator.excessPayment(
+        cashPaid: cashReceived,
+        amountDue: amountDue,
+      );
+      var excessToDeposit = 0.0;
+      if (excess > 0.001) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        final choice = await showExcessPaymentDialog(
+          context: context,
+          cashReceived: cashReceived,
+          amountDue: amountDue,
+          excess: excess,
+        );
+        if (!mounted) return;
+        if (choice == null) return;
+        setState(() {
+          _excessPreview = choice;
+          _isLoading = true;
+        });
+        excessToDeposit =
+            choice == ExcessPaymentChoice.addToDeposit ? excess : 0;
+      }
+
       final balance = PaymentStatusUtils.computeRemainingBalance(
         totalAmount: total,
         amountPaid: cashApplied,
@@ -476,11 +523,13 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
         await ref.read(deliveryRepositoryProvider).updateDelivery(
               delivery,
               cashReceived: cashReceived,
+              excessToDeposit: excessToDeposit,
             );
       } else {
         await ref.read(deliveryRepositoryProvider).createDelivery(
               delivery,
               cashReceived: cashReceived,
+              excessToDeposit: excessToDeposit,
             );
       }
 
@@ -857,7 +906,7 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                     ],
                     const SizedBox(height: 8),
                     AppTextField(
-                      label: 'Amount Paid',
+                      label: 'Cash Received',
                       controller: _amountPaidCtrl,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -902,45 +951,58 @@ class _AddDeliveryScreenState extends ConsumerState<AddDeliveryScreen> {
                               label: 'Delivery Total',
                               value: CurrencyFormatter.format(_total),
                             ),
-                            if (_applyDeposit && _depositApplied > 0) ...[
+                            if (_depositAvailableCache > 0.001)
                               _SummaryRow(
-                                label: 'Customer Deposit',
+                                label: 'Previous Deposit',
                                 value: CurrencyFormatter.format(
                                   _depositAvailableCache,
                                 ),
                               ),
+                            if (_applyDeposit && _depositApplied > 0)
                               _SummaryRow(
                                 label: 'Deposit Applied',
-                                value: CurrencyFormatter.format(_depositApplied),
+                                value:
+                                    '-${CurrencyFormatter.format(_depositApplied)}',
                                 valueColor: const Color(0xFF2E7D32),
                               ),
+                            _SummaryRow(
+                              label: 'Amount Due',
+                              value: CurrencyFormatter.format(_amountDue),
+                            ),
+                            if (_paymentStatus != PaymentStatus.unpaid)
                               _SummaryRow(
-                                label: 'Remaining Deposit',
+                                label: 'Cash Received',
+                                value: CurrencyFormatter.format(_cashReceived),
+                              ),
+                            if (_excessPayment > 0.001)
+                              _SummaryRow(
+                                label: 'Excess Payment',
+                                value: CurrencyFormatter.format(_excessPayment),
+                                valueColor: const Color(0xFF1565C0),
+                              ),
+                            if (_changeGiven > 0.001)
+                              _SummaryRow(
+                                label: 'Change Given',
+                                value: CurrencyFormatter.format(_changeGiven),
+                              ),
+                            if (_depositAddedFromExcess > 0.001)
+                              _SummaryRow(
+                                label: 'Deposit Added',
                                 value: CurrencyFormatter.format(
-                                  _remainingDeposit,
+                                  _depositAddedFromExcess,
                                 ),
+                                valueColor: const Color(0xFF1565C0),
                               ),
+                            if (_depositAvailableCache > 0.001 ||
+                                _depositAddedFromExcess > 0.001 ||
+                                (_applyDeposit && _depositApplied > 0))
                               _SummaryRow(
-                                label: 'Customer Pays',
-                                value: CurrencyFormatter.format(_cashApplied),
+                                label: 'New Deposit Balance',
+                                value: CurrencyFormatter.format(
+                                  _newDepositBalance,
+                                ),
+                                valueColor: const Color(0xFF1565C0),
                               ),
-                            ] else ...[
-                              if (_paymentStatus != PaymentStatus.unpaid)
-                                _SummaryRow(
-                                  label: 'Amount Paid',
-                                  value: CurrencyFormatter.format(
-                                    _cashReceived,
-                                  ),
-                                ),
-                              if (_excessDeposit > 0)
-                                _SummaryRow(
-                                  label: 'Advance Deposit',
-                                  value: CurrencyFormatter.format(
-                                    _excessDeposit,
-                                  ),
-                                  valueColor: const Color(0xFF1565C0),
-                                ),
-                            ],
                             _SummaryRow(
                               label: 'Outstanding Balance',
                               value: CurrencyFormatter.format(_remainingBalance),

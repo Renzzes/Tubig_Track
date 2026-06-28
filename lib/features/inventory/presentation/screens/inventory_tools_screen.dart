@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../domain/entities/bottle_transaction.dart';
+import '../widgets/inventory_count_adjustment_sheet.dart';
 import '../widgets/transaction_bottom_sheet.dart';
 
 class InventoryToolsScreen extends ConsumerWidget {
@@ -15,6 +16,18 @@ class InventoryToolsScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => TransactionBottomSheet(transactionType: type),
+    );
+  }
+
+  void _openCountAdjustmentSheet(
+    BuildContext context,
+    InventoryCountCategory category,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => InventoryCountAdjustmentSheet(category: category),
     );
   }
 
@@ -43,6 +56,31 @@ class InventoryToolsScreen extends ConsumerWidget {
               icon: Icons.add_circle_outline,
               color: Colors.teal,
               onTap: () => _openTransactionSheet(context, TransactionType.added),
+            ),
+            _ToolButton(
+              label: 'Adjust Filled Bottles',
+              icon: Icons.tune_outlined,
+              color: Colors.teal.shade700,
+              onTap: () => _openCountAdjustmentSheet(
+                context,
+                InventoryCountCategory.filled,
+              ),
+            ),
+            _ToolButton(
+              label: 'Add Empty Bottles',
+              icon: Icons.inbox_outlined,
+              color: Colors.blueGrey,
+              onTap: () =>
+                  _openTransactionSheet(context, TransactionType.emptyAdded),
+            ),
+            _ToolButton(
+              label: 'Adjust Empty Bottles',
+              icon: Icons.tune_outlined,
+              color: Colors.blueGrey.shade700,
+              onTap: () => _openCountAdjustmentSheet(
+                context,
+                InventoryCountCategory.empty,
+              ),
             ),
             _ToolButton(
               label: 'Bottle Correction',
@@ -76,10 +114,9 @@ class InventoryToolsScreen extends ConsumerWidget {
             ),
             _ToolButton(
               label: 'Inventory Adjustment',
-              icon: Icons.tune_outlined,
-              color: Colors.indigo,
-              onTap: () =>
-                  _openTransactionSheet(context, TransactionType.adjustment),
+              icon: Icons.fact_check_outlined,
+              color: AppColors.primary,
+              onTap: () => context.push('/inventory/audit'),
             ),
             const SizedBox(height: 20),
             Text(

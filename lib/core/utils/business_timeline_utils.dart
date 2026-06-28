@@ -218,5 +218,10 @@ String _transactionHeadline(BottleTransaction tx) {
         ? 'Customer Bottle Adjustment +${tx.quantity} Bottles'
         : 'Customer Bottle Adjustment ${tx.quantity} Bottles';
   }
-  return BottleTransaction.timelineLabel(tx.transactionType, tx.quantity);
+  return BottleTransaction.timelineLabel(
+    tx.transactionType,
+    tx.quantity,
+    notes: tx.notes,
+    reason: tx.reason,
+  );
 }

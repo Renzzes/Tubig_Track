@@ -247,7 +247,9 @@ class _CustomerHistoryScreenState extends ConsumerState<CustomerHistoryScreen> {
               fontWeight: FontWeight.w600,
               color: d.transactionType == DepositTransactionType.depositUsed
                   ? Colors.orange
-                  : Colors.green,
+                  : d.transactionType == DepositTransactionType.changeGiven
+                      ? Colors.blueGrey
+                      : Colors.green,
             ),
           ),
         ),
@@ -432,6 +434,10 @@ class _InventoryHistoryScreenState extends ConsumerState<InventoryHistoryScreen>
         return Icons.add_shopping_cart;
       case TransactionType.added:
         return Icons.add_circle_outline;
+      case TransactionType.emptyAdded:
+        return Icons.inbox_outlined;
+      case TransactionType.emptyAdjustment:
+        return Icons.tune_outlined;
       case TransactionType.damaged:
         return Icons.broken_image_outlined;
       case TransactionType.missing:

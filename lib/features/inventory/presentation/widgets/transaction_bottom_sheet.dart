@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/utils/empty_bottle_source.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../customers/presentation/providers/customers_provider.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../providers/inventory_provider.dart';
+import 'inventory_validation_dialog.dart';
 
 class TransactionBottomSheet extends ConsumerStatefulWidget {
   final TransactionType transactionType;
@@ -30,7 +32,10 @@ class _TransactionBottomSheetState
   late final TextEditingController _reasonCtrl;
   late final TextEditingController _notesCtrl;
   String? _selectedCustomerId;
+  EmptyBottleSource? _emptyBottleSource;
   bool _isLoading = false;
+
+  bool get _isEmptyIntake => widget.transactionType == TransactionType.emptyAdded;
 
   bool get _isEditing => widget.existingTransaction != null;
 
@@ -43,10 +48,12 @@ class _TransactionBottomSheetState
       widget.transactionType == TransactionType.missing ||
       widget.transactionType == TransactionType.donation ||
       widget.transactionType == TransactionType.adjustment ||
+      widget.transactionType == TransactionType.emptyAdjustment ||
       widget.transactionType == TransactionType.customerAdjustment;
 
   bool get _allowsSignedQuantity =>
       widget.transactionType == TransactionType.adjustment ||
+      widget.transactionType == TransactionType.emptyAdjustment ||
       widget.transactionType == TransactionType.customerAdjustment;
 
   @override
@@ -59,6 +66,12 @@ class _TransactionBottomSheetState
     _reasonCtrl = TextEditingController(text: existing?.reason ?? '');
     _notesCtrl = TextEditingController(text: existing?.notes ?? '');
     _selectedCustomerId = existing?.customerId;
+    if (_isEmptyIntake && existing?.reason != null) {
+      _emptyBottleSource = EmptyBottleSourceX.fromLabel(existing!.reason) ??
+          EmptyBottleSource.manualEntry;
+    } else if (_isEmptyIntake) {
+      _emptyBottleSource = EmptyBottleSource.manualEntry;
+    }
   }
 
   @override
@@ -86,7 +99,11 @@ class _TransactionBottomSheetState
         transactionType: widget.transactionType,
         quantity: int.parse(_quantityCtrl.text.trim()),
         date: widget.existingTransaction?.date ?? DateTime.now(),
-        reason: _reasonCtrl.text.trim().isEmpty ? null : _reasonCtrl.text.trim(),
+        reason: _isEmptyIntake
+            ? _emptyBottleSource!.label
+            : (_reasonCtrl.text.trim().isEmpty
+                ? null
+                : _reasonCtrl.text.trim()),
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
 
@@ -97,6 +114,7 @@ class _TransactionBottomSheetState
       }
 
       if (mounted) {
+        refreshInventoryProviders(ref);
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -109,11 +127,7 @@ class _TransactionBottomSheetState
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      if (mounted) await handleInventorySaveError(context, e);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -128,9 +142,13 @@ class _TransactionBottomSheetState
       case TransactionType.donation:
         return 'Donate Bottles';
       case TransactionType.adjustment:
-        return 'Inventory Adjustment';
+        return 'Adjust Filled Bottles';
       case TransactionType.added:
         return 'Add Filled Bottles';
+      case TransactionType.emptyAdded:
+        return 'Add Empty Bottles';
+      case TransactionType.emptyAdjustment:
+        return 'Adjust Empty Bottles';
       case TransactionType.customerAdjustment:
         return 'Bottle Correction';
       case TransactionType.audit:
@@ -227,6 +245,27 @@ class _TransactionBottomSheetState
                     return null;
                   },
                 ),
+                if (_isEmptyIntake) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<EmptyBottleSource>(
+                    // ignore: deprecated_member_use
+                    value: _emptyBottleSource,
+                    decoration: const InputDecoration(
+                      labelText: 'Source *',
+                      prefixIcon: Icon(Icons.source_outlined),
+                    ),
+                    items: EmptyBottleSource.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _emptyBottleSource = v),
+                    validator: (v) => v == null ? 'Required' : null,
+                  ),
+                ],
                 if (_requiresReason) ...[
                   const SizedBox(height: 16),
                   AppTextField(

@@ -34,6 +34,10 @@ class TransactionActivityHandler {
       case RecentTransactionType.bottleBorrow:
       case RecentTransactionType.bottleReturn:
       case RecentTransactionType.bottlePurchase:
+      case RecentTransactionType.bottleFilledAdded:
+      case RecentTransactionType.bottleFilledAdjustment:
+      case RecentTransactionType.bottleEmptyAdded:
+      case RecentTransactionType.bottleEmptyAdjustment:
       case RecentTransactionType.bottleDamaged:
       case RecentTransactionType.bottleMissing:
       case RecentTransactionType.bottleDonation:
@@ -43,6 +47,7 @@ class TransactionActivityHandler {
       case RecentTransactionType.depositAdded:
       case RecentTransactionType.depositUsed:
       case RecentTransactionType.depositAdjustment:
+      case RecentTransactionType.depositChangeGiven:
         if (tx.deliveryId != null) {
           context.push('/deliveries/${tx.deliveryId}/edit');
         } else if (tx.customerId != null) {

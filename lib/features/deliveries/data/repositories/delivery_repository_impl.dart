@@ -117,6 +117,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   Future<void> _syncDepositTransactions(
     Delivery delivery, {
     required double cashReceived,
+    double excessToDeposit = 0,
   }) async {
     await _db.customerDepositsDao.deleteByDelivery(delivery.id);
 
@@ -135,15 +136,32 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
 
     final amountDue = delivery.totalAmount - delivery.depositApplied;
     final excess = cashReceived - amountDue;
-    if (excess > 0.001) {
+    if (excess <= 0.001) return;
+
+    final depositAmount = excessToDeposit.clamp(0.0, excess);
+    final changeGiven = excess - depositAmount;
+
+    if (depositAmount > 0.001) {
       await _db.customerDepositsDao.insertDeposit(
         CustomerDepositsTableCompanion.insert(
           id: '${delivery.id}_added',
           customerId: delivery.customerId,
-          amount: excess,
+          amount: depositAmount,
           transactionType: 'deposit_added',
           deliveryId: Value(delivery.id),
-          notes: const Value('Excess payment from delivery'),
+          notes: const Value('Excess payment added to deposit'),
+        ),
+      );
+    }
+    if (changeGiven > 0.001) {
+      await _db.customerDepositsDao.insertDeposit(
+        CustomerDepositsTableCompanion.insert(
+          id: '${delivery.id}_change',
+          customerId: delivery.customerId,
+          amount: changeGiven,
+          transactionType: 'change_given',
+          deliveryId: Value(delivery.id),
+          notes: const Value('Excess payment returned as change'),
         ),
       );
     }
@@ -225,7 +243,11 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
   }
 
   @override
-  Future<void> createDelivery(Delivery delivery, {double? cashReceived}) async {
+  Future<void> createDelivery(
+    Delivery delivery, {
+    double? cashReceived,
+    double excessToDeposit = 0,
+  }) async {
     await _db.transaction(() async {
       final receiptNumber = delivery.receiptNumber ??
           await _db.nextReceiptNumber(date: delivery.deliveryDate);
@@ -256,12 +278,17 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       await _syncDepositTransactions(
         delivery,
         cashReceived: cashReceived ?? delivery.amountPaid,
+        excessToDeposit: excessToDeposit,
       );
     });
   }
 
   @override
-  Future<void> updateDelivery(Delivery delivery, {double? cashReceived}) async {
+  Future<void> updateDelivery(
+    Delivery delivery, {
+    double? cashReceived,
+    double excessToDeposit = 0,
+  }) async {
     await _db.transaction(() async {
       await _db.deliveriesDao.updateDelivery(_companion(delivery));
       await _syncBorrowTransaction(delivery);
@@ -269,6 +296,7 @@ class DeliveryRepositoryImpl implements DeliveryRepository {
       await _syncDepositTransactions(
         delivery,
         cashReceived: cashReceived ?? delivery.amountPaid,
+        excessToDeposit: excessToDeposit,
       );
     });
   }

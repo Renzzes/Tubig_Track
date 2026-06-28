@@ -42,6 +42,14 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
         return 'Bottle Collection';
       case RecentTransactionType.bottlePurchase:
         return 'Purchase New Bottles';
+      case RecentTransactionType.bottleFilledAdded:
+        return 'Add Filled Bottles';
+      case RecentTransactionType.bottleFilledAdjustment:
+        return 'Adjust Filled Bottles';
+      case RecentTransactionType.bottleEmptyAdded:
+        return 'Add Empty Bottles';
+      case RecentTransactionType.bottleEmptyAdjustment:
+        return 'Adjust Empty Bottles';
       case RecentTransactionType.bottleDamaged:
         return 'Damaged Bottles';
       case RecentTransactionType.bottleMissing:
@@ -70,6 +78,8 @@ class _AllTransactionsScreenState extends ConsumerState<AllTransactionsScreen> {
         return 'Deposit Used';
       case RecentTransactionType.depositAdjustment:
         return 'Deposit Adjustment';
+      case RecentTransactionType.depositChangeGiven:
+        return 'Change Given';
     }
   }
 

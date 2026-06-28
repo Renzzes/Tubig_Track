@@ -10,6 +10,8 @@ import '../../../../core/services/pdf_export_actions.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/empty_bottle_source.dart';
+import '../../../../core/utils/inventory_movement_report_utils.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../domain/entities/report_summary.dart';
@@ -317,6 +319,47 @@ class ReportsScreen extends ConsumerWidget {
       sheet.appendRow([
         xl.TextCellValue('Supplier Deliveries (Period)'),
         xl.IntCellValue(report.periodSupplierDeliveries),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Filled Bottles Added')]);
+      for (final entry in orderedFilledBottlesAddedBreakdown(
+        report.periodFilledBottlesAddedBySource,
+      )) {
+        sheet.appendRow([
+          xl.TextCellValue('  ${entry.key}'),
+          xl.IntCellValue(entry.value),
+        ]);
+      }
+      sheet.appendRow([
+        xl.TextCellValue('Total Filled Added'),
+        xl.IntCellValue(report.periodTotalFilledAdded),
+      ]);
+      sheet.appendRow([xl.TextCellValue('Empty Bottle Intake')]);
+      final intakeBreakdown =
+          orderedEmptyBottleIntakeBreakdown(report.periodEmptyBottleIntakeBySource);
+      if (intakeBreakdown.isEmpty) {
+        sheet.appendRow([
+          xl.TextCellValue('Total'),
+          xl.IntCellValue(report.periodEmptyBottleIntake),
+        ]);
+      } else {
+        for (final entry in intakeBreakdown) {
+          sheet.appendRow([
+            xl.TextCellValue('  ${entry.key}'),
+            xl.IntCellValue(entry.value),
+          ]);
+        }
+        sheet.appendRow([
+          xl.TextCellValue('Total'),
+          xl.IntCellValue(report.periodEmptyBottleIntake),
+        ]);
+      }
+      sheet.appendRow([
+        xl.TextCellValue('Total Empty Received'),
+        xl.IntCellValue(report.periodEmptyBottleIntake),
+      ]);
+      sheet.appendRow([
+        xl.TextCellValue('Net Filled Bottles Added'),
+        xl.TextCellValue(formatNetFilledBottlesAdded(report.periodNetFilledBottlesAdded)),
       ]);
 
       final walkInSheet = excel['Walk-In Sales'];
@@ -751,7 +794,133 @@ class _ReportContent extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 8),
-
+        _ReportExpansionSection(
+          title: 'Inventory Activity',
+          icon: Icons.history,
+          color: AppColors.primary,
+          summary:
+              '${formatNetFilledBottlesAdded(report.periodNetFilledBottlesAdded)}, '
+              '${report.periodTotalFilledAdded} filled in, '
+              '${report.periodEmptyBottleIntake} empty in',
+          children: [
+            _InventorySourceBreakdown(
+              title: 'Filled Bottles Added',
+              entries: orderedFilledBottlesAddedBreakdown(
+                report.periodFilledBottlesAddedBySource,
+              ),
+              total: report.periodTotalFilledAdded,
+              emptyLabel: '0',
+            ),
+            const Divider(height: 24),
+            _InventorySourceBreakdown(
+              title: 'Empty Bottle Intake',
+              entries: orderedEmptyBottleIntakeBreakdown(
+                report.periodEmptyBottleIntakeBySource,
+              ),
+              total: report.periodEmptyBottleIntake,
+              emptyLabel: '0',
+            ),
+            const Divider(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      'Bottle Movement Summary',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  _MetricRow(
+                    label: 'Total Filled Added',
+                    value: '${report.periodTotalFilledAdded}',
+                  ),
+                  _MetricRow(
+                    label: 'Total Empty Received',
+                    value: '${report.periodEmptyBottleIntake}',
+                  ),
+                  _MetricRow(
+                    label: 'Net Filled Bottles Added',
+                    value: formatNetFilledBottlesAdded(
+                      report.periodNetFilledBottlesAdded,
+                    ),
+                    isTotal: true,
+                    color: report.periodNetFilledBottlesAdded >= 0
+                        ? AppColors.success
+                        : AppColors.error,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Filled bottles added minus empty bottles received in this period.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            _MetricRow(
+              label: 'Walk-in Sales',
+              value: '${report.periodWalkInBottlesSold} bottles',
+            ),
+            _MetricRow(
+              label: 'Customer Collections',
+              value: '${report.periodCollections} bottles',
+            ),
+            const Divider(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(
+                      'Inventory Snapshot',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  _MetricRow(
+                    label: 'Filled Bottles Available',
+                    value: '${report.availableBottles}',
+                  ),
+                  _MetricRow(
+                    label: 'Empty Bottles Ready for Refill',
+                    value: '${report.emptyBottlesReadyForRefill}',
+                  ),
+                  _MetricRow(
+                    label: 'Bottles With Customers',
+                    value: '${report.bottlesWithCustomers}',
+                  ),
+                  _MetricRow(
+                    label: 'Total Bottles Owned',
+                    value: '${report.totalBottlesOwned}',
+                    isTotal: true,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Current warehouse and customer bottle counts as of now.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
         _ReportExpansionSection(
           title: 'Inventory Ownership Changes',
           icon: Icons.add_circle_outline,
@@ -1031,6 +1200,61 @@ class _DetailRow extends StatelessWidget {
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventorySourceBreakdown extends StatelessWidget {
+  final String title;
+  final List<MapEntry<String, int>> entries;
+  final int total;
+  final String emptyLabel;
+
+  const _InventorySourceBreakdown({
+    required this.title,
+    required this.entries,
+    required this.total,
+    required this.emptyLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (total == 0) {
+      return _MetricRow(label: title, value: emptyLabel);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          ...entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: _MetricRow(
+                label: entry.key,
+                value: '${entry.value}',
+              ),
+            ),
+          ),
+          _MetricRow(
+            label: 'Total',
+            value: '$total',
+            isTotal: true,
           ),
         ],
       ),

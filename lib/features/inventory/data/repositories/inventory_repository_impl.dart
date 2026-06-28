@@ -6,6 +6,7 @@ import '../../../../core/services/inventory_state_effects.dart';
 import '../../../../core/services/inventory_state_service.dart';
 import '../../../../core/database/migrations/inventory_state_migration.dart';
 import '../../../../core/utils/inventory_calculator.dart';
+import '../../../../core/utils/inventory_validation.dart';
 import '../../domain/entities/bottle_transaction.dart';
 import '../../domain/entities/inventory_adjustment.dart';
 import '../../domain/entities/inventory_audit.dart';
@@ -269,27 +270,36 @@ class InventoryRepositoryImpl implements InventoryRepository {
     );
   }
 
-  /// Checks whether adding [delta] to the tracked bottle sum would exceed
-  /// totalBottlesOwned. Only relevant for types that increase the sum
-  /// (added, positive adjustment). Other types merely move bottles between
-  /// categories without changing the total.
-  Future<void> _checkBottleOverflow(TransactionType type, int quantity) async {
-    final increases = type == TransactionType.added ||
-        (type == TransactionType.adjustment && quantity > 0);
-    if (!increases) return;
-
+  Future<void> _validateTransaction(
+    TransactionType type,
+    int quantity,
+  ) async {
     final summary = await getSummary();
-    final currentSum = summary.filledBottlesAvailable +
-        summary.emptyBottlesReadyForRefill +
-        summary.bottlesWithCustomers +
-        summary.damagedBottles +
-        summary.missingBottles;
-    if (currentSum + quantity > summary.totalBottlesOwned) {
-      throw StateError(
-        'Bottle inventory exceeds owned bottle count. '
-        'Purchase new bottles or correct inventory first.',
-      );
+    InventoryValidation.validateTransaction(
+      summary: summary,
+      type: type,
+      quantity: quantity,
+    );
+  }
+
+  Future<void> _maybeRecordAdjustmentRow(BottleTransaction transaction) async {
+    if (transaction.transactionType != TransactionType.adjustment &&
+        transaction.transactionType != TransactionType.emptyAdjustment) {
+      return;
     }
+    if (transaction.quantity == 0) return;
+
+    await _db.inventoryAdjustmentsDao.insertAdjustment(
+      InventoryAdjustmentsTableCompanion.insert(
+        id: const Uuid().v4(),
+        adjustmentDate: Value(transaction.date),
+        quantity: transaction.quantity,
+        reason: transaction.reason ?? BottleTransaction.typeLabel(
+          transaction.transactionType,
+        ),
+        notes: Value(transaction.notes),
+      ),
+    );
   }
 
   @override
@@ -297,7 +307,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     if (transaction.isDeliveryLinked) {
       throw StateError('Delivery-linked transactions are managed by deliveries.');
     }
-    await _checkBottleOverflow(
+    await _validateTransaction(
       transaction.transactionType,
       transaction.quantity,
     );
@@ -307,6 +317,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
         transaction.quantity,
       );
       await _insertTransactionRow(transaction);
+      await _maybeRecordAdjustmentRow(transaction);
       if (transaction.transactionType == TransactionType.customerAdjustment) {
         await syncGlobalCustomerBottleSettings(_db);
       }
@@ -325,6 +336,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
       final oldType =
           BottleTransaction.typeFromString(existing.transactionType);
       await _effects.applyTransaction(oldType, existing.quantity, reverse: true);
+      await _validateTransaction(
+        transaction.transactionType,
+        transaction.quantity,
+      );
       await _effects.applyTransaction(
         transaction.transactionType,
         transaction.quantity,
@@ -911,6 +926,13 @@ class InventoryRepositoryImpl implements InventoryRepository {
     if (customerOwnedCollected > customerOwnedHeld) {
       throw StateError(
         'Cannot collect more than $customerOwnedHeld customer-owned bottles held.',
+      );
+    }
+
+    if (businessOwnedCollected > 0) {
+      await _validateTransaction(
+        TransactionType.ret,
+        businessOwnedCollected,
       );
     }
 

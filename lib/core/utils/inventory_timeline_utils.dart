@@ -42,13 +42,19 @@ List<InventoryTimelineEntry> buildInventoryTimeline({
     final headline = BottleTransaction.timelineLabel(
       tx.transactionType,
       tx.quantity,
+      notes: tx.notes,
+      reason: tx.reason,
     );
+
+    final subtitle = tx.transactionType == TransactionType.emptyAdded
+        ? tx.reason
+        : customerName;
 
     entries.add(
       InventoryTimelineEntry(
         date: tx.date,
         headline: headline,
-        subtitle: customerName,
+        subtitle: subtitle,
         transactionType: tx.transactionType,
         transactionId: tx.id,
         transaction: tx,

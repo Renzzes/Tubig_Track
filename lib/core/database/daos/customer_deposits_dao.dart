@@ -56,6 +56,8 @@ class CustomerDepositsDao extends DatabaseAccessor<AppDatabase>
           balance -= row.amount;
         case 'deposit_adjustment':
           balance += row.amount;
+        case 'change_given':
+          break;
       }
     }
     return balance.clamp(0.0, double.infinity);

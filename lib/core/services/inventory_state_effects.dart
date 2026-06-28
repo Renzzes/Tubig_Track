@@ -12,7 +12,11 @@ class InventoryStateEffects {
     int quantity, {
     bool reverse = false,
   }) async {
-    if (quantity == 0 && type != TransactionType.adjustment) return;
+    if (quantity == 0 &&
+        type != TransactionType.adjustment &&
+        type != TransactionType.emptyAdjustment) {
+      return;
+    }
     final sign = reverse ? -1 : 1;
 
     switch (type) {
@@ -28,6 +32,10 @@ class InventoryStateEffects {
         await _state.adjustFilled(quantity * sign);
       case TransactionType.added:
         await _state.adjustFilled(quantity * sign);
+      case TransactionType.emptyAdded:
+        await _state.adjustEmpty(quantity * sign);
+      case TransactionType.emptyAdjustment:
+        await _state.adjustEmpty(quantity * sign);
       case TransactionType.purchase:
       case TransactionType.customerAdjustment:
       case TransactionType.audit:

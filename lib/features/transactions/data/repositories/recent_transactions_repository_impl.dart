@@ -1,5 +1,6 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/supply_timeline_utils.dart';
+import '../../../deposits/domain/entities/customer_deposit.dart';
 import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../../supply_purchases/domain/entities/supply_purchase.dart';
 import '../../domain/entities/recent_transaction.dart';
@@ -162,13 +163,18 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
         case 'purchase':
           type = RecentTransactionType.bottlePurchase;
         case 'added':
-          type = RecentTransactionType.bottleAdjustment;
+          type = RecentTransactionType.bottleFilledAdded;
         case 'missing':
           type = RecentTransactionType.bottleMissing;
         case 'donation':
           type = RecentTransactionType.bottleDonation;
         case 'adjustment':
-          type = RecentTransactionType.bottleAdjustment;
+          type = RecentTransactionType.bottleFilledAdjustment;
+        case 'empty_added':
+        case 'empty_bottle_intake':
+          type = RecentTransactionType.bottleEmptyAdded;
+        case 'empty_adjustment':
+          type = RecentTransactionType.bottleEmptyAdjustment;
         case 'audit':
           type = RecentTransactionType.bottleAudit;
         default:
@@ -184,12 +190,23 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
           type: type,
           date: t.date,
           title: customerName != null
-              ? '${BottleTransaction.timelineLabel(txType, t.quantity)} — $customerName'
-              : BottleTransaction.timelineLabel(txType, t.quantity),
+              ? '${BottleTransaction.timelineLabel(txType, t.quantity, notes: t.notes, reason: t.reason)} — $customerName'
+              : BottleTransaction.timelineLabel(
+                  txType,
+                  t.quantity,
+                  notes: t.notes,
+                  reason: t.reason,
+                ),
           subtitle: t.notes,
           amount: t.quantity.toDouble(),
           isCredit: type == RecentTransactionType.bottleReturn ||
               type == RecentTransactionType.bottlePurchase ||
+              type == RecentTransactionType.bottleFilledAdded ||
+              type == RecentTransactionType.bottleEmptyAdded ||
+              (type == RecentTransactionType.bottleFilledAdjustment &&
+                  t.quantity > 0) ||
+              (type == RecentTransactionType.bottleEmptyAdjustment &&
+                  t.quantity > 0) ||
               (type == RecentTransactionType.bottleAdjustment &&
                   t.quantity > 0),
           customerId: t.customerId,
@@ -236,18 +253,26 @@ class RecentTransactionsRepositoryImpl implements RecentTransactionsRepository {
       switch (d.transactionType) {
         case 'deposit_used':
           type = RecentTransactionType.depositUsed;
+        case 'change_given':
+          type = RecentTransactionType.depositChangeGiven;
         case 'deposit_adjustment':
           type = RecentTransactionType.depositAdjustment;
         default:
           type = RecentTransactionType.depositAdded;
       }
+      final customerName = customerMap[d.customerId];
       items.add(
         RecentTransaction(
           id: 'deposit_${d.id}',
           sourceId: d.id,
           type: type,
           date: d.createdAt,
-          title: customerMap[d.customerId] ?? 'Unknown',
+          title: type == RecentTransactionType.depositChangeGiven
+              ? 'Change Given — ${customerName ?? 'Customer'}'
+              : (CustomerDeposit.typeLabel(
+                    CustomerDeposit.typeFromString(d.transactionType),
+                  ) +
+                  (customerName != null ? ' — $customerName' : '')),
           subtitle: d.notes,
           amount: d.amount,
           isCredit: type == RecentTransactionType.depositAdded ||

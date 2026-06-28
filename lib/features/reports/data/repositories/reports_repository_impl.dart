@@ -1,6 +1,8 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/empty_bottle_source.dart';
 import '../../../../core/utils/expense_category_utils.dart';
+import '../../../../core/utils/inventory_movement_report_utils.dart';
 import '../../domain/entities/report_summary.dart';
 import '../../domain/repositories/reports_repository.dart';
 import '../../../inventory/data/repositories/inventory_repository_impl.dart';
@@ -135,6 +137,9 @@ class ReportsRepositoryImpl implements ReportsRepository {
     var periodDonatedBottles = 0;
     var periodDamagedBottles = 0;
     var periodMissingBottles = 0;
+    var periodEmptyBottleIntake = 0;
+    final periodEmptyBottleIntakeBySource = <String, int>{};
+    var manualFilledBottlesAdded = 0;
     for (final t in bottleTxsInPeriod) {
       switch (t.transactionType) {
         case 'purchase':
@@ -142,10 +147,20 @@ class ReportsRepositoryImpl implements ReportsRepository {
           periodPurchasedNewBottles += t.quantity;
         case 'added':
           periodFilledBottleAdjustments += t.quantity;
+          if (t.quantity > 0) manualFilledBottlesAdded += t.quantity;
         case 'adjustment':
-          if (t.quantity > 0) {
-            periodFilledBottleAdjustments += t.quantity;
-          }
+          periodFilledBottleAdjustments += t.quantity;
+          if (t.quantity > 0) manualFilledBottlesAdded += t.quantity;
+        case 'empty_added':
+        case 'empty_bottle_intake':
+          periodEmptyBottleIntake += t.quantity;
+          addEmptyBottleIntakeToBreakdown(
+            periodEmptyBottleIntakeBySource,
+            t.reason,
+            t.quantity,
+          );
+        case 'empty_adjustment':
+          periodFilledBottleAdjustments += t.quantity;
         case 'donation':
           periodDonatedBottles += t.quantity;
         case 'damaged':
@@ -159,6 +174,17 @@ class ReportsRepositoryImpl implements ReportsRepository {
     for (final sp in supplyPurchasesInPeriod) {
       periodSupplierFilledBottlesReceived += sp.quantity;
     }
+
+    final periodFilledBottlesAddedBySource = buildFilledBottlesAddedBySource(
+      supplierDeliveriesQuantity: periodSupplierFilledBottlesReceived,
+      manualAdjustmentQuantity: manualFilledBottlesAdded,
+    );
+    final periodTotalFilledAdded =
+        totalFilledBottlesAdded(periodFilledBottlesAddedBySource);
+    final periodNetFilledBottlesAdded = netFilledBottlesAdded(
+      totalFilledAdded: periodTotalFilledAdded,
+      totalEmptyReceived: periodEmptyBottleIntake,
+    );
 
     final ownedLogsInPeriod =
         await _db.customerOwnedBottleLogsDao.getByDateRange(start, end);
@@ -224,6 +250,16 @@ class ReportsRepositoryImpl implements ReportsRepository {
       );
     }).toList();
 
+    var periodWalkInBottlesSold = 0;
+    for (final row in walkInRows) {
+      final type = WalkInTypeX.fromStorage(row.walkInType);
+      periodWalkInBottlesSold += switch (type) {
+        WalkInType.businessBottles => row.businessOwnedQuantity,
+        WalkInType.customerRefill => row.customerOwnedQuantity,
+        WalkInType.exchange => row.businessOwnedQuantity,
+      };
+    }
+
     return ReportSummary(
       period: period,
       startDate: start,
@@ -263,6 +299,12 @@ class ReportsRepositoryImpl implements ReportsRepository {
       periodDonatedBottles: periodDonatedBottles,
       periodDamagedBottles: periodDamagedBottles,
       periodMissingBottles: periodMissingBottles,
+      periodEmptyBottleIntake: periodEmptyBottleIntake,
+      periodEmptyBottleIntakeBySource: periodEmptyBottleIntakeBySource,
+      periodFilledBottlesAddedBySource: periodFilledBottlesAddedBySource,
+      periodTotalFilledAdded: periodTotalFilledAdded,
+      periodNetFilledBottlesAdded: periodNetFilledBottlesAdded,
+      periodWalkInBottlesSold: periodWalkInBottlesSold,
       periodCustomerOwnedCollected: periodCustomerOwnedCollected,
       periodCustomerOwnedDelivered: periodCustomerOwnedDelivered,
       totalAudits: auditSummary.totalAudits,

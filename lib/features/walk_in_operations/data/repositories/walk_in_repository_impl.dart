@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/services/inventory_state_effects.dart';
 import '../../../../core/services/inventory_state_service.dart';
+import '../../../../core/utils/empty_bottle_source.dart';
 import '../../../inventory/domain/entities/bottle_transaction.dart';
 import '../../domain/entities/walk_in_sale.dart';
 import '../../domain/repositories/walk_in_repository.dart';
@@ -113,7 +114,23 @@ class WalkInRepositoryImpl implements WalkInRepository {
         await _ensureFilledAvailable(sale.businessOwnedQuantity);
         await _state.adjustFilled(-sale.businessOwnedQuantity);
         if (sale.returnedEmptyQuantity > 0) {
-          await _state.adjustEmpty(sale.returnedEmptyQuantity);
+          await _effects.applyTransaction(
+            TransactionType.emptyAdded,
+            sale.returnedEmptyQuantity,
+          );
+          await _db.bottleTransactionsDao.insertTransaction(
+            BottleTransactionsTableCompanion.insert(
+              id: '${sale.id}_empty_intake',
+              customerId: Value(sale.customerId),
+              transactionType: BottleTransaction.typeToString(
+                TransactionType.emptyAdded,
+              ),
+              quantity: sale.returnedEmptyQuantity,
+              date: Value(sale.date),
+              reason: Value(EmptyBottleSource.walkInCustomer.label),
+              notes: Value(sale.notes),
+            ),
+          );
         }
     }
   }
@@ -140,7 +157,16 @@ class WalkInRepositoryImpl implements WalkInRepository {
       case WalkInType.exchange:
         await _state.adjustFilled(sale.businessOwnedQuantity);
         if (sale.returnedEmptyQuantity > 0) {
-          await _state.adjustEmpty(-sale.returnedEmptyQuantity);
+          final txId = '${sale.id}_empty_intake';
+          final existing = await _db.bottleTransactionsDao.getById(txId);
+          if (existing != null) {
+            await _effects.applyTransaction(
+              TransactionType.emptyAdded,
+              existing.quantity,
+              reverse: true,
+            );
+            await _db.bottleTransactionsDao.deleteTransaction(txId);
+          }
         }
     }
   }

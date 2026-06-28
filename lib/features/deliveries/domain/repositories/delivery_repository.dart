@@ -25,8 +25,16 @@ abstract class DeliveryRepository {
   Stream<List<Delivery>> watchByCustomer(String customerId);
   Future<List<Delivery>> getByDateRange(DateTime start, DateTime end);
   Future<Delivery?> getById(String id);
-  Future<void> createDelivery(Delivery delivery, {double? cashReceived});
-  Future<void> updateDelivery(Delivery delivery, {double? cashReceived});
+  Future<void> createDelivery(
+    Delivery delivery, {
+    double? cashReceived,
+    double excessToDeposit = 0,
+  });
+  Future<void> updateDelivery(
+    Delivery delivery, {
+    double? cashReceived,
+    double excessToDeposit = 0,
+  });
   Future<void> deleteDelivery(String id);
   Future<void> syncAllPaymentStatuses();
 }

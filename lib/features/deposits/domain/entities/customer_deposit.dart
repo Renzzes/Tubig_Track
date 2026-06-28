@@ -2,6 +2,7 @@ enum DepositTransactionType {
   depositAdded,
   depositUsed,
   depositAdjustment,
+  changeGiven,
 }
 
 class CustomerDeposit {
@@ -29,6 +30,8 @@ class CustomerDeposit {
         return DepositTransactionType.depositUsed;
       case 'deposit_adjustment':
         return DepositTransactionType.depositAdjustment;
+      case 'change_given':
+        return DepositTransactionType.changeGiven;
       default:
         return DepositTransactionType.depositAdded;
     }
@@ -40,6 +43,8 @@ class CustomerDeposit {
         return 'deposit_used';
       case DepositTransactionType.depositAdjustment:
         return 'deposit_adjustment';
+      case DepositTransactionType.changeGiven:
+        return 'change_given';
       case DepositTransactionType.depositAdded:
         return 'deposit_added';
     }
@@ -51,6 +56,8 @@ class CustomerDeposit {
         return 'Deposit Used';
       case DepositTransactionType.depositAdjustment:
         return 'Deposit Adjustment';
+      case DepositTransactionType.changeGiven:
+        return 'Change Given';
       case DepositTransactionType.depositAdded:
         return 'Deposit Added';
     }
